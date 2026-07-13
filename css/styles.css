@@ -388,3 +388,47 @@ h1, h2, h3 { line-height: 1.2; }
   color: var(--danger); font-weight: 600; font-size: 15px; background: transparent;
 }
 .link-danger:active { opacity: .55; }
+
+/* ============================================================
+   Prüfungsmodus
+   ============================================================ */
+.exam-bar { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; }
+.exam-timer {
+  font-variant-numeric: tabular-nums; font-weight: 700; font-size: 17px;
+  background: var(--bg-elev-2); padding: 6px 12px; border-radius: 10px; letter-spacing: .5px;
+}
+.exam-timer.low { color: #fff; background: var(--danger); }
+.exam-count { flex: 1; text-align: center; font-size: 15px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.exam-flag {
+  width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--bg-elev-2); color: var(--text-dim);
+}
+.exam-flag svg { width: 20px; height: 20px; }
+.exam-flag.on { background: var(--warn); color: #fff; }
+
+.exam-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.exam-cell {
+  aspect-ratio: 1; border-radius: 10px; font-weight: 700; font-size: 15px;
+  background: var(--bg-elev-2); color: var(--text); border: 2px solid transparent;
+  font-variant-numeric: tabular-nums;
+}
+.exam-cell.answered { background: var(--primary); color: #fff; }
+.exam-cell.flagged { border-color: var(--warn); }
+.exam-cell.current { outline: 2px solid var(--text); outline-offset: 1px; }
+
+/* Themenprofil */
+.theme-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+.theme-row + .theme-row { border-top: 0.5px solid var(--separator); }
+.theme-row .tn { flex: 1; font-size: 14px; }
+.theme-row .tbar { width: 90px; height: 7px; border-radius: 999px; background: var(--bg-elev-2); overflow: hidden; }
+.theme-row .tbar > span { display: block; height: 100%; border-radius: 999px; }
+.theme-row .tp { width: 44px; text-align: right; font-size: 14px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* Review */
+.review-item { background: var(--bg-elev); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); border-left: 3px solid var(--success); }
+.review-item.no { border-left-color: var(--danger); }
+.review-item .ri-head { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+.review-item .ri-q { font-weight: 600; margin: 0 0 8px; }
+.review-item .ri-line { margin: 2px 0; font-size: 14px; }
+.review-item .ri-lab { color: var(--text-dim); }
+.review-item .ri-exp { margin: 8px 0 0; font-size: 14px; color: var(--text-dim); line-height: 1.5; }

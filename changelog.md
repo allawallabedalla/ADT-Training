@@ -11,6 +11,29 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.9.0] — 2026-07-13  ·  Echter Prüfungsmodus
+
+Die Prüfungssimulation ist jetzt eine realistische Generalprobe statt verkapptem Üben.
+
+### Hinzugefügt
+- **Countdown-Timer** (Simulation: 90 s je Frage) – läuft als Wanduhr weiter, auch nach
+  Verlassen/Reload; bei 0 wird automatisch abgegeben.
+- **Kein Zwischen-Feedback / keine XP-Toasts** während der Prüfung.
+- **Freie Navigation**: Vor/Zurück, Fragen **markieren** (Flag) und eine **Übersicht**
+  (Gitter mit beantwortet/markiert/aktuell) zum direkten Anspringen.
+- **Blueprint-Zusammenstellung**: 30 Fragen mit **themenproportionaler Quote** (jedes
+  der 9 Themen ist vertreten) – Läufe sind vergleichbar.
+- **Abgeben → Auswertung**: Score, Bestehensgrenze (≥ 50 %), **Themenprofil** (richtig/gesamt
+  je Thema) und **Detail-Review** (deine Antwort vs. richtige + Erklärung, „Falsche wiederholen").
+- **Session-Persistenz**: eine laufende Prüfung überlebt Reload/App-Wechsel; die Startseite
+  bietet „Fortsetzen" an. (schließt das im Workshop genannte Session-Verlust-Risiko)
+
+### Technik
+- Eigener, in sich geschlossener Prüfungs-Flow (der Übungs-Quiz bleibt unangetastet).
+- 2 neue E2E-Tests (kompletter Prüfungsablauf + Session-Persistenz). `tests/run.sh` grün. Service Worker v10.
+
+---
+
 ## [0.8.0] — 2026-07-13  ·  Phase 2: Härtung & Transparenz
 
 Schließt die durch Cloud/Push entstandene Fläche.

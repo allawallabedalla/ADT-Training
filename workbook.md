@@ -89,7 +89,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 1. ✅ **Quick Wins** (Usability & Robustheit) → v0.7.0 – erledigt 2026-07-13
 2. ✅ **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die Cloud/Push-Fläche) → v0.8.0 (2026-07-13)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
-4. Danach große P1-Features: Fragetyp-Abstraktion → echter Prüfungsmodus → Spaced Repetition → Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
+4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → als Nächstes: Spaced Repetition + Mastery → Fragetyp-Abstraktion + Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
 5. Parallel/laufend: fachliche Gesamt-Review der Fragen + Content-Ausbau (sobald Material da ist)
 
 **Bekannte Risiken durch bisherige Umsetzung (ehrlich dokumentiert, alle im Backlog adressiert):**
@@ -106,7 +106,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ✅ **Fachkorrektur the-004** (Strahlentherapie ist lokal, nicht systemisch) – v0.7.0
 - ⬜ **Fachliche Gesamt-Review** aller Fragen gegen UICC 8. Aufl., ICD-O-3, ICD-10-GM, oBDS-Begriff (CUP-Kode, pM0 prüfen)
 - ⬜ **Fragetyp-Abstraktion** (Handler je Typ) – Enabler für neue Aufgabentypen
-- ⬜ **Echter Prüfungsmodus** (Timer, kein Sofort-Feedback, freie Navigation/Flaggen, Themen-Blueprint, Sammelauswertung) + **Session-Persistenz**
+- ✅ **Echter Prüfungsmodus** (Timer, kein Sofort-Feedback, freie Navigation/Flaggen, Themen-Blueprint, Sammelauswertung) + **Session-Persistenz** — v0.9.0
 - ⬜ **Spaced Repetition + mehrstufige Mastery** (behebt „einmal richtig = gemeistert"); „heute fällig"; Push an Fälligkeit koppeln
 - ⬜ **Anwendungs-/Kodier-/Rechenaufgaben** (numeric/code-Eingabe) – braucht Inhalt
 - ⬜ **Quiz barrierefrei & robuster**: In-place-Toggle statt Full-Re-Render + ARIA-Rollen/Fokus

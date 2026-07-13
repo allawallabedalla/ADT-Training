@@ -445,7 +445,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.8.0";
+const APP_VERSION = "0.9.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -463,7 +463,7 @@ const BADGE_ICON = {
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
 };
 
-const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Sync & Sicherung", info: "Info", result: "Ergebnis", quiz: "" };
+const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Sync & Sicherung", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
 function setStreak() {
   if (streakEl) streakEl.innerHTML = '<span class="streak-flame">' + icon("flame") + "</span>" + S.streak;
 }
@@ -474,7 +474,7 @@ function updateAppbar(view) {
   if (h1) h1.textContent = BAR_TITLES[view] != null ? BAR_TITLES[view] : "ADT Trainer";
   const bar = document.querySelector(".appbar");
   // Ansichten ohne Large-Title (Quiz/Ergebnis) zeigen den Balken-Titel direkt.
-  if (bar) bar.classList.toggle("scrolled", view === "quiz" || view === "result");
+  if (bar) bar.classList.toggle("scrolled", view === "quiz" || view === "result" || view === "exam" || view === "examresult");
   setStreak();
 }
 
@@ -521,7 +521,7 @@ function renderHome() {
 
     <div class="section-title">Prüfung</div>
     <div class="ios-group">
-      <button class="mode-btn" data-act="exam">${iconTile("clipboardCheck", "#34c759")}<span class="txt"><b>Prüfungssimulation</b><p>${Math.min(30, QUESTIONS.length)} Fragen · bestanden ab 50 %</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="exam">${iconTile("clipboardCheck", "#34c759")}<span class="txt"><b>Prüfungssimulation</b><p>${examInProgress() ? "▶︎ Läuft – tippen zum Fortsetzen" : Math.min(30, QUESTIONS.length) + " Fragen · Timer · bestanden ab 50 %"}</p></span><span class="chev">›</span></button>
     </div>
 
     <div class="section-title">Fortschritt</div>
@@ -541,7 +541,7 @@ function renderHome() {
     if (a === "mixed") { buildSession("mixed"); go("quiz"); }
     else if (a === "topics") go("topics");
     else if (a === "weak") { buildSession("weak"); go("quiz"); }
-    else if (a === "exam") { buildSession("exam"); go("quiz"); }
+    else if (a === "exam") examStart();
     else if (a === "badges") go("badges");
     else if (a === "settings") go("settings");
     else if (a === "info") go("info");
@@ -890,6 +890,274 @@ function renderResult(right, total, pct) {
   });
 }
 
+/* ------------------------------------------------------------------ *
+ * 5b) Prüfungsmodus – echte Simulation (eigener Flow, persistent)
+ * ------------------------------------------------------------------ */
+const EXAM_KEY = "adt_exam_session_v1";
+const EXAM_SECONDS_PER_Q = 90;      // Zeitbudget je Frage (Simulation)
+let EXAM = null;                    // laufende Prüfung
+let EXAM_RESULT = null;             // Ergebnis nach Abgabe
+let examTimerId = null;
+
+function nowMs() { return Date.now(); }
+function examRemainingMs(e) { return Math.max(0, e.startedAt + e.durationMs - nowMs()); }
+function fmtTime(ms) { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }
+function examQuestions() { return EXAM.qids.map(id => QUESTIONS.find(q => q.id === id)); }
+function examInProgress() { return !!loadExam(); }
+
+function saveExam() { try { localStorage.setItem(EXAM_KEY, JSON.stringify(EXAM)); } catch (e) {} }
+function loadExam() {
+  try {
+    const raw = localStorage.getItem(EXAM_KEY); if (!raw) return null;
+    const e = JSON.parse(raw);
+    if (!e || !Array.isArray(e.qids) || e.submitted) return null;
+    if (examRemainingMs(e) <= 0) return null;                 // abgelaufen
+    if (!e.qids.every(id => QUESTIONS.some(q => q.id === id))) return null; // Fragen geändert
+    return e;
+  } catch (e) { return null; }
+}
+function removeExam() { try { localStorage.removeItem(EXAM_KEY); } catch (e) {} }
+
+// Blueprint: Fragen je Thema proportional zur Verfügbarkeit ziehen.
+function buildExamQuestions() {
+  const target = Math.min(30, QUESTIONS.length);
+  const total = QUESTIONS.length;
+  const byTopic = {};
+  for (const q of QUESTIONS) (byTopic[q.topic] = byTopic[q.topic] || []).push(q);
+  const picked = [], used = new Set();
+  for (const t of Object.keys(byTopic)) {
+    const quota = Math.max(1, Math.round(target * byTopic[t].length / total));
+    for (const q of shuffle(byTopic[t]).slice(0, quota)) { picked.push(q); used.add(q.id); }
+  }
+  const rest = shuffle(QUESTIONS.filter(q => !used.has(q.id)));
+  while (picked.length < target && rest.length) { const q = rest.pop(); picked.push(q); used.add(q.id); }
+  return shuffle(picked).slice(0, target);
+}
+
+function examStart() {
+  const saved = loadExam();
+  if (saved) {
+    modalChoice("Laufende Prüfung", "Es läuft noch eine Prüfung. Fortsetzen oder neu starten?",
+      [{ label: "Fortsetzen", value: "resume", variant: "primary" },
+       { label: "Neu starten", value: "new", variant: "danger" },
+       { label: "Abbrechen", value: null, variant: "ghost" }]
+    ).then((c) => { if (c === "resume") { EXAM = saved; go("exam"); } else if (c === "new") newExam(); });
+    return;
+  }
+  newExam();
+}
+function newExam() {
+  const qs = buildExamQuestions();
+  EXAM = {
+    qids: qs.map(q => q.id),
+    optionOrders: qs.map(q => shuffle(q.options.map((_, i) => i))),
+    picks: qs.map(() => []),
+    flags: qs.map(() => false),
+    idx: 0,
+    startedAt: nowMs(),
+    durationMs: qs.length * EXAM_SECONDS_PER_Q * 1000,
+    submitted: false,
+  };
+  saveExam();
+  go("exam");
+}
+
+function stopExamTimer() { if (examTimerId) { clearInterval(examTimerId); examTimerId = null; } }
+function startExamTimer() {
+  stopExamTimer();
+  examTimerId = setInterval(() => {
+    if (!EXAM || EXAM.submitted) { stopExamTimer(); return; }
+    const rem = examRemainingMs(EXAM);
+    const el = document.getElementById("examTimer");
+    if (el) { el.textContent = fmtTime(rem); el.classList.toggle("low", rem < 60000); }
+    if (rem <= 0) { stopExamTimer(); submitExam(true); }
+  }, 1000);
+}
+
+function examTogglePick(origIdx) {
+  const q = examQuestions()[EXAM.idx];
+  const arr = EXAM.picks[EXAM.idx];
+  if (q.type === "single") EXAM.picks[EXAM.idx] = [origIdx];
+  else { const k = arr.indexOf(origIdx); if (k >= 0) arr.splice(k, 1); else arr.push(origIdx); }
+  saveExam(); renderExam();
+}
+function examGoto(i) {
+  const N = EXAM.qids.length;
+  EXAM.idx = Math.max(0, Math.min(N - 1, i)); saveExam(); renderExam(); window.scrollTo(0, 0);
+}
+function examToggleFlag() { EXAM.flags[EXAM.idx] = !EXAM.flags[EXAM.idx]; saveExam(); renderExam(); }
+
+function renderExam() {
+  updateAppbar("exam");
+  const qs = examQuestions();
+  const N = qs.length, i = EXAM.idx, q = qs[i], t = TOPICS[q.topic];
+  const order = EXAM.optionOrders[i];
+  const picks = new Set(EXAM.picks[i]);
+  const answered = EXAM.picks.filter(p => p.length).length;
+
+  const opts = order.map(origIdx => {
+    const isPicked = picks.has(origIdx);
+    const cls = "opt type-" + q.type + (isPicked ? " selected" : "");
+    const mark = isPicked ? (q.type === "single" ? "●" : "✓") : "";
+    return `<button class="${cls}" data-eoi="${origIdx}"><span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}</span></button>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="exam-bar">
+      <span class="exam-timer" id="examTimer">${fmtTime(examRemainingMs(EXAM))}</span>
+      <span class="exam-count">Frage ${i + 1} / ${N}</span>
+      <button class="exam-flag ${EXAM.flags[i] ? "on" : ""}" id="examFlag" aria-label="Frage zur Überprüfung markieren">${icon("flag")}</button>
+    </div>
+    <div class="q-card">
+      <div class="q-meta"><span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>${q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>'}</div>
+      <p class="q-text">${esc(q.question)}</p>
+      ${q.type === "multi" ? '<p class="q-hint">Mehrere Antworten möglich. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>' : ''}
+      <div class="options">${opts}</div>
+    </div>
+    <button class="btn-ghost" id="examOverview" style="margin-top:4px">Übersicht · ${answered}/${N} beantwortet</button>
+    <div class="spacer-lg"></div>
+  `;
+  app.querySelectorAll("[data-eoi]").forEach(el => el.addEventListener("click", () => examTogglePick(parseInt(el.dataset.eoi, 10))));
+  document.getElementById("examFlag").addEventListener("click", examToggleFlag);
+  document.getElementById("examOverview").addEventListener("click", showExamOverview);
+
+  actionbar.classList.remove("hidden");
+  actionbar.innerHTML = `<div class="inner">
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <button class="btn-ghost" id="examPrev" ${i === 0 ? "disabled" : ""} style="flex:1">‹ Zurück</button>
+      <button class="btn-ghost" id="examNext" ${i === N - 1 ? "disabled" : ""} style="flex:1">Weiter ›</button>
+    </div>
+    <button class="btn-primary" id="examSubmit">Prüfung abgeben</button>
+  </div>`;
+  document.getElementById("examPrev").addEventListener("click", () => examGoto(i - 1));
+  document.getElementById("examNext").addEventListener("click", () => examGoto(i + 1));
+  document.getElementById("examSubmit").addEventListener("click", confirmSubmitExam);
+  startExamTimer();
+}
+
+function showExamOverview() {
+  const qs = examQuestions(), N = qs.length;
+  const cells = qs.map((q, k) => {
+    const cls = "exam-cell" + (EXAM.picks[k].length ? " answered" : "") + (EXAM.flags[k] ? " flagged" : "") + (k === EXAM.idx ? " current" : "");
+    return `<button class="${cls}" data-jump="${k}">${k + 1}</button>`;
+  }).join("");
+  const ov = document.createElement("div"); ov.className = "modal-overlay";
+  ov.innerHTML = `<div class="modal-card"><h3 class="modal-title">Übersicht</h3>
+    <div class="exam-grid">${cells}</div>
+    <p class="muted" style="margin:12px 0 0;font-size:13px">Gefüllt = beantwortet · oranger Rand = markiert</p>
+    <div class="modal-actions" style="margin-top:16px"><button class="btn-ghost modal-btn" id="ovClose">Schließen</button></div></div>`;
+  document.body.appendChild(ov); requestAnimationFrame(() => ov.classList.add("show"));
+  const close = () => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 200); };
+  ov.querySelectorAll("[data-jump]").forEach(el => el.addEventListener("click", () => { close(); examGoto(parseInt(el.dataset.jump, 10)); }));
+  document.getElementById("ovClose").addEventListener("click", close);
+  ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+}
+
+async function confirmSubmitExam() {
+  const N = EXAM.qids.length, answered = EXAM.picks.filter(p => p.length).length;
+  const un = N - answered;
+  const ok = await modalChoice("Prüfung abgeben",
+    un > 0 ? `${un} Frage(n) noch unbeantwortet. Trotzdem abgeben und auswerten?` : "Prüfung jetzt abgeben und auswerten?",
+    [{ label: "Abgeben", value: true, variant: "danger" }, { label: "Weiter prüfen", value: false, variant: "ghost" }]);
+  if (ok) submitExam(false);
+}
+
+function submitExam(auto) {
+  stopExamTimer();
+  const qs = examQuestions();
+  const results = qs.map((q, k) => {
+    const picks = new Set(EXAM.picks[k]), correct = new Set(q.correct);
+    let ok = picks.size === correct.size;
+    if (ok) for (const c of correct) if (!picks.has(c)) { ok = false; break; }
+    return { q, ok, picks: EXAM.picks[k].slice() };
+  });
+  const right = results.filter(r => r.ok).length, total = qs.length;
+  const pct = total ? Math.round(right / total * 100) : 0;
+
+  // Fortschritt aktualisieren (perQuestion + Gesamtzähler + Prüfungsrekord)
+  for (const r of results) {
+    const p = S.perQuestion[r.q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null };
+    p.seen += 1; if (r.ok) { p.correct += 1; p.lastResult = "correct"; } else { p.wrong += 1; p.lastResult = "wrong"; }
+    S.perQuestion[r.q.id] = p;
+  }
+  S.totalAnswered += total; S.totalCorrect += right;
+  if (pct >= 50) S.examsPassed += 1;
+  if (pct > S.bestExamPct) S.bestExamPct = pct;
+  touchStreak(); saveState(); checkBadges();
+
+  EXAM_RESULT = { results, right, total, pct, auto };
+  EXAM = null; removeExam();
+  go("examresult");
+}
+
+function renderExamResult() {
+  updateAppbar("examresult");
+  stopExamTimer();
+  const res = EXAM_RESULT;
+  const { right, total, pct } = res;
+  const passed = pct >= 50;
+  const R = 76, C = 2 * Math.PI * R, off = C * (1 - pct / 100);
+  const color = pct >= 75 ? "var(--success)" : pct >= 50 ? "var(--warn)" : "var(--danger)";
+  const hero = pct >= 90 ? "🏆 Herausragend!" : pct >= 75 ? "🎉 Stark!" : pct >= 50 ? "👍 Bestanden!" : "💪 Weiter üben!";
+
+  // Themenprofil
+  const agg = {};
+  for (const r of res.results) { const a = (agg[r.q.topic] = agg[r.q.topic] || { r: 0, n: 0 }); a.n++; if (r.ok) a.r++; }
+  const themeRows = Object.keys(agg).map(t => {
+    const a = agg[t], p = Math.round(a.r / a.n * 100);
+    return `<div class="theme-row"><span class="tn">${esc(TOPICS[t].name)}</span><span class="tbar"><span style="width:${p}%;background:${TOPICS[t].color}"></span></span><span class="tp">${a.r}/${a.n}</span></div>`;
+  }).join("");
+
+  // Review
+  const review = res.results.map((r, k) => {
+    const q = r.q;
+    const your = r.picks.length ? r.picks.map(i => esc(q.options[i])).join(", ") : "— (nicht beantwortet)";
+    const corr = q.correct.map(i => esc(q.options[i])).join(", ");
+    return `<div class="review-item ${r.ok ? "ok" : "no"}">
+      <div class="ri-head">${r.ok ? "✅" : "❌"} <b>Frage ${k + 1}</b> · ${esc(TOPICS[q.topic].name)}</div>
+      <p class="ri-q">${esc(q.question)}</p>
+      <p class="ri-line"><span class="ri-lab">Deine Antwort:</span> ${your}</p>
+      ${r.ok ? "" : `<p class="ri-line"><span class="ri-lab">Richtig:</span> ${corr}</p>`}
+      <p class="ri-exp">${esc(q.explanation)}</p>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="result-hero">
+      <div class="big pop">${hero.split(" ")[0]}</div>
+      <h2>${esc(hero.slice(hero.indexOf(" ") + 1))}</h2>
+      <div class="score-ring">
+        <svg width="168" height="168" viewBox="0 0 168 168">
+          <circle cx="84" cy="84" r="${R}" fill="none" stroke="var(--bg-elev-2)" stroke-width="14"/>
+          <circle cx="84" cy="84" r="${R}" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}" style="transition:stroke-dashoffset 1s ease"/>
+        </svg>
+        <div class="center"><div><div class="pc">${pct}%</div><div class="sub">${right} von ${total} richtig</div></div></div>
+      </div>
+      <div class="pass-badge ${passed ? "pass" : "fail"}">${passed ? "BESTANDEN" : "NICHT BESTANDEN"} · Grenze 50 %</div>
+      ${res.auto ? '<p class="muted center" style="margin-top:8px">Zeit abgelaufen – automatisch abgegeben.</p>' : ""}
+    </div>
+    <div class="section-title">Themenprofil</div>
+    <div class="q-card">${themeRows}</div>
+    <div class="section-title">Auswertung im Detail</div>
+    ${review}
+    <div class="spacer-lg"></div>
+  `;
+
+  actionbar.classList.remove("hidden");
+  const wrongIds = res.results.filter(r => !r.ok).map(r => r.q.id);
+  actionbar.innerHTML = `<div class="inner">
+    ${wrongIds.length ? `<button class="btn-primary" id="examAgain" style="margin-bottom:10px">Falsche wiederholen (${wrongIds.length})</button>` : ""}
+    <button class="btn-ghost" id="examHome">Zur Startseite</button>
+  </div>`;
+  document.getElementById("examHome").addEventListener("click", () => go("home"));
+  const ea = document.getElementById("examAgain");
+  if (ea) ea.addEventListener("click", () => {
+    const qs = shuffle(QUESTIONS.filter(q => wrongIds.includes(q.id)));
+    SESSION = { mode: "review", topic: null, questions: qs, optionOrders: qs.map(q => shuffle(q.options.map((_, i) => i))), idx: 0, picks: qs.map(() => new Set()), checked: qs.map(() => false), correctFlags: qs.map(() => null) };
+    go("quiz");
+  });
+}
+
 /* ---- Badges ---- */
 function renderBadges() {
   updateAppbar("badges");
@@ -981,11 +1249,14 @@ let VIEW = "home";
 function go(view) {
   const prev = VIEW;
   VIEW = view;
+  if (view !== "exam") stopExamTimer();   // Timer läuft nur in der Prüfungsansicht
   try {
     window.scrollTo(0, 0);   // neue Ansicht immer oben starten
     if (view === "home") renderHome();
     else if (view === "topics") renderTopics();
     else if (view === "quiz") renderQuiz();
+    else if (view === "exam") renderExam();
+    else if (view === "examresult") renderExamResult();
     else if (view === "badges") renderBadges();
     else if (view === "settings") renderSettings();
     else if (view === "info") renderInfo();
@@ -1011,6 +1282,13 @@ async function goBack() {
       "Training beenden?",
       "Der bisherige Fortschritt bleibt gespeichert.",
       [{ label: "Beenden", value: true, variant: "danger" }, { label: "Weiter üben", value: false, variant: "ghost" }]
+    );
+    if (ok) go("home");
+  } else if (VIEW === "exam") {
+    const ok = await modalChoice(
+      "Prüfung verlassen?",
+      "Die Prüfung läuft weiter (die Zeit tickt) – du kannst sie später fortsetzen.",
+      [{ label: "Verlassen", value: true, variant: "danger" }, { label: "Weiter prüfen", value: false, variant: "ghost" }]
     );
     if (ok) go("home");
   } else {

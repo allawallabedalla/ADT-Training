@@ -99,6 +99,39 @@ async function page() {
   chk(missedSeen && allHaveNote, 'Verpasste richtige Antwort trägt "Richtige Antwort"-Hinweis');
 }
 
+// 7) Prüfungsmodus: starten -> alle beantworten -> abgeben -> Ergebnis
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="exam"]');
+  await p.waitForSelector('.exam-bar');
+  for (let i = 0; i < 40; i++) {
+    await p.waitForSelector('.q-card');
+    await p.click('.opt');
+    const nextDisabled = await p.getAttribute('#examNext', 'disabled');
+    if (nextDisabled !== null) break; // letzte Frage erreicht
+    await p.click('#examNext');
+  }
+  await p.click('#examSubmit');
+  await p.waitForSelector('.modal-overlay .modal-btn.btn-danger');
+  await p.click('.modal-overlay .modal-btn.btn-danger');
+  await p.waitForSelector('.pass-badge');
+  const profile = await p.$('.theme-row');
+  const review = await p.$('.review-item');
+  chk(!!profile && !!review, 'Prüfung: Abgabe → Ergebnis mit Themenprofil & Review');
+}
+
+// 8) Prüfung: Session-Persistenz (Reload mitten in der Prüfung -> Fortsetzen möglich)
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="exam"]'); await p.waitForSelector('.exam-bar');
+  await p.click('.opt'); await p.click('#examNext'); await p.waitForTimeout(100);
+  await p.reload({ waitUntil: 'networkidle' });                 // mitten in der Prüfung neu laden
+  const saved = await p.evaluate(() => localStorage.getItem('adt_exam_session_v1'));
+  chk(!!saved, 'Prüfung: laufende Session bleibt nach Reload erhalten');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();
