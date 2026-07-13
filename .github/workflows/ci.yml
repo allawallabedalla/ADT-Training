@@ -1,0 +1,29 @@
+name: CI
+
+# Leichtgewichtiger Konsistenz-Check bei jedem Push/PR: Syntax der JS-Dateien,
+# Fragen-Datenbank (Format/IDs/Antworten) und die Sync-Unit-Tests.
+# Bewusst OHNE Browser (Playwright), damit CI schnell und stabil bleibt – die
+# vollständige Suite inkl. E2E/Service-Worker läuft lokal via `bash tests/run.sh`.
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntaxprüfung (node --check)
+        run: |
+          for f in config.js js/sync.js js/app.js sw.js data/questions.js; do
+            node --check "$f"
+          done
+      - name: Fragen-Datenbank validieren
+        run: node tests/validate-questions.mjs
+      - name: Unit-Tests (Sync-Logik)
+        run: node tests/unit-sync.mjs

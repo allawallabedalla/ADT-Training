@@ -126,7 +126,9 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
   Fortschrittsring (geräte-lokal). Offen: Statistik/Historie über Zeit
 - ✅ Faire Streak (v0.14.0): Gnadentag (ein verpasster Tag erlaubt) + Rekord-Serie (bestStreak)
 - ✅ Native Zurück-Navigation (v0.19.0): pushState/popstate, Quiz/Prüfung mit Bestätigung, Ergebnis ersetzt Ansicht
-- ⬜ **app.js in Module aufteilen + Node-Test-Harness + Fragen-CI-Check** (stützt „makellose Funktion")
+- 🟡 **app.js Module + Test-Harness + Fragen-CI-Check**: ✅ Node-Test-Harness (tests/) + Fragen-CI-Check
+  (GitHub Actions, v0.27.0). Modul-Split **bewusst zurückgestellt**: hohes Regressionsrisiko am
+  laufenden Monolithen ohne Nutzen für die Funktion – die Testabdeckung sichert die Korrektheit.
 - ✅ Cache-Robustheit (v0.17.0): stale-while-revalidate für die App-Shell + reg.update +
   no-cache-Revalidierung; stabiler Cache-Name → kein manuelles Cache-Bumpen mehr. Neuer
   SW-/Offline-Test (`tests/sw-cache.mjs`).
@@ -189,7 +191,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 - ✅ **Reset erweitern**: „überall (Cloud) / nur dieses Gerät" umgesetzt (v0.3.0)
 - ✅ **In-App-Hinweis „neue Version verfügbar"** bei Service-Worker-Update (v0.3.0)
 - ✅ **P3** Merge des Arbeits-Branches auf `main` (jeder Release wird per Fast-Forward auf `main` deployt)
-- ⬜ **P3** Automatischer Konsistenz-Check der Fragen (CI/Test-Skript)
+- ✅ **P3** Automatischer Konsistenz-Check der Fragen (CI, v0.27.0: .github/workflows/ci.yml)
 
 ---
 
