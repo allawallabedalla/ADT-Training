@@ -27,6 +27,9 @@
 - **Kein ungefragtes Pushen auf `main`** und **kein ungefragter Pull Request**.
 - **Robustheit vor Funktionsumfang:** Die App darf nicht abstürzen und keinen
   Fortschritt verlieren.
+- **Speicherstände sind heilig:** Der localStorage-Schlüssel `adt_trainer_state_v1`
+  wird **nie umbenannt**. Datenmodell-Änderungen erfolgen per **Migration** (alte
+  Stände einlesen und ergänzen), damit Lernfortschritt App-Updates immer überlebt.
 
 ## 3. Projekt-Fakten
 
@@ -84,6 +87,10 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 - ⬜ **P2** **Barrierefreiheit** (größere Schrift wählbar, Kontraste, Screenreader-Labels)
 
 ### Technik / Betrieb
+- ⬜ **P2** **Reset erweitern**: optional auch den Cloud-Datensatz des verbundenen Sync-Codes leeren.
+  Aktuell wirkt „Fortschritt zurücksetzen" nur lokal – bei aktivem Sync füllt der Merge die Werte
+  aus der Cloud wieder auf. Getrennte Aktionen „nur dieses Gerät" / „überall (Cloud)" + Bestätigung.
+- ⬜ **P3** Klarere Reset-/Sync-UX (Hinweis, dass lokaler Reset bei aktivem Code aus der Cloud zurückkommt)
 - ⬜ **P2** In-App-Hinweis „neue Version verfügbar" bei Service-Worker-Update
 - ⬜ **P3** Merge des Arbeits-Branches auf `main` (auf Wunsch, für dauerhafte Pages-URL)
 - ⬜ **P3** Automatischer Konsistenz-Check der Fragen (CI/Test-Skript)
@@ -113,6 +120,7 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 | 2026-07-13 | Cloud-Sync über **Supabase** (statt Firebase) | REST/RPC per einfachem `fetch`, kein SDK → robuster, offline-first, kein CDN-Zwang |
 | 2026-07-13 | Identität per **Sync-Code** (statt Login) | Kein Passwort/OAuth nötig – einfachste Nutzung; Code = Zugriffsschlüssel (capability) |
 | 2026-07-13 | **Network-first** für `config.js` & `questions.js` im SW | Konfig-/Fragen-Updates erreichen Nutzer ohne Cache-Neuversionierung |
+| 2026-07-13 | Speicher-Schlüssel `adt_trainer_state_v1` bleibt **stabil** | Speicherstände überleben App-Updates; Änderungen nur per Migration |
 
 ---
 
