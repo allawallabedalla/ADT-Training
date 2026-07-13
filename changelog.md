@@ -11,6 +11,20 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.2.1] — 2026-07-13
+
+### Behoben
+- **Cloud-Sync mit neuem Supabase-Schlüsselformat** (`sb_publishable_…`): Diese Keys
+  sind keine JWTs und dürfen laut Supabase **nicht** im `Authorization`-Header stehen
+  (sonst HTTP 401). Der Schlüssel wird jetzt nur noch im `apikey`-Header gesendet;
+  ein `Authorization: Bearer …` wird ausschließlich bei klassischen JWT-Keys (`eyJ…`)
+  gesetzt (Abwärtskompatibilität). Verifiziert per Header-Unit-Test für beide Formate.
+
+### Konfiguriert
+- `config.js` mit dem Supabase-Projekt verbunden (Projekt-URL + öffentlicher `sb_publishable`-Key).
+
+---
+
 ## [0.2.0] — 2026-07-13
 
 Geräteübergreifende Synchronisation des Lernfortschritts.

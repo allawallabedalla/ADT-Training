@@ -104,13 +104,15 @@
   // ---- Supabase-RPC-Aufrufe ----
   async function rpc(fn, body) {
     const c = cfg();
+    const key = c.supabaseAnonKey;
+    const headers = { "Content-Type": "application/json", "apikey": key };
+    // Neue Supabase-Schlüssel (sb_publishable_… / sb_secret_…) sind KEINE JWTs und
+    // dürfen NICHT im Authorization-Header stehen (sonst 401). Nur klassische
+    // JWT-Keys (beginnen mit "eyJ") gehören dorthin – für Abwärtskompatibilität.
+    if (/^eyJ/.test(key)) headers["Authorization"] = "Bearer " + key;
     const res = await fetch(c.supabaseUrl.replace(/\/+$/, "") + "/rest/v1/rpc/" + fn, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": c.supabaseAnonKey,
-        "Authorization": "Bearer " + c.supabaseAnonKey,
-      },
+      headers: headers,
       body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error("RPC " + fn + " HTTP " + res.status);

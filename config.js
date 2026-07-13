@@ -13,6 +13,7 @@
  * eben lokal ohne Cloud-Sync.
  */
 window.ADT_CONFIG = {
-  supabaseUrl: "",      // z. B. "https://abcdefgh.supabase.co"
-  supabaseAnonKey: "",  // der lange "anon public"-Schlüssel aus den Projekt-Einstellungen
+  supabaseUrl: "https://ayozhjbfhreqauyimsjy.supabase.co",
+  // öffentlicher Schlüssel (neues Supabase-Format "sb_publishable_…" = Ersatz für den anon-Key)
+  supabaseAnonKey: "sb_publishable_ey4LlOV5CftCc_YnGJpfjg__aXt__jB",
 };
