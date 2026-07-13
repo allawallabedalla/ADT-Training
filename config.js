@@ -21,4 +21,11 @@ window.ADT_CONFIG = {
   // Server-Teil steht (Tabelle + Edge Function + stündlicher Zeitplan) → aktiv.
   // Leer lassen = Erinnerungen deaktiviert. Einrichtung: README → „Lern-Erinnerungen".
   vapidPublicKey: "BPKKeZOQjP2lCBpX-zDcUO1E5pvpTw9DkrIJn-apU2LYXYmRBqePd0wRdv-S-F50uHWZaFYgSE1WcvshMERzj20",
+
+  // Zugangsschutz für die Lerninhalte.
+  //  false = öffentliche Beispiel-Fragen (aktueller Stand, kein Code nötig).
+  //  true  = Inhalte sind geschützt: die App verlangt einen Zugangscode und lädt die
+  //          Fragen serverseitig geprüft aus Supabase (get_content). Erst umstellen,
+  //          wenn das echte Material in Supabase liegt (siehe supabase/content-gate.sql).
+  contentGated: false,
 };

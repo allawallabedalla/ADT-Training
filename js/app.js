@@ -181,6 +181,31 @@ function bumpToday(n) { try { const c = getToday() + (n || 0); localStorage.setI
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch { return true; } }
 function setOnboarded() { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) {} }
 
+/* ---- Zugangsschutz für Lerninhalte (Zugangscode → serverseitige Prüfung) ---- */
+const CONTENT_KEY = "adt_content_v1";        // lokal gecachte, freigeschaltete Inhalte
+const CONTENT_CODE_KEY = "adt_content_code"; // Code (für stille Hintergrund-Aktualisierung)
+function contentGateActive() { return !!(window.ADT_CONFIG && window.ADT_CONFIG.contentGated); }
+function contentUnlocked() { try { return !!localStorage.getItem(CONTENT_KEY); } catch { return false; } }
+function storeUnlockedContent(content, code) {
+  try {
+    localStorage.setItem(CONTENT_KEY, JSON.stringify({ TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS }));
+    if (code) localStorage.setItem(CONTENT_CODE_KEY, code);
+    return true;
+  } catch (e) { return false; }
+}
+// Stille Aktualisierung: neue Inhalte greifen beim nächsten Start.
+async function refreshContentInBackground() {
+  try {
+    if (!contentUnlocked() || !navigator.onLine || !window.ADTSync) return;
+    const code = localStorage.getItem(CONTENT_CODE_KEY);
+    if (!code) return;
+    const content = await ADTSync.getContent(code);
+    if (!content) return;
+    const next = JSON.stringify({ TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS });
+    if (next !== localStorage.getItem(CONTENT_KEY)) localStorage.setItem(CONTENT_KEY, next);
+  } catch (e) {}
+}
+
 /* ---- Prüfungs-Historie (geräte-lokal, für die Statistik) ---- */
 const EXAMHIST_KEY = "adt_exam_history";
 function getExamHistory() { try { const a = JSON.parse(localStorage.getItem(EXAMHIST_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } }
@@ -725,7 +750,7 @@ const ICONS = {
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.28.0";
+const APP_VERSION = "0.29.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -1924,6 +1949,38 @@ async function changeDailyGoal() {
 }
 
 // Erststart-Begrüßung: kurz erklären + Tagesziel setzen. Nur einmal (lokal gemerkt).
+// Freischalt-Bildschirm: blockiert die App, bis ein gültiger Zugangscode eingegeben wurde.
+function showContentGate(msg) {
+  try { updateAppbar("home"); } catch (e) {}
+  const back = document.getElementById("backBtn"); if (back) back.classList.add("hidden");
+  actionbar.classList.add("hidden");
+  app.innerHTML = `
+    <h1 class="large-title">Geschützte Inhalte</h1>
+    <div class="q-card">
+      <p style="margin:0 0 12px;line-height:1.55">Diese Lerninhalte sind zugangsgeschützt. Bitte gib deinen <b>Zugangscode</b> ein – er wird auf diesem Gerät gespeichert, du brauchst ihn nur einmal.</p>
+      <input id="gateCode" inputmode="text" autocapitalize="none" autocomplete="off" spellcheck="false"
+        placeholder="Zugangscode" aria-label="Zugangscode"
+        style="width:100%;padding:14px;font-size:17px;border-radius:12px;border:2px solid var(--border);background:var(--bg-elev);color:var(--text)">
+      <button class="btn-primary" id="gateBtn" style="margin-top:12px">Freischalten</button>
+      <p id="gateErr" style="color:var(--danger);margin:10px 0 0;min-height:1.2em">${msg ? esc(msg) : ""}</p>
+    </div>
+    <p class="muted center" style="margin-top:16px;font-size:12px">Ohne gültigen Code werden keine Inhalte geladen. Zum Freischalten einmalig online sein.</p>`;
+  const inp = document.getElementById("gateCode");
+  const btn = document.getElementById("gateBtn");
+  const err = document.getElementById("gateErr");
+  const submit = async () => {
+    const code = (inp.value || "").trim();
+    if (!code) return;
+    btn.disabled = true; err.style.color = "var(--text-dim)"; err.textContent = "Prüfe…";
+    if (!navigator.onLine) { err.style.color = "var(--danger)"; err.textContent = "Zum Freischalten einmalig online sein."; btn.disabled = false; return; }
+    const content = window.ADTSync ? await ADTSync.getContent(code) : null;
+    if (content && storeUnlockedContent(content, code)) { location.reload(); }
+    else { err.style.color = "var(--danger)"; err.textContent = "Code ungültig oder Inhalte nicht erreichbar."; btn.disabled = false; }
+  };
+  if (btn) btn.addEventListener("click", submit);
+  if (inp) { inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); }); inp.focus(); }
+}
+
 function showOnboarding() {
   return new Promise((resolve) => {
     const ov = document.createElement("div");
@@ -2070,10 +2127,14 @@ window.addEventListener("scroll", () => {
 
 document.getElementById("backBtn").addEventListener("click", goBack);
 
-if (!DATA_OK) {
+if (contentGateActive() && !contentUnlocked()) {
+  // Inhalte sind geschützt und dieses Gerät ist noch nicht freigeschaltet → Zugangscode verlangen.
+  showContentGate();
+} else if (!DATA_OK) {
   app.innerHTML = `<div class="empty"><div class="ic">⚠️</div><h2>Daten-Fehler</h2>
     <p class="muted">Die Fragen-Datenbank enthält einen Formatfehler. Details in der Konsole.</p></div>`;
 } else {
+  refreshContentInBackground();   // freigeschaltete Inhalte still aktuell halten (greift nächsten Start)
   // Serie ggf. zurücksetzen, wenn mehr als ein Tag ausgelassen wurde (Gnadentag erlaubt
   // genau einen verpassten Tag). Nur Anzeige-Konsistenz beim Start.
   const t = todayStr();

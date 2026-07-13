@@ -24,7 +24,7 @@
  * Neue Fragen einfach unten anhängen. Die App validiert das Format beim Start.
  */
 
-const TOPICS = {
+const SAMPLE_TOPICS = {
   grundlagen:    { name: "Grundlagen der Onkologie",        icon: "🧬", color: "#5b8def" },
   tnm:           { name: "TNM-Klassifikation (UICC)",       icon: "📐", color: "#e8734a" },
   icdo:          { name: "ICD-O-3 (Topografie & Morphologie)", icon: "🔬", color: "#7c5cbf" },
@@ -36,7 +36,7 @@ const TOPICS = {
   datenschutz:   { name: "Datenschutz & Recht",             icon: "🔒", color: "#8a8f99" },
 };
 
-const QUESTIONS = [
+const SAMPLE_QUESTIONS = [
   // ===================== GRUNDLAGEN =====================
   {
     id: "gr-001", topic: "grundlagen", difficulty: 1, type: "single",
@@ -699,8 +699,21 @@ const QUESTIONS = [
   },
 ];
 
-// Für Nutzung im nicht-Modul-Kontext (klassische <script>-Einbindung)
+// Aktive Inhalte auflösen: FREIGESCHALTETE (lokal gecachte) Inhalte haben Vorrang,
+// sonst die öffentlichen Beispiel-Inhalte. So enthält die öffentliche App-Hülle keine
+// geschützten Fragen – die kommen erst nach Zugangscode aus Supabase und liegen dann
+// nur lokal im Cache dieses Geräts.
 if (typeof window !== "undefined") {
-  window.TOPICS = TOPICS;
-  window.QUESTIONS = QUESTIONS;
+  window.ADT_SAMPLE = { TOPICS: SAMPLE_TOPICS, QUESTIONS: SAMPLE_QUESTIONS };
+  var __active = window.ADT_SAMPLE;
+  try {
+    var __ls = window.localStorage;
+    var __raw = __ls && __ls.getItem("adt_content_v1");
+    if (__raw) {
+      var __g = JSON.parse(__raw);
+      if (__g && __g.TOPICS && Array.isArray(__g.QUESTIONS) && __g.QUESTIONS.length) __active = __g;
+    }
+  } catch (e) {}
+  window.TOPICS = __active.TOPICS;
+  window.QUESTIONS = __active.QUESTIONS;
 }

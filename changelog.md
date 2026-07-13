@@ -11,6 +11,31 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.29.0] — 2026-07-13  ·  Zugangsschutz für Inhalte (Fundament)
+
+Vorbereitung, um vertrauliche Lerninhalte NICHT öffentlich auszuliefern.
+
+### Hinzugefügt
+- **Zugangscode-Schutz (opt-in via `config.js` → `contentGated`)**: Ist er aktiv, verlangt die
+  App einen **Zugangscode** und lädt die Fragen serverseitig geprüft aus Supabase
+  (`get_content`) statt aus dem öffentlichen Code. Nach dem Freischalten sind die Inhalte
+  lokal gecacht und **offline** nutzbar; Aktualisierungen kommen still nach.
+- **Content-Resolver**: `data/questions.js` bevorzugt freigeschaltete (lokal gecachte) Inhalte
+  vor den öffentlichen Beispiel-Fragen – die öffentliche App-Hülle enthält dann keine
+  geschützten Fragen.
+- **`supabase/content-gate.sql`**: Tabellen (Inhalte + Code-**Hash**), RLS ohne Policies,
+  `SECURITY DEFINER`-Funktion `get_content`, die ohne korrekten Code nichts herausgibt.
+- Gitignoriertes **`material/`** für Quell-PDFs (wird nie committet).
+
+### Standard
+- `contentGated: false` → aktueller Stand unverändert (öffentliche Beispiel-Fragen). Erst auf
+  `true` stellen, wenn echtes Material in Supabase liegt.
+
+### Technik
+- 3 neue Tests (Freischalt-Screen, korrekter/falscher Code). `tests/run.sh` grün.
+
+---
+
 ## [0.28.0] — 2026-07-13  ·  Weniger Toasts beim Lernen
 
 ### Geändert

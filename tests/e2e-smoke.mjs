@@ -18,7 +18,9 @@ async function page(opts = {}) {
   const p = await ctx.newPage();
   // Onboarding-Overlay standardmäßig überspringen, damit es die übrigen Tests nicht blockiert.
   if (opts.onboarded !== false) await p.addInitScript(() => localStorage.setItem('adt_onboarded', '1'));
-  p.on('console', (m) => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
+  // Reine Netzwerk-Status-Meldungen des Browsers (z. B. bewusst getestete 400/404-Antworten)
+  // sind KEINE App-Fehler – nur echte JS-Fehler zählen.
+  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/i.test(m.text())) errors.push('CONSOLE: ' + m.text()); });
   p.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
   return p;
 }
@@ -521,6 +523,33 @@ async function page(opts = {}) {
   await p.evaluate(() => { const q = QUESTIONS.find(x => x.type !== 'numeric'); SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] }; go('quiz'); });
   await p.waitForSelector('.q-card.q-anim');
   chk(true, 'Animation: neue Frage wird sanft eingeblendet (q-anim)');
+}
+
+// 25) Zugangsschutz: Freischalt-Bildschirm, korrekter Code lädt Inhalte, falscher nicht
+{
+  const demo = { TOPICS: { demo: { name: 'Demo', color: '#007aff' } }, QUESTIONS: [{ id: 'x1', topic: 'demo', difficulty: 1, type: 'single', question: 'Q?', options: ['a', 'b'], correct: [0], explanation: 'weil a genau richtig ist' }] };
+  // Korrekter Code (get_content serverseitig gemockt) → Inhalte kommen nach Reload aus dem Cache
+  const p = await page();
+  await p.route('**/rpc/get_content', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(demo) }));
+  await p.goto(BASE, { waitUntil: 'networkidle' }); await p.waitForSelector('.level-card');
+  await p.evaluate(() => showContentGate());
+  await p.waitForSelector('#gateCode');
+  chk(true, 'Gate: Freischalt-Bildschirm rendert');
+  await p.fill('#gateCode', 'langer-test-zugangscode');
+  await p.click('#gateBtn');
+  await p.waitForSelector('.level-card');   // Reload → Boot mit freigeschalteten Inhalten
+  const okc = await p.evaluate(() => Object.keys(TOPICS).includes('demo') && QUESTIONS[0] && QUESTIONS[0].id === 'x1');
+  chk(okc, 'Gate: freigeschaltete Inhalte werden nach Reload genutzt (aus dem Cache)');
+
+  // Falscher Code (get_content antwortet 400) → Fehler, nichts gespeichert
+  const q = await page();
+  await q.route('**/rpc/get_content', (r) => r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"unauthorized"}' }));
+  await q.goto(BASE, { waitUntil: 'networkidle' }); await q.waitForSelector('.level-card');
+  await q.evaluate(() => showContentGate());
+  await q.fill('#gateCode', 'falsch');
+  await q.click('#gateBtn');
+  await q.waitForFunction(() => /ungültig|erreichbar/i.test((document.getElementById('gateErr') || {}).textContent || ''));
+  chk(!(await q.evaluate(() => localStorage.getItem('adt_content_v1'))), 'Gate: falscher Code speichert keine Inhalte');
 }
 
 chk(errors.length === 0, 'keine Laufzeitfehler');

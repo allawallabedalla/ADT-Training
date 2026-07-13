@@ -1,0 +1,5 @@
+# Dein Quellmaterial (PDFs/PowerPoint/Notizen) liegt hier NUR lokal.
+# Es wird NIEMALS committet/veröffentlicht – alles in diesem Ordner ist ignoriert.
+*
+!.gitignore
+!README.md

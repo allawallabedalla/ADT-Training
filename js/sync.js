@@ -220,11 +220,21 @@
     catch (e) { console.warn("push_remove fehlgeschlagen", e && e.message); return false; }
   }
 
+  // ---- Geschützte Lerninhalte abrufen (serverseitige Zugangsprüfung) ----
+  // Gibt bei korrektem Code { TOPICS, QUESTIONS } zurück, sonst null (falscher Code/Fehler).
+  async function getContent(code) {
+    if (!isConfigured()) return null;
+    try {
+      const res = await rpcOnce("get_content", { p_code: code });   // ohne Retry: 4xx = falscher Code
+      return (res && res.TOPICS && Array.isArray(res.QUESTIONS)) ? res : null;
+    } catch (e) { return null; }
+  }
+
   window.ADTSync = {
     isConfigured, getCode, setCode, getLastSynced,
     generateCode, normalizeCode, mergeStates,
     syncNow, overwriteRemote,
-    savePush, removePush,
+    savePush, removePush, getContent,
     hasPending,
     isSyncing: () => syncing,
     onChange: (fn) => { onChange = fn; },
