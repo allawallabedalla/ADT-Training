@@ -15,6 +15,12 @@ done
 echo "== 2) Fragen-Datenbank validieren =="
 node tests/validate-questions.mjs || fail=1
 
+echo "== 2b) Geprüfte Inhalts-Dateien (content/) validieren =="
+for f in content/*.json; do
+  [ -e "$f" ] || continue
+  if node tools/validate-content.mjs "$f"; then echo "  ok: $f"; else echo "  FAIL: $f"; fail=1; fi
+done
+
 echo "== 3) Unit-Tests (sync-Logik) =="
 node tests/unit-sync.mjs || fail=1
 

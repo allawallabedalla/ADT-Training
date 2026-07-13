@@ -24,6 +24,16 @@ kein Veröffentlichen vertraulicher Inhalte.**
 > Jede Frage braucht ein `source`-Feld mit Foliennummer und wörtlichem Zitat. Erfinde nichts. Markiere
 > Unsicheres separat. Danach ein zweiter Durchgang, der jede Frage nur gegen ihr Zitat prüft."*
 
+## Unkritische Inhalte: `content/` (im Repo)
+
+Fachlich **unkritisches** Material (offen verfügbare Schulungsfolien) darf direkt
+ins Repo unter `content/`. Beispiel: `content/deskriptive-statistik.json` (55 Fragen
+aus dem ADT-Foliensatz „Deskriptive Statistik", 4-fach gegengeprüft). Aus dem JSON
+wird mit `node tools/content-to-md.mjs <datei.json> > <datei.md>` eine lesbare
+Freigabe-Liste erzeugt. CI und `tests/run.sh` validieren jede `content/*.json`
+automatisch. **Vertrauliche** Inhalte gehören weiterhin nur nach `material/` (lokal)
+bzw. gegated in Supabase.
+
 ## Ausgabe-Format (`material/content.json`)
 
 ```json

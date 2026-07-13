@@ -1,0 +1,831 @@
+{
+  "TOPICS": {
+    "dstat-grundlagen": { "name": "Deskriptive Statistik – Grundlagen", "color": "#5b8def" },
+    "dstat-lage": { "name": "Lage- & Streumaße", "color": "#34c759" },
+    "dstat-zusammenhang": { "name": "Korrelation & Regression", "color": "#ff9500" },
+    "dstat-darstellung": { "name": "Ergebnisdarstellung", "color": "#af52de" },
+    "dstat-ueberleben": { "name": "Überlebenszeitanalyse", "color": "#ff3b30" }
+  },
+  "QUESTIONS": [
+    {
+      "id": "dstat-g01",
+      "topic": "dstat-grundlagen",
+      "difficulty": 1,
+      "type": "single",
+      "question": "Was ist die Aufgabe der deskriptiven Statistik?",
+      "options": [
+        "Die Vielfalt beobachteter Erscheinungen übersichtlich aufzubereiten",
+        "Aus Stichproben auf die Grundgesamtheit zu schließen",
+        "Hypothesen mit Signifikanztests zu prüfen",
+        "Ursache-Wirkungs-Beziehungen zu beweisen"
+      ],
+      "correct": [0],
+      "explanation": "Deskriptive Statistik bereitet beobachtete Erscheinungen übersichtlich auf – sie ordnet und beschreibt Daten (Kenngrößen), ohne selbst auf zugrunde liegende Gesetzmäßigkeiten zu schließen (das ist Aufgabe der analytischen Statistik).",
+      "source": "Foliensatz Deskriptive Statistik (Wegener, 19.01.2026), Folie 4: \"Deskriptive Statistik hat die Aufgabe, die Vielfalt beobachteter Erscheinungen übersichtlich aufzubereiten.\""
+    },
+    {
+      "id": "dstat-g02",
+      "topic": "dstat-grundlagen",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Was bezeichnet der Begriff „Merkmalsträger“?",
+      "options": [
+        "Das Objekt oder Subjekt, an dem die Beobachtung durchgeführt wird (z. B. Patient, Blutprobe)",
+        "Den beobachteten Aspekt selbst (z. B. Geschlecht, Alter)",
+        "Das mögliche Ergebnis einer Beobachtung (z. B. männlich, weiblich)",
+        "Die Tabelle, in der die Daten gespeichert werden"
+      ],
+      "correct": [0],
+      "explanation": "Der Merkmalsträger (auch Beobachtungseinheit, Fall) ist der- bzw. dasjenige, an dem beobachtet wird – etwa Patient, Proband, Blutprobe, Station oder Krankenhaus. Der beobachtete Aspekt selbst heißt Merkmal.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 5: \"Merkmalsträger (Beobachtungseinheit, Fall …) ist der- bzw. dasjenige, an dem die Beobachtung durchgeführt wird. Beispiele: Patient, Proband, Blutprobe, Station, Krankenhaus …\""
+    },
+    {
+      "id": "dstat-g03",
+      "topic": "dstat-grundlagen",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wann heißt ein Merkmal „qualitativ“?",
+      "options": [
+        "Wenn seine Ausprägungen durch Begriffe und nicht durch Zahlen beschrieben werden",
+        "Wenn nur ganze Zahlen als Ausprägung vorkommen können",
+        "Wenn alle reellen Zahlen eines Intervalls vorkommen können",
+        "Wenn es einen absoluten Nullpunkt besitzt"
+      ],
+      "correct": [0],
+      "explanation": "Ein qualitatives Merkmal wird durch Begriffe beschrieben (z. B. Geschlecht, Haarfarbe, Diagnose). Werden die Ausprägungen durch nicht willkürlich festlegbare Zahlen/Messwerte beschrieben, ist das Merkmal quantitativ.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 8: \"Ein Merkmal heißt qualitativ, wenn seine Ausprägungen durch Begriffe und nicht durch Zahlen beschrieben werden. Beispiele: Geschlecht, Haarfarbe, Beruf, Diagnose …\""
+    },
+    {
+      "id": "dstat-g04",
+      "topic": "dstat-grundlagen",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welches Merkmal ist ordinal (ordinalskaliert)?",
+      "options": [
+        "Schmerzempfinden mit den Ausprägungen unerträglich / stark / mäßig / leicht",
+        "Haarfarbe mit den Ausprägungen blond / braun / schwarz",
+        "Geschlecht mit den Ausprägungen männlich / weiblich",
+        "Diagnose mit den Ausprägungen der ICD-Codes"
+      ],
+      "correct": [0],
+      "explanation": "Ein qualitatives Merkmal heißt ordinal, wenn seine Ausprägungen eine (natürliche) Ordnung bilden – wie Schmerzempfinden oder Schulzensuren. Haarfarbe, Geschlecht und Diagnose besitzen keine natürliche Rangordnung und sind nominal.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 8: \"Ein qualitatives Merkmal heißt ordinal, wenn seine Ausprägungen eine (natürliche) Ordnung bilden. … Beispiel: Schmerzempfinden: unerträglich, stark, mäßig …\""
+    },
+    {
+      "id": "dstat-g05",
+      "topic": "dstat-grundlagen",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Was unterscheidet ein diskretes von einem stetigen quantitativen Merkmal?",
+      "options": [
+        "Diskret: nur bestimmte Zahlen (z. B. ganze) möglich; stetig: alle reellen Zahlen eines Intervalls möglich",
+        "Diskret: alle reellen Zahlen möglich; stetig: nur ganze Zahlen möglich",
+        "Diskret: durch Begriffe beschrieben; stetig: durch Zahlen beschrieben",
+        "Es gibt keinen Unterschied, beide Begriffe sind gleichbedeutend"
+      ],
+      "correct": [0],
+      "explanation": "Ein diskretes quantitatives Merkmal kann nur bestimmte Zahlen annehmen (z. B. Zahl der Frakturen). Ein stetiges Merkmal kann – zumindest in einem Intervall – alle reellen Zahlen annehmen (z. B. Körpergröße in cm, Alter in Jahren).",
+      "source": "Foliensatz Deskriptive Statistik, Folien 9–10: \"… quantitativ diskret, wenn nur bestimmte Zahlen (etwa ganze) vorkommen können.\" / \"… quantitativ stetig, wenn (mindestens in einem festgelegten Intervall) alle reellen Zahlen vorkommen können.\""
+    },
+    {
+      "id": "dstat-g06",
+      "topic": "dstat-grundlagen",
+      "difficulty": 3,
+      "type": "single",
+      "question": "In welche drei Skalenniveaus werden quantitative Merkmale laut Skript noch unterteilt?",
+      "options": [
+        "intervallskaliert, verhältnisskaliert und absolutskaliert",
+        "nominal, ordinal und binär",
+        "diskret, stetig und kategorial",
+        "qualitativ, quantitativ und gemischt"
+      ],
+      "correct": [0],
+      "explanation": "Quantitative Merkmale werden noch unterteilt in intervallskaliert, verhältnisskaliert und absolutskaliert. Beim letzten dieser Niveaus ist wichtig, dass es einen absoluten Nullpunkt gibt (Beispiel: Körpergröße und -gewicht).",
+      "source": "Foliensatz Deskriptive Statistik, Folie 11: \"Quantitative Merkmale werden gelegentlich noch unterteilt in intervallskaliert, verhältnisskaliert und absolutskaliert. Bei letzterem ist wichtig, dass es einen absoluten Nullpunkt gibt, z. B. bei Körpergröße und -gewicht …\""
+    },
+    {
+      "id": "dstat-g07",
+      "topic": "dstat-grundlagen",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Ein qualitatives Merkmal ist in der Dokumentation als Zahl kodiert. Was gilt für das Rechnen mit diesen Codes?",
+      "options": [
+        "Man sollte damit nicht rechnen – Ausnahme: binäre Merkmale (0/1)",
+        "Man darf uneingeschränkt damit rechnen wie mit Messwerten",
+        "Man darf nur den Mittelwert, aber keine Varianz berechnen",
+        "Kodierte qualitative Merkmale werden dadurch automatisch quantitativ"
+      ],
+      "correct": [0],
+      "explanation": "Auch wenn qualitative Merkmale als Zahlen kodiert werden, macht Rechnen damit keinen Sinn. Einzige Ausnahme: ein binäres qualitatives Merkmal (genau zwei Ausprägungen), bei dem 0/1-Kodierung Verfahren erlaubt, die sonst quantitatives Niveau voraussetzen.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 11: \"Auch wenn qualitative Merkmale … als Zahlen kodiert werden, sollte man mit diesen nicht rechnen … Einzige Ausnahme ist, wenn ein qualitatives Merkmal binär ist …\""
+    },
+    {
+      "id": "dstat-g08",
+      "topic": "dstat-grundlagen",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wie sind Daten in einer Datenmatrix angeordnet?",
+      "options": [
+        "In den Zeilen die Merkmalsträger (Fälle), in den Spalten die Merkmale (Variablen)",
+        "In den Zeilen die Merkmale, in den Spalten die Merkmalsträger",
+        "Jeweils ein Fall pro Spalte und ein Merkmal pro Zeile",
+        "Alle Werte eines Falls in einer einzigen Zelle"
+      ],
+      "correct": [0],
+      "explanation": "In der Datenmatrix stehen in den Zeilen die Merkmalsausprägungen eines Merkmalsträgers, jede Spalte enthält ein Merkmal. Merkmalsträger heißen auch Fälle, Merkmale auch Variablen.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 12: \"In den Zeilen stehen jeweils die Merkmalsausprägungen zu einem Merkmalsträger. Jede Spalte beinhaltet ein Merkmal … Merkmalsträger auch Fälle, Merkmale auch Variablen genannt.\""
+    },
+    {
+      "id": "dstat-g09",
+      "topic": "dstat-grundlagen",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Welche wichtige Voraussetzung gilt für fast alle statistischen Verfahren bezüglich der Fälle in der Datenmatrix?",
+      "options": [
+        "Unabhängigkeit der Merkmalsträger – jeder Fall darf nur in genau einer Zeile vorkommen",
+        "Alle Fälle müssen dieselbe Anzahl fehlender Werte haben",
+        "Jeder Fall muss in mindestens zwei Zeilen erfasst sein",
+        "Die Fälle müssen nach Größe sortiert vorliegen"
+      ],
+      "correct": [0],
+      "explanation": "Wichtige Voraussetzung ist die Unabhängigkeit aller Merkmalsträger voneinander. Jeder Patient/Fall darf nur in genau einer Zeile vorkommen; mehrere Messungen an einer Person gehören zum selben Fall.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 12: \"Eine wichtige Voraussetzung für fast alle statistischen Verfahren ist die Unabhängigkeit aller Merkmalsträger … Jeder Patient, Fall etc. darf nur in genau einer Zeile vorkommen.\""
+    },
+    {
+      "id": "dstat-l01",
+      "topic": "dstat-lage",
+      "difficulty": 1,
+      "type": "single",
+      "question": "Wozu dienen Lagemaße im Gegensatz zu Streumaßen?",
+      "options": [
+        "Lagemaße beschreiben die Lage auf der Zahlengeraden, Streumaße die Breite der Streuung",
+        "Lagemaße beschreiben die Streuung, Streumaße die zentrale Lage",
+        "Beide beschreiben dasselbe mit unterschiedlichen Formeln",
+        "Lagemaße gelten nur für qualitative, Streumaße nur für quantitative Merkmale"
+      ],
+      "correct": [0],
+      "explanation": "Lagemaße (z. B. Mittelwert, Median, Modalwert) sagen etwas über die Lage auf der Zahlengeraden aus. Streumaße (z. B. Spannweite, Varianz, Standardabweichung) geben Auskunft, wie breit die Verteilung streut.",
+      "source": "Foliensatz Deskriptive Statistik, Folien 14–15: \"Lagemaße … sagen etwas über die Lage auf der Zahlengeraden aus … Streumaße … geben Auskunft darüber, wie breit diese Verteilung … streut.\""
+    },
+    {
+      "id": "dstat-l02",
+      "topic": "dstat-lage",
+      "difficulty": 1,
+      "type": "multi",
+      "question": "Welche der folgenden Kenngrößen sind Streumaße?",
+      "options": ["Spannweite", "Quartilsabstand", "Varianz", "Modalwert"],
+      "correct": [0, 1, 2],
+      "explanation": "Streumaße sind Spannweite, Quartilsabstand, Varianz und Standardabweichung. Der Modalwert ist ein Lagemaß (der häufigste Wert).",
+      "source": "Foliensatz Deskriptive Statistik, Folie 14: \"Streumaße sind Spannweite, Quartilsabstand, Varianz und Standardabweichung.\" / \"Lagemaße sind Modalwert, Minimum, Maximum, Percentile, Median, Quartile, … Mittelwert.\""
+    },
+    {
+      "id": "dstat-l03",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "numeric",
+      "question": "Berechnen Sie den Mittelwert (arithmetisches Mittel) der Messwerte 22, 27, 25, 26, 30.",
+      "answer": 26,
+      "tolerance": 0,
+      "explanation": "Der Mittelwert ist die Summe der Werte geteilt durch ihre Anzahl: (22 + 27 + 25 + 26 + 30) / 5 = 130 / 5 = 26.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 16: \"x̄ = (22 + 27 + 25 + 26 + 30) / 5 = 130 / 5 = 26.\""
+    },
+    {
+      "id": "dstat-l04",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "numeric",
+      "question": "Berechnen Sie den Mittelwert der Messwerte 27, 24, 28, 21.",
+      "answer": 25,
+      "tolerance": 0,
+      "explanation": "(27 + 24 + 28 + 21) / 4 = 100 / 4 = 25.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 16: \"x̄ = (27 + 24 + 28 + 21) / 4 = 100 / 4 = 25.\""
+    },
+    {
+      "id": "dstat-l05",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Wie ist die empirische Varianz s² definiert?",
+      "options": [
+        "s² = 1/(n−1) · Σ(xᵢ − x̄)²",
+        "s² = 1/n · Σ(xᵢ − x̄)",
+        "s² = Σ(xᵢ − x̄)² / n",
+        "s² = Wurzel aus der Standardabweichung"
+      ],
+      "correct": [0],
+      "explanation": "Die (empirische) Varianz ist die durch (n−1) geteilte Summe der quadrierten Abweichungen vom Mittelwert: s² = 1/(n−1) · Σ(xᵢ − x̄)². Die Standardabweichung ist die positive Quadratwurzel daraus.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 18: \"… ist die (empirische) Varianz s² definiert durch: s² = 1/(n−1) · Σ(xᵢ − x̄)².\""
+    },
+    {
+      "id": "dstat-l06",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "numeric",
+      "question": "Die Messwerte 22, 27, 25, 26, 30 haben den Mittelwert 26. Wie groß ist die empirische Varianz s²?",
+      "answer": 8.5,
+      "tolerance": 0,
+      "explanation": "s² = 1/(n−1) · Σ(xᵢ − x̄)² = (16 + 1 + 1 + 0 + 16) / (5−1) = 34 / 4 = 8,5.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 18: \"Varianz: s² = (16 + 1 + 1 + 0 + 16) / 4 = 34 / 4 = 8,5.\""
+    },
+    {
+      "id": "dstat-l07",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "numeric",
+      "question": "Die Messwerte 27, 24, 28, 21 haben den Mittelwert 25. Wie groß ist die empirische Varianz s²?",
+      "answer": 10,
+      "tolerance": 0,
+      "explanation": "s² = 1/(n−1) · Σ(xᵢ − x̄)² = (4 + 1 + 9 + 16) / (4−1) = 30 / 3 = 10.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 18: \"Varianz: s² = (4 + 1 + 9 + 16) / 3 = 30 / 3 = 10.\""
+    },
+    {
+      "id": "dstat-l08",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Was ist die Standardabweichung s?",
+      "options": [
+        "Die positive Quadratwurzel aus der Varianz",
+        "Das Quadrat der Varianz",
+        "Die Differenz aus Maximum und Minimum",
+        "Der Kehrwert des Mittelwerts"
+      ],
+      "correct": [0],
+      "explanation": "Die positive Quadratwurzel aus der Varianz heißt Standardabweichung. Beispiel: aus s² = 8,5 folgt s = √8,5 ≈ 2,915.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 18: \"Die positive Quadratwurzel aus der Varianz heißt Standardabweichung. … s = √8,5 = 2,915476.\""
+    },
+    {
+      "id": "dstat-l09",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "numeric",
+      "question": "Bestimmen Sie den Median der geordneten Messwerte 22, 25, 26, 27, 30 (n = 5).",
+      "answer": 26,
+      "tolerance": 0,
+      "explanation": "Bei ungeradem n ist der Median der mittlere Wert der geordneten Liste: das 0,5-Quantil Q(0,5) = x[3] = 26.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 20: \"Median: Q(0,5) = x[3] = 26.\" (geordnet: 22, 25, 26, 27, 30)"
+    },
+    {
+      "id": "dstat-l10",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "numeric",
+      "question": "Bestimmen Sie den Median der geordneten Messwerte 21, 24, 27, 28 (n = 4).",
+      "answer": 25.5,
+      "tolerance": 0,
+      "explanation": "Bei geradem n ist der Median das Mittel der beiden mittleren Werte: (x[2] + x[3]) / 2 = (24 + 27) / 2 = 51 / 2 = 25,5.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 20: \"Median: Q(0,5) = (x[2] + x[3]) / 2 = (24 + 27) / 2 = 51 / 2 = 25,5.\""
+    },
+    {
+      "id": "dstat-l11",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wie wird das 0,5-Quantil (50-Perzentil) auch genannt?",
+      "options": ["Median", "Modalwert", "Spannweite", "Oberes Quartil"],
+      "correct": [0],
+      "explanation": "Das 0,5-Quantil (50-Perzentil) wird Median genannt. Das 0,25- bzw. 0,75-Quantil heißen unteres bzw. oberes Quartil.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 21: \"Das 0,5-Quantil (50-Perzentil) wird Median genannt.\""
+    },
+    {
+      "id": "dstat-l12",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wie ist die Spannweite definiert?",
+      "options": [
+        "Maximum − Minimum",
+        "Oberes Quartil − unteres Quartil",
+        "Mittelwert − Median",
+        "Summe aller Werte geteilt durch n"
+      ],
+      "correct": [0],
+      "explanation": "Die Spannweite ist Maximum minus Minimum. Der Quartilsabstand dagegen ist oberes Quartil minus unteres Quartil.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 21: \"Streubreite als Spannweite (= Maximum − Minimum) oder Quartilsabstand (= oberes − unteres Quartil) bestimmen.\""
+    },
+    {
+      "id": "dstat-l13",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Warum lassen sich Quantile (z. B. der Median) auch bei ordinalen Merkmalen berechnen?",
+      "options": [
+        "Weil dafür nur die Ordnung der Merkmalsausprägungen erforderlich ist",
+        "Weil ordinale Merkmale immer einen absoluten Nullpunkt haben",
+        "Weil ordinale Merkmale automatisch quantitativ sind",
+        "Weil bei ordinalen Merkmalen die Abstände definiert sind"
+      ],
+      "correct": [0],
+      "explanation": "Quantile lassen sich auch bei ordinalen Merkmalen berechnen, da nur die Ordnung der Merkmalsausprägungen dafür erforderlich ist. Der Mittelwert hingegen setzt quantitatives Niveau voraus.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 21: \"Quantile lassen sich auch bei ordinalen Merkmalen berechnen, da nur die Ordnung der Merkmalsausprägungen dafür erforderlich ist.\""
+    },
+    {
+      "id": "dstat-l14",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Ein kleines Unternehmen: neun Mitarbeiter verdienen je 2.000 €, der Chef 7.000 €. Der Mittelwert beträgt 2.500 €. Warum beschreibt hier der Median (2.000 €) den Sachverhalt besser?",
+      "options": [
+        "Weil der Median robust gegen Ausreißer ist",
+        "Weil der Median immer größer als der Mittelwert ist",
+        "Weil der Mittelwert bei Einkommen nicht berechnet werden darf",
+        "Weil der Median den höchsten Wert der Gruppe angibt"
+      ],
+      "correct": [0],
+      "explanation": "Der Mittelwert (2.500 €) wird durch das hohe Chef-Gehalt nach oben verzerrt – niemand außer dem Chef verdient so viel. Der Median (2.000 €) beschreibt den Sachverhalt besser, weil er robust gegen Ausreißer ist.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 22: \"Der Median ist 2.000 und beschreibt den Sachverhalt besser … Man sagt auch: Der Median ist robust gegen Ausreißer.\" (Anmerkung: „Klausurrelevant: der Median gegen Mittelwert“)"
+    },
+    {
+      "id": "dstat-l15",
+      "topic": "dstat-lage",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Für welches Messniveau ist der Mittelwert (arithmetisches Mittel) als Kenngröße zulässig?",
+      "options": [
+        "Nur für quantitative Merkmale (stetig oder diskret)",
+        "Für alle Merkmale, auch nominale",
+        "Nur für nominale Merkmale",
+        "Für ordinale und nominale, aber nicht für quantitative Merkmale"
+      ],
+      "correct": [0],
+      "explanation": "Aus dem Skalenniveau ergibt sich, welche Kenngrößen zulässig sind. Der Mittelwert ist nur bei quantitativen Merkmalen (stetig/diskret) zulässig – nicht bei ordinalen oder nominalen. Der Modalwert dagegen ist auch bei nominalen Merkmalen zulässig.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 23 (Tabelle Messniveau/Kenngröße): Mittelwert nur bei quantitativ (stetig/diskret) „ja“, bei ordinal/nominal „nein“; Modalwert bei allen „ja“."
+    },
+    {
+      "id": "dstat-l16",
+      "topic": "dstat-lage",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welche Aussage über das Verhältnis von quantitativen und ordinalen Merkmalen trifft laut Skript zu?",
+      "options": [
+        "Alle quantitativen Merkmale sind insbesondere auch ordinal",
+        "Ordinale Merkmale sind immer auch quantitativ",
+        "Quantitative und ordinale Merkmale schließen sich gegenseitig aus",
+        "Nominale Merkmale sind ein Sonderfall der quantitativen Merkmale"
+      ],
+      "correct": [0],
+      "explanation": "Alle quantitativen Merkmale sind insbesondere auch ordinal (sie besitzen eine Ordnung). In den meisten Fällen ist das jedoch von untergeordnetem Interesse, da die quantitative Eigenschaft die wichtigere ist.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 23: \"Alle quantitativen Merkmale sind insbesondere auch ordinal.\""
+    },
+    {
+      "id": "dstat-z01",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Wie ist der Korrelationskoeffizient r nach Bravais und Pearson definiert?",
+      "options": [
+        "r = sₓᵧ / (sₓ · sᵧ) – Kovarianz geteilt durch das Produkt der Standardabweichungen",
+        "r = sₓᵧ · sₓ · sᵧ",
+        "r = (sₓ · sᵧ) / sₓᵧ",
+        "r = sₓᵧ / (sₓ² + sᵧ²)"
+      ],
+      "correct": [0],
+      "explanation": "Der Korrelationskoeffizient nach Bravais und Pearson ist die Kovarianz geteilt durch das Produkt der beiden Standardabweichungen: r = sₓᵧ / (sₓ · sᵧ).",
+      "source": "Foliensatz Deskriptive Statistik, Folie 26: \"… ist der Korrelationskoeffizient r … definiert durch: r = sₓᵧ / (sₓ · sᵧ).\""
+    },
+    {
+      "id": "dstat-z02",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Was gibt das Bestimmtheitsmaß r² an?",
+      "options": [
+        "Welcher Anteil der Varianz durch die Korrelation erklärt werden kann",
+        "Die Steigung der Regressionsgeraden",
+        "Die Summe der Messwertpaare",
+        "Ob ein Merkmal nominal oder ordinal ist"
+      ],
+      "correct": [0],
+      "explanation": "Das Quadrat des Korrelationskoeffizienten wird Bestimmtheitsmaß genannt. Es gibt an, welcher Anteil der Varianz erklärt werden kann.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 26: \"Das Quadrat des Korrelationskoeffizienten wird Bestimmtheitsmaß genannt. Dieses gibt an, welcher Anteil der Varianz … erklärt werden kann.\""
+    },
+    {
+      "id": "dstat-z03",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welchen Zusammenhang beschreibt ein Korrelationskoeffizient von r = +1?",
+      "options": [
+        "Einen perfekten linearen positiven Zusammenhang (alle Punkte auf einer Geraden mit b > 0)",
+        "Keinen linearen Zusammenhang",
+        "Einen linearen negativen Zusammenhang",
+        "Einen rein zufälligen Zusammenhang"
+      ],
+      "correct": [0],
+      "explanation": "Bei r = +1 besteht ein linearer positiver Zusammenhang yᵢ = a + b·xᵢ (b > 0): je größer die x-Werte, desto größer die y-Werte. Wäre r = 1, lägen alle Punkte auf der Geraden.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 28: \"r = +1: Es besteht ein linearer positiver Zusammenhang: yᵢ = a + b·xᵢ (b > 0).\""
+    },
+    {
+      "id": "dstat-z04",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Ein Korrelationskoeffizient von r = 0 bedeutet …",
+      "options": [
+        "… es besteht kein linearer Zusammenhang (ein nicht-linearer Zusammenhang kann dennoch bestehen)",
+        "… es besteht gar kein Zusammenhang zwischen den Merkmalen",
+        "… die beiden Merkmale sind identisch",
+        "… alle Punkte liegen exakt auf einer Geraden"
+      ],
+      "correct": [0],
+      "explanation": "Der Korrelationskoeffizient sagt nur etwas über einen linearen Zusammenhang aus. Beispiel yᵢ = xᵢ²: Kovarianz und damit r sind 0, obwohl ein funktionaler (nicht-linearer) Zusammenhang besteht.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 34: \"Da die Kovarianz … gleich 0 ist, ist auch der Korrelationskoeffizient gleich 0, obwohl ein … Zusammenhang besteht … Der Korrelationskoeffizient sagt nur etwas über einen linearen Zusammenhang aus.\""
+    },
+    {
+      "id": "dstat-z05",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Wie ist die Steigung bᵧₓ der Regressionsgeraden „y auf x“ definiert?",
+      "options": [
+        "bᵧₓ = sₓᵧ / sₓ²  (Kovarianz geteilt durch die Varianz von x)",
+        "bᵧₓ = sₓᵧ / sᵧ²",
+        "bᵧₓ = sₓ² / sₓᵧ",
+        "bᵧₓ = x̄ − ȳ"
+      ],
+      "correct": [0],
+      "explanation": "Für die Regressionsgerade „y auf x“ gilt bᵧₓ = sₓᵧ / sₓ² und der Achsenabschnitt aᵧₓ = ȳ − bᵧₓ·x̄. Für „x auf y“ verwendet man dagegen bₓᵧ = sₓᵧ / sᵧ².",
+      "source": "Foliensatz Deskriptive Statistik, Folie 32: \"Regressionsgerade 'y auf x': … bᵧₓ = sₓᵧ / sₓ²; aᵧₓ = ȳ − bᵧₓ·x̄.\""
+    },
+    {
+      "id": "dstat-z06",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Für welches Messniveau eignet sich der Spearmansche Rangkorrelationskoeffizient?",
+      "options": [
+        "Für qualitativ ordinale Daten (Wertepaare auf ordinalem Messniveau)",
+        "Ausschließlich für nominale Daten",
+        "Nur für stetige quantitative Daten",
+        "Für Daten ganz ohne Ordnung"
+      ],
+      "correct": [0],
+      "explanation": "Der Korrelationskoeffizient nach Bravais-Pearson und die Regressionsanalyse können nur auf quantitative Daten angewandt werden. Zur Beschreibung des Zusammenhangs zwischen Wertepaaren auf qualitativ ordinalem Messniveau gibt es den Spearmanschen Rangkorrelationskoeffizienten.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 35: \"… Zur Beschreibung des Zusammenhangs zwischen Wertepaaren auf qualitativ ordinalem Messniveau gibt es den Spearmanschen Rangkorrelationskoeffizienten (Spearman 1907–1983).\""
+    },
+    {
+      "id": "dstat-z07",
+      "topic": "dstat-zusammenhang",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welchen Wertebereich hat der Spearmansche Rangkorrelationskoeffizient?",
+      "options": [
+        "Von −1 bis +1 (wie der Bravais-Pearsonsche)",
+        "Von 0 bis +1",
+        "Von 0 bis 100 %",
+        "Beliebige reelle Werte ohne Grenzen"
+      ],
+      "correct": [0],
+      "explanation": "Der Spearmansche Rangkorrelationskoeffizient hat wie der Bravais-Pearsonsche Werte von −1 bis +1.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 36: \"Der Spearmansche Rangkorrelationskoeffizient hat wie der Bravais-Pearsonsche Werte von −1 bis +1.\""
+    },
+    {
+      "id": "dstat-d01",
+      "topic": "dstat-darstellung",
+      "difficulty": 1,
+      "type": "single",
+      "question": "Was ist die „absolute Häufigkeit“ einer Merkmalsausprägung?",
+      "options": [
+        "Die Anzahl der Fälle mit dieser Ausprägung",
+        "Der Anteil dieser Ausprägung an allen Ausgewerteten",
+        "Die kumulierte Summe über alle Ausprägungen",
+        "Der Prozentwert ohne fehlende Angaben"
+      ],
+      "correct": [0],
+      "explanation": "Die Anzahl der Fälle mit einer Ausprägung heißt absolute Häufigkeit. Deren Anteil bezogen auf alle Ausgewerteten heißt relative Häufigkeit (als Anteil von 1 oder in Prozent).",
+      "source": "Foliensatz Deskriptive Statistik, Folie 39: \"Die Anzahl der Fälle mit einer Ausprägung wird absolute Häufigkeit genannt. Deren Anteil bezogen auf alle Ausgewerteten heißt relative Häufigkeit …\""
+    },
+    {
+      "id": "dstat-d02",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wofür eignet sich ein Torten- bzw. Kreisdiagramm besonders?",
+      "options": [
+        "Für einen raschen Überblick über die relativen Häufigkeiten eines nominalen Merkmals",
+        "Für die Darstellung von Überlebenskurven über die Zeit",
+        "Für den Vergleich der Streuung mehrerer Populationen",
+        "Für den Zusammenhang zweier quantitativer Merkmale"
+      ],
+      "correct": [0],
+      "explanation": "Zur Darstellung der Anteile einzelner Ausprägungen eines nominalen Merkmals eignet sich ein Kreis- oder Tortendiagramm. Dem ganzen Kreis entsprechen 100 %. Für viele Anteile unter 5 % ist es eher nicht geeignet.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 51: \"Zur Darstellung der Anteile einzelner Ausprägungen eines nominalen Merkmals eignet sich ein Kreis- oder Tortendiagramm … Für viele Anteile unter 5 % ist ein Tortendiagramm eher nicht geeignet.\""
+    },
+    {
+      "id": "dstat-d03",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Was wird bei einem Histogramm aus den Originaldaten gebildet und dargestellt?",
+      "options": [
+        "Intervalle (Klassen), deren Häufigkeiten als Säulenflächen dargestellt werden",
+        "Einzelne Kreissektoren für jede Ausprägung",
+        "Ränge der Werte in aufsteigender Reihenfolge",
+        "Der Zusammenhang zweier Merkmale als Punktwolke"
+      ],
+      "correct": [0],
+      "explanation": "Für quantitative Daten ist das Histogramm eine geeignete Darstellung: Aus den Originaldaten werden Intervalle gebildet und deren Häufigkeiten ausgezählt. Die Darstellung erfolgt in nebeneinanderstehenden Säulen, deren Fläche jeweils die Zahl der Fälle repräsentiert.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 58: \"Aus den Originaldaten werden Intervalle gebildet und deren Häufigkeiten ausgezählt. Die Darstellung erfolgt in nebeneinanderstehenden Säulen, deren Fläche jeweils die Zahl der Fälle repräsentiert.\""
+    },
+    {
+      "id": "dstat-d04",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Was ist laut Skript entscheidend für die Aussagefähigkeit eines Histogramms?",
+      "options": [
+        "Die Zahl der gewählten Intervalle (Klassen)",
+        "Die Farbwahl der Säulen",
+        "Ob es zwei- oder dreidimensional dargestellt wird",
+        "Die alphabetische Sortierung der Klassen"
+      ],
+      "correct": [0],
+      "explanation": "Entscheidend ist die Zahl der gewählten Intervalle: sind es zu viele, ist die Darstellung zu sprunghaft; sind es zu wenige, fehlt es an Genauigkeit. Eine dritte Dimension bringt dagegen keinen Erkenntnisgewinn.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 76: \"Entscheidend für die Aussagefähigkeit eines Histogramms ist die Zahl der gewählten Intervalle. Sind es zu viele, ist die Darstellung zu sprunghaft, sind es zu wenige, fehlt es der Darstellung an Genauigkeit.\""
+    },
+    {
+      "id": "dstat-d05",
+      "topic": "dstat-darstellung",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Was kennzeichnet der Kasten (das Rechteck) in einem Boxplot?",
+      "options": [
+        "Den Bereich zwischen unterem und oberem Quartil – also genau die Hälfte der Fälle",
+        "Den Bereich zwischen Minimum und Maximum",
+        "Den Bereich einer Standardabweichung um den Mittelwert",
+        "Den Bereich der Ausreißer"
+      ],
+      "correct": [0],
+      "explanation": "Beim Boxplot kennzeichnet das Rechteck den Bereich zwischen unterem und oberem Quartil; der Kasten steht also für genau die Hälfte der untersuchten Fälle. Minimum, Maximum und Median werden als Striche dargestellt.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 77: \"Mit einem Rechteck wird der Bereich zwischen unterem und oberem Quartil gekennzeichnet … Der Kasten steht also für genau die Hälfte der untersuchten Fälle.\""
+    },
+    {
+      "id": "dstat-d06",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Für welches Skalenniveau ist ein Boxplot (Box- und Whiskerplot) mindestens geeignet?",
+      "options": [
+        "Für mindestens ordinalskalierte Daten",
+        "Nur für nominalskalierte Daten",
+        "Ausschließlich für verhältnisskalierte Daten",
+        "Für Daten ganz ohne Skalenniveau"
+      ],
+      "correct": [0],
+      "explanation": "Der Tukeysche Boxplot (Box- und Whiskerplot) ist eine Darstellung für mindestens ordinalskalierte Daten. Bei quantitativem Skalenniveau werden zusätzlich Mittelwert und Standardabweichung eingetragen.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 77: \"Eine Darstellung für mindestens ordinalskalierte Daten ist der Tukeysche Boxplot …\""
+    },
+    {
+      "id": "dstat-d07",
+      "topic": "dstat-darstellung",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Wie geht man in einem Boxplot mit einer sehr breit gestreuten Verteilung mit einigen extremen Werten um?",
+      "options": [
+        "Die Whisker auf das 1,5-fache des Interquartilsabstands beschränken und Ausreißer als Punkte markieren",
+        "Die extremen Werte einfach weglassen",
+        "Den Kasten bis zu Minimum und Maximum ausdehnen",
+        "Statt des Medians den Mittelwert als Kastengrenze verwenden"
+      ],
+      "correct": [0],
+      "explanation": "Bei sehr breit gestreuter Verteilung mit wenigen extrem großen/kleinen Werten beschränkt man die Whisker (Antennen) auf das 1,5-fache des Interquartilsabstands und markiert die Ausreißer als Punkte – so verzerren sie die Darstellung nicht.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 79: \"… beschränkt man die Whisker (= Antennen) auf das 1,5-fache des Interquartilsabstandes und markiert die Ausreißer als Punkte.\""
+    },
+    {
+      "id": "dstat-d08",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wozu dient eine Kreuztabelle (Kontingenztafel)?",
+      "options": [
+        "Den Zusammenhang zwischen zwei qualitativen Merkmalen zu beschreiben",
+        "Die Überlebensrate über die Zeit zu schätzen",
+        "Die Varianz eines einzelnen Merkmals zu berechnen",
+        "Eine einzelne Häufigkeitsverteilung darzustellen"
+      ],
+      "correct": [0],
+      "explanation": "Soll der Zusammenhang zwischen zwei qualitativen Merkmalen beschrieben werden, erstellt man eine Kreuztabelle (Kontingenztafel) mit Zeilen und Spalten. In jeder Zelle steht die Anzahl der Fälle mit der jeweiligen Kombination.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 80: \"Soll der Zusammenhang zwischen zwei qualitativen Merkmalen beschrieben werden, erstellt man eine Kreuztabelle, auch Kontingenztafel genannt.\""
+    },
+    {
+      "id": "dstat-d09",
+      "topic": "dstat-darstellung",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Wie heißen in einer Kreuztabelle die Häufigkeitsverteilungen, die den Summen der Zeilen und Spalten entsprechen?",
+      "options": ["Randverteilungen", "Zellhäufigkeiten", "Quartile", "Modalwerte"],
+      "correct": [0],
+      "explanation": "Zusätzlich zu den Zellen wird für jede Variable deren Häufigkeitsverteilung bestimmt, die den jeweiligen Summen der Zeilen- und Spaltenzellen entspricht. Diese werden Randverteilungen genannt.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 80: \"… Diese werden auch Randverteilungen genannt.\""
+    },
+    {
+      "id": "dstat-d10",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welcher Grundsatz gilt laut Skript bei der Präsentation statistischer Auswertungen?",
+      "options": [
+        "So viel Information wie nötig, so wenig wie möglich",
+        "So viele Zahlen und Details wie irgend möglich",
+        "Immer alle Prozentangaben (Zeile, Spalte, Gesamt) aufführen",
+        "Grafiken grundsätzlich dreidimensional darstellen"
+      ],
+      "correct": [0],
+      "explanation": "Bei einer Präsentation statistischer Auswertungen gilt: So viel Information wie nötig, so wenig wie möglich. Welche Prozentangaben eine Kreuztabelle enthält, muss von Fall zu Fall nach Wichtig- und Übersichtlichkeit entschieden werden.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 91: \"Bei einer Präsentation statistischer Auswertungen gilt: So viel Information wie nötig, so wenig wie möglich!\""
+    },
+    {
+      "id": "dstat-d11",
+      "topic": "dstat-darstellung",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Eine Auffälligkeit in einer Kreuztabelle legt einen Zusammenhang nahe. Was ist nötig, um diesen abzusichern?",
+      "options": [
+        "Geeignete statistische Tests",
+        "Nichts weiter – die Auffälligkeit beweist den Zusammenhang",
+        "Ein größeres Tortendiagramm",
+        "Die Umwandlung aller Merkmale in nominale"
+      ],
+      "correct": [0],
+      "explanation": "Aus einer Auffälligkeit in einer Kreuztabelle kann normalerweise auf einen Zusammenhang geschlossen werden – dazu bedarf es aber geeigneter statistischer Tests. Auch bei Boxplot-Vergleichen gilt dieselbe Einschränkung.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 91: \"Aus einer Auffälligkeit in einer Kreuztabelle kann normalerweise auf einen Zusammenhang geschlossen werden. Dazu bedarf es geeigneter statistischer Tests!\""
+    },
+    {
+      "id": "dstat-d12",
+      "topic": "dstat-darstellung",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welche Darstellung vermittelt einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale?",
+      "options": [
+        "Das Streudiagramm (Punktwolke, scatterplot)",
+        "Das Tortendiagramm",
+        "Die einfache Häufigkeitstabelle",
+        "Der einzelne Boxplot"
+      ],
+      "correct": [0],
+      "explanation": "Das Streudiagramm (englisch scatterplot, auch Punktwolke) kann einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale vermitteln; ggf. wird eine Regressionsgerade eingezeichnet.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 95: \"Das Streudiagramm kann einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale vermitteln.\" Begriffe „Punktwolke“ und „scatterplot“: Folie 25 (\"Die Darstellung aller Wertepaare als Punkte wird scatterplot … genannt\" / „Streudiagramm (englisch: … Punktwolke genannt)“)."
+    },
+    {
+      "id": "dstat-u01",
+      "topic": "dstat-ueberleben",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Was benötigt man für eine Überlebenszeitschätzung als „Startpunkt“ und „Endpunkt“?",
+      "options": [
+        "Einen definierten Anfangszeitpunkt und ein definiertes Zielereignis",
+        "Nur das Sterbedatum aller Patienten",
+        "Ausschließlich vollständig beobachtete Fälle",
+        "Den Mittelwert aller Beobachtungszeiten"
+      ],
+      "correct": [0],
+      "explanation": "Für jede Überlebenszeitschätzung müssen ein definierter Anfangszeitpunkt (z. B. Datum der Diagnosestellung oder ersten Operation) und ein bestimmtes Zielereignis (z. B. Tod, Rezidiv, Metastase) definiert und prinzipiell erreichbar sein.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 97: \"… muss ein definierter Anfangszeitpunkt (z. B. Datum der Diagnosestellung …) bekannt und ein bestimmtes Zielereignis (z. B. Tod, Rezidiv, Metastase …) definiert und prinzipiell erreichbar sein.\""
+    },
+    {
+      "id": "dstat-u02",
+      "topic": "dstat-ueberleben",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Wie nennt man Fälle, bei denen das Zielereignis (noch) nicht eingetreten ist?",
+      "options": [
+        "Zensierte Fälle",
+        "Terminale Fälle",
+        "Modalfälle",
+        "Randfälle"
+      ],
+      "correct": [0],
+      "explanation": "Fälle, bei denen das Zielereignis (noch) nicht eingetreten ist, werden als zensiert bezeichnet. Für sie ist die tatsächliche Zeitdauer noch nicht bekannt, aber sie ist mindestens gleich der Beobachtungsdauer.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 97: \"Fälle, bei denen das Zielereignis (noch) nicht eingetreten ist, werden als zensiert bezeichnet.\""
+    },
+    {
+      "id": "dstat-u03",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Worin unterscheiden sich das Verfahren nach Cutler & Ederer und das nach Kaplan & Meier grundsätzlich?",
+      "options": [
+        "Cutler & Ederer rechnet auf Basis fester Zeitintervalle, Kaplan & Meier berechnet die Kurve zu jedem Zeitpunkt eines Zielereignisses",
+        "Cutler & Ederer benötigt stets die Originaldaten, Kaplan & Meier nur publizierte Tabellen",
+        "Beide Verfahren liefern grundsätzlich identische Ergebnisse",
+        "Kaplan & Meier ignoriert zensierte Fälle vollständig"
+      ],
+      "correct": [0],
+      "explanation": "Das Verfahren nach Cutler & Ederer errechnet die Ausfallrate auf Basis fester Zeitintervalle, während der Kaplan-Meier-Algorithmus die Überlebenskurve zu jedem Zeitpunkt eines Zielereignisses berechnet. Kaplan-Meier erfordert stets die Originaldaten; Cutler-Ederer lässt sich auch aus publizierten Tabellen berechnen.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 98: \"Die von Cutler … angegebene Methode errechnet die Ausfallrate auf der Basis fester Zeitintervalle, während der von Kaplan … beschriebene Algorithmus die Berechnung der Überlebenskurve zu jedem Zeitpunkt eines Zielereignisses vornimmt.\""
+    },
+    {
+      "id": "dstat-u04",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Was gilt für die Genauigkeit der beiden Verfahren in Abhängigkeit von der Intervalllänge?",
+      "options": [
+        "Je kürzer die Zeitintervalle bei Cutler-Ederer, desto mehr nähern sich die Ergebnisse denen von Kaplan-Meier an",
+        "Je länger die Intervalle bei Cutler-Ederer, desto näher an Kaplan-Meier",
+        "Die Intervalllänge hat keinen Einfluss auf die Ergebnisse",
+        "Kaplan-Meier wird mit längeren Intervallen genauer"
+      ],
+      "correct": [0],
+      "explanation": "Je kürzer die Zeitintervalle beim Cutler-Ederer-Verfahren gewählt werden, desto mehr nähern sich dessen Ergebnisse denen der Kaplan-Meier-Methode an.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 141/142: \"Je kürzer die Zeitintervalle beim Cutler-Ederer-Verfahren gewählt werden, desto mehr nähern sich die Ergebnisse dieses Verfahrens denen der Kaplan-Meier-Methode an.\""
+    },
+    {
+      "id": "dstat-u05",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "numeric",
+      "question": "Kaplan-Meier, 1. Intervall: n = 10 unter Risiko, d = 1 Zielereignis. Wie groß ist die Ausfallwahrscheinlichkeit h₁ = d/n?",
+      "answer": 0.1,
+      "tolerance": 0,
+      "explanation": "h₁ = d₁/n₁ = 1/10 = 0,100. Die Überlebensrate ist dann u₁ = 1 − h₁ = 0,900.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 124: \"h₁ = d₁/n₁ = 1/10 = 0,100.\""
+    },
+    {
+      "id": "dstat-u06",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Wie berechnet sich beim Kaplan-Meier-Verfahren die kumulative Überlebensrate fⱼ?",
+      "options": [
+        "fⱼ = fⱼ₋₁ · uⱼ  (Produkt der bisherigen Überlebensrate mit der aktuellen Intervall-Überlebensrate)",
+        "fⱼ = fⱼ₋₁ + uⱼ",
+        "fⱼ = dⱼ / nⱼ",
+        "fⱼ = 1 − uⱼ"
+      ],
+      "correct": [0],
+      "explanation": "Die kumulative Überlebensrate ist das Produkt aus der vorherigen kumulativen Rate und der aktuellen Intervall-Überlebensrate: fⱼ = fⱼ₋₁ · uⱼ (mit f₀ = 1). Dabei ist uⱼ = 1 − hⱼ und hⱼ = dⱼ/nⱼ.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 123/126: \"fⱼ = fⱼ₋₁ · uⱼ (f₀ = 1). … f₁ = f₀ · u₁ = 1,000 · 0,900 = 0,900.\""
+    },
+    {
+      "id": "dstat-u07",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "numeric",
+      "question": "Kaplan-Meier-Beispiel: f₁ = 0,900 und im 2. Intervall ist u₂ = 0,889. Wie groß ist die kumulative Überlebensrate f₂ (auf 3 Nachkommastellen)?",
+      "answer": 0.8,
+      "tolerance": 0.001,
+      "explanation": "f₂ = f₁ · u₂ = 0,900 · 0,889 = 0,800.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 129: \"f₂ = f₁ · u₂ = 0,900 · 0,889 = 0,800.\""
+    },
+    {
+      "id": "dstat-u08",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "numeric",
+      "question": "Cutler-Ederer, 3. Intervall: r₃ = 8 unter Risiko zu Beginn, c₃ = 2 zensierte Fälle. Wie groß ist die mittlere Zahl unter Risiko n₃ = r₃ − c₃/2?",
+      "answer": 7,
+      "tolerance": 0,
+      "explanation": "n₃ = r₃ − c₃/2 = 8 − 2/2 = 8 − 1 = 7,0. Die zensierten Fälle gehen mit halbem Gewicht ein, weil ihre Zeiten im Intervall als gleichverteilt angenommen werden.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 111: \"n₃ = r₃ − c₃/2 = 8 − 2/2 = 7,0.\""
+    },
+    {
+      "id": "dstat-u09",
+      "topic": "dstat-ueberleben",
+      "difficulty": 2,
+      "type": "single",
+      "question": "Welcher statistische Test wird am häufigsten zum Vergleich zweier Überlebenskurven verwendet?",
+      "options": [
+        "Der Log-Rank-Test",
+        "Die Coxsche Regression",
+        "Der Bravais-Pearson-Test",
+        "Der Spearman-Test"
+      ],
+      "correct": [0],
+      "explanation": "Zum Vergleich zweier Kurven und Feststellung eines Unterschieds ist der Log-Rank-Test der am häufigsten verwendete Test. Er vergleicht die Gesamtüberlebenszeiten zweier Gruppen.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 142: \"Der am häufigsten verwendete ist der sog. Log-Rank-Test, der die Gesamtüberlebenszeiten zweier Gruppen miteinander vergleicht …\""
+    },
+    {
+      "id": "dstat-u10",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Warum reicht der Log-Rank-Test allein oft nicht aus, und welches Verfahren wird dann eingesetzt?",
+      "options": [
+        "Weil das Überleben von mehreren Faktoren beeinflusst wird – dann ist eine multivariate Analyse mit Coxscher Regression nötig",
+        "Weil der Log-Rank-Test nur zensierte Fälle betrachtet – dann nimmt man Kaplan-Meier",
+        "Weil er nur für ein Merkmal gilt – dann nimmt man den Spearman-Test",
+        "Weil er keinen p-Wert liefert – dann nimmt man ein Tortendiagramm"
+      ],
+      "correct": [0],
+      "explanation": "Da das Überleben meist von mehreren Faktoren beeinflusst wird, kann der Log-Rank-Test allein keine zuverlässige Beurteilung liefern. Dazu ist eine multivariate Analyse nötig, die meist mit der Coxschen Regression (David R. Cox) vorgenommen wird; sie schätzt den Einfluss jedes einzelnen Faktors.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 143: \"Da das Überleben meistens von mehreren Faktoren beeinflusst wird, kann der Log-Rank-Test allein keine zuverlässige Beurteilung … liefern. Dazu ist eine multivariate Analyse notwendig, die meistens mit Hilfe der Coxschen Regression … vorgenommen wird.\""
+    },
+    {
+      "id": "dstat-u11",
+      "topic": "dstat-ueberleben",
+      "difficulty": 3,
+      "type": "single",
+      "question": "Was ist bei der Coxschen Regression bezüglich fehlender Angaben zu beachten?",
+      "options": [
+        "Nur Fälle mit qualifizierter Angabe zu jedem Risikofaktor gehen ein; zu viele fehlende Angaben machen sie nutzlos",
+        "Fehlende Angaben werden automatisch durch den Mittelwert ersetzt",
+        "Fehlende Angaben spielen keine Rolle",
+        "Nur Fälle ohne jeden Risikofaktor gehen ein"
+      ],
+      "correct": [0],
+      "explanation": "Bei der Coxschen Regression gehen nur solche Fälle in die Berechnung ein, zu denen für jeden Risikofaktor eine qualifizierte Angabe vorliegt. Zu viele fehlende Angaben in den Daten machen eine Coxsche Regression nutzlos.",
+      "source": "Foliensatz Deskriptive Statistik, Folie 143: \"… dass nur solche Fälle in die Berechnungen eingehen, zu denen für jeden Risikofaktor eine qualifizierte Angabe vorliegt. Zu viele fehlende Angaben … machen eine Coxsche Regression nutzlos.\""
+    }
+  ]
+}

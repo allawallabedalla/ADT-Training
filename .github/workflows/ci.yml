@@ -25,5 +25,11 @@ jobs:
           done
       - name: Fragen-Datenbank validieren
         run: node tests/validate-questions.mjs
+      - name: Geprüfte Inhalts-Dateien (content/) validieren
+        run: |
+          for f in content/*.json; do
+            [ -e "$f" ] || continue
+            node tools/validate-content.mjs "$f"
+          done
       - name: Unit-Tests (Sync-Logik)
         run: node tests/unit-sync.mjs
