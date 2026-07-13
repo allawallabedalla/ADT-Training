@@ -1,6 +1,6 @@
 /* Service Worker – Offline-Cache für den ADT Trainer.
  * Cache-Version bei Änderungen erhöhen, damit Nutzer die neue Version erhalten. */
-const CACHE = "adt-trainer-v2";
+const CACHE = "adt-trainer-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -17,7 +17,13 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // KEIN automatisches skipWaiting: ein Update wartet, bis der Nutzer es per
+  // In-App-Banner bestätigt (dann sendet die App die SKIP_WAITING-Nachricht).
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+});
+
+self.addEventListener("message", (e) => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {

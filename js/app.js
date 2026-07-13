@@ -22,8 +22,10 @@ const DATA_OK = (() => {
 /* ------------------------------------------------------------------ *
  * 1) Persistenter Zustand (localStorage, robust gegen Defekte)
  * ------------------------------------------------------------------ */
-const STORE_KEY = "adt_trainer_state_v1";
+const STORE_KEY = "adt_trainer_state_v1";   // NIE umbenennen – siehe workbook.md („Speicherstände sind heilig")
+const SCHEMA_VERSION = 1;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
 const DEFAULT_STATE = {
+  schemaVersion: SCHEMA_VERSION,
   xp: 0,
   streak: 0,
   lastActiveDay: null,          // "YYYY-MM-DD"
@@ -35,12 +37,60 @@ const DEFAULT_STATE = {
   bestExamPct: 0,
 };
 
+// Migrations-Gerüst: MIGRATIONS[n] hebt einen Stand von Version n-1 auf n.
+// So überleben Lernstände künftige Datenmodell-Änderungen (statt sie zu verwerfen).
+const MIGRATIONS = {
+  // Beispiel für die Zukunft:
+  // 2: (s) => { s.neuesFeld = 0; return s; },
+};
+function migrate(state) {
+  let v = Number(state && state.schemaVersion) || 1;
+  while (v < SCHEMA_VERSION) {
+    const m = MIGRATIONS[v + 1];
+    if (typeof m === "function") {
+      try { state = m(state) || state; }
+      catch (e) { console.warn("Migration " + (v + 1) + " fehlgeschlagen", e); }
+    }
+    v++;
+  }
+  if (state && typeof state === "object") state.schemaVersion = SCHEMA_VERSION;
+  return state;
+}
+
+// Defensiv säubern: ein teilweise defekter Stand darf die App nie brechen.
+function sanitizeState(raw) {
+  const s = { ...DEFAULT_STATE, ...(raw && typeof raw === "object" ? raw : {}) };
+  const clampInt = (v, min, max) => {
+    let n = Math.floor(Number(v)); if (!isFinite(n)) n = min;
+    n = Math.max(min, n); if (max != null) n = Math.min(max, n); return n;
+  };
+  s.schemaVersion = SCHEMA_VERSION;
+  s.xp = clampInt(s.xp, 0);
+  s.streak = clampInt(s.streak, 0);
+  s.totalAnswered = clampInt(s.totalAnswered, 0);
+  s.totalCorrect = clampInt(s.totalCorrect, 0);
+  s.examsPassed = clampInt(s.examsPassed, 0);
+  s.bestExamPct = clampInt(s.bestExamPct, 0, 100);
+  s.lastActiveDay = typeof s.lastActiveDay === "string" ? s.lastActiveDay : null;
+  s.perQuestion = (s.perQuestion && typeof s.perQuestion === "object") ? s.perQuestion : {};
+  s.badges = (s.badges && typeof s.badges === "object") ? s.badges : {};
+  for (const id of Object.keys(s.perQuestion)) {
+    const p = s.perQuestion[id] || {};
+    s.perQuestion[id] = {
+      seen: clampInt(p.seen, 0),
+      correct: clampInt(p.correct, 0),
+      wrong: clampInt(p.wrong, 0),
+      lastResult: (p.lastResult === "correct" || p.lastResult === "wrong") ? p.lastResult : null,
+    };
+  }
+  return s;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return { ...DEFAULT_STATE };
-    const parsed = JSON.parse(raw);
-    return { ...DEFAULT_STATE, ...parsed, perQuestion: parsed.perQuestion || {}, badges: parsed.badges || {} };
+    return sanitizeState(migrate(JSON.parse(raw)));
   } catch (e) {
     console.warn("State beschädigt, setze zurück.", e);
     return { ...DEFAULT_STATE };
@@ -48,14 +98,17 @@ function loadState() {
 }
 let S = loadState();
 let saveTimer = null;
+function persistLocal() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); return true; }
+  catch (e) { console.warn("Speichern fehlgeschlagen (localStorage voll?)", e); return false; }
+}
 function saveState() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
-    catch (e) { console.warn("Speichern fehlgeschlagen", e); }
-    scheduleSync();
-  }, 120);
+  saveTimer = setTimeout(() => { persistLocal(); scheduleSync(); }, 120);
 }
+// Ausstehende Speicherung sofort schreiben – z. B. wenn die App geschlossen oder
+// in den Hintergrund geschickt wird (auf iOS laufen Timer dann evtl. nicht mehr).
+function flushSave() { clearTimeout(saveTimer); persistLocal(); }
 
 /* ---- Cloud-Sync-Anbindung (optional, siehe js/sync.js) ---- */
 let syncTimer = null;
@@ -67,8 +120,8 @@ function scheduleSync() {
 }
 function getLocalState() { return S; }
 function setLocalState(merged) {
-  S = { ...DEFAULT_STATE, ...merged, perQuestion: merged.perQuestion || {}, badges: merged.badges || {} };
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignorieren */ }
+  S = sanitizeState(migrate(merged));
+  persistLocal();
 }
 async function runSync(opts) {
   if (!window.ADTSync) return { ok: false };
@@ -379,7 +432,14 @@ function renderSettings() {
       <button class="mode-btn" id="btnDisconnect"><span class="emoji">🚪</span><span class="txt"><b>Verbindung trennen</b><p>Code von diesem Gerät entfernen (Daten bleiben in der Cloud)</p></span><span class="chev">›</span></button>`;
   }
 
-  app.innerHTML = `<div class="section-title">Geräteübergreifende Synchronisation</div>${body}`;
+  const backup = `
+    <div class="section-title" style="margin-top:24px">Sicherung (dieses Gerät)</div>
+    <p class="muted" style="margin:0 0 10px">Fortschritt als Datei sichern – als Backup oder zum Übertragen ohne Cloud.</p>
+    <button class="mode-btn" id="btnExport"><span class="emoji">💾</span><span class="txt"><b>Backup exportieren</b><p>Fortschritt als Datei speichern</p></span><span class="chev">›</span></button>
+    <button class="mode-btn" id="btnImport"><span class="emoji">📥</span><span class="txt"><b>Backup importieren</b><p>Aus Datei wiederherstellen (wird zusammengeführt)</p></span><span class="chev">›</span></button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none">`;
+
+  app.innerHTML = `<div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}`;
 
   const $ = (id) => document.getElementById(id);
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
@@ -392,19 +452,27 @@ function renderSettings() {
     else if (r && r.reason === "offline") toast("🔌 Offline – wird später abgeglichen");
     else toast("⚠️ Sync fehlgeschlagen");
   });
-  const bD = $("btnDisconnect"); if (bD) bD.addEventListener("click", () => {
-    if (confirm("Verbindung auf diesem Gerät trennen? Der Fortschritt bleibt lokal und in der Cloud erhalten.")) {
-      ADTSync.setCode(null); toast("Verbindung getrennt"); renderSettings();
-    }
+  const bD = $("btnDisconnect"); if (bD) bD.addEventListener("click", async () => {
+    const ok = await modalChoice("Verbindung trennen",
+      "Code von diesem Gerät entfernen? Der Fortschritt bleibt lokal und in der Cloud erhalten.",
+      [{ label: "Trennen", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]);
+    if (ok) { ADTSync.setCode(null); toast("Verbindung getrennt"); renderSettings(); }
   });
+  const bEx = $("btnExport"); if (bEx) bEx.addEventListener("click", exportProgress);
+  const bIm = $("btnImport"); const imf = $("importFile");
+  if (bIm && imf) {
+    bIm.addEventListener("click", () => imf.click());
+    imf.addEventListener("change", () => { if (imf.files && imf.files[0]) importProgressFile(imf.files[0]); imf.value = ""; });
+  }
   updateSyncChip();
 }
 
 function updateSyncChip() {
   const chip = document.getElementById("syncChip");
   if (!chip || !window.ADTSync) return;
-  if (!navigator.onLine) chip.textContent = "🔌 offline";
+  if (!navigator.onLine) chip.textContent = "🔌 offline · wird später abgeglichen";
   else if (ADTSync.isSyncing()) chip.textContent = "🔄 synchronisiere…";
+  else if (ADTSync.hasPending && ADTSync.hasPending()) chip.textContent = "⏳ Abgleich ausstehend";
   else chip.textContent = "☁️ verbunden";
 }
 
@@ -616,13 +684,29 @@ function renderBadges() {
  * ------------------------------------------------------------------ */
 let VIEW = "home";
 function go(view) {
+  const prev = VIEW;
   VIEW = view;
-  if (view === "home") renderHome();
-  else if (view === "topics") renderTopics();
-  else if (view === "quiz") renderQuiz();
-  else if (view === "badges") renderBadges();
-  else if (view === "settings") renderSettings();
-  history.replaceState({ view }, "");
+  try {
+    if (view === "home") renderHome();
+    else if (view === "topics") renderTopics();
+    else if (view === "quiz") renderQuiz();
+    else if (view === "badges") renderBadges();
+    else if (view === "settings") renderSettings();
+    history.replaceState({ view }, "");
+  } catch (e) {
+    console.error("Render-Fehler in Ansicht '" + view + "':", e);
+    // Nie weißer Bildschirm: sichere Rückfallanzeige mit Weg zurück.
+    VIEW = "home";
+    try {
+      app.innerHTML = `<div class="empty"><div class="ic">😕</div>
+        <h2>Ups, da ging etwas schief</h2>
+        <p class="muted">Dein Fortschritt ist sicher gespeichert. Tippe unten, um neu zu starten.</p></div>`;
+      actionbar.classList.remove("hidden");
+      actionbar.innerHTML = `<div class="inner"><button class="btn-primary" id="recoverBtn">Zur Startseite</button></div>`;
+      const rb = document.getElementById("recoverBtn");
+      if (rb) rb.addEventListener("click", () => { try { go("home"); } catch (_) { location.reload(); } });
+    } catch (_) { /* im Extremfall bleibt die letzte Ansicht stehen */ VIEW = prev; }
+  }
 }
 function goBack() {
   if (VIEW === "quiz") {
@@ -642,15 +726,132 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 1900);
 }
-function confirmReset() {
-  if (confirm("Wirklich den gesamten Lernfortschritt (XP, Level, Serie, Erfolge) löschen? Das kann nicht rückgängig gemacht werden.")) {
-    S = { ...DEFAULT_STATE }; saveState(); toast("Fortschritt zurückgesetzt"); go("home");
+
+// In-App-Banner „neue Version verfügbar" (Service-Worker-Update).
+let swUpdateAccepted = false;   // nur nach aktiver Bestätigung neu laden
+function showUpdateBanner(worker) {
+  if (document.getElementById("updateBanner")) return;
+  const bar = document.createElement("div");
+  bar.id = "updateBanner"; bar.className = "update-banner";
+  bar.innerHTML = `<span>✨ Neue Version verfügbar</span><button id="updateReload">Neu laden</button>`;
+  document.body.appendChild(bar);
+  requestAnimationFrame(() => bar.classList.add("show"));
+  document.getElementById("updateReload").addEventListener("click", () => {
+    swUpdateAccepted = true;
+    try { worker.postMessage({ type: "SKIP_WAITING" }); }
+    catch (e) { location.reload(); }
+  });
+}
+
+// Wiederverwendbarer Auswahl-Dialog. buttons: [{label, value, variant}]. Promise -> value.
+function modalChoice(title, message, buttons) {
+  return new Promise((resolve) => {
+    const ov = document.createElement("div");
+    ov.className = "modal-overlay";
+    const btnHtml = buttons.map((b, i) => {
+      const cls = b.variant === "danger" ? "btn-danger" : b.variant === "ghost" ? "btn-ghost" : "btn-primary";
+      return `<button class="${cls} modal-btn" data-i="${i}">${esc(b.label)}</button>`;
+    }).join("");
+    ov.innerHTML = `<div class="modal-card">
+      <h3 class="modal-title">${esc(title)}</h3>
+      ${message ? `<p class="modal-msg">${esc(message)}</p>` : ""}
+      <div class="modal-actions">${btnHtml}</div></div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add("show"));
+    const close = (val) => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 200); resolve(val); };
+    ov.querySelectorAll(".modal-btn").forEach((el) => el.addEventListener("click", () => close(buttons[+el.dataset.i].value)));
+    ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
+  });
+}
+
+async function confirmReset() {
+  if (syncEnabled()) {
+    const choice = await modalChoice(
+      "Fortschritt zurücksetzen",
+      "Dieses Gerät ist mit der Cloud verbunden. Wie möchtest du zurücksetzen?",
+      [
+        { label: "Überall (Cloud + dieses Gerät)", value: "all", variant: "danger" },
+        { label: "Nur dieses Gerät (trennt die Cloud)", value: "local", variant: "primary" },
+        { label: "Abbrechen", value: null, variant: "ghost" },
+      ]
+    );
+    if (!choice) return;
+    if (choice === "all") {
+      S = { ...DEFAULT_STATE }; persistLocal();
+      const r = await ADTSync.overwriteRemote(S);
+      toast(r && r.ok ? "Überall zurückgesetzt" : "Lokal zurückgesetzt – Cloud folgt bei Verbindung");
+    } else {
+      // Verbindung trennen, damit der lokale Reset nicht aus der Cloud zurückkehrt
+      ADTSync.setCode(null);
+      S = { ...DEFAULT_STATE }; persistLocal();
+      toast("Zurückgesetzt · Cloud-Verbindung getrennt");
+    }
+    go("home");
+  } else {
+    const ok = await modalChoice(
+      "Fortschritt zurücksetzen",
+      "Wirklich den gesamten Lernfortschritt (XP, Level, Serie, Erfolge) löschen? Das kann nicht rückgängig gemacht werden.",
+      [{ label: "Ja, löschen", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]
+    );
+    if (ok) { S = { ...DEFAULT_STATE }; persistLocal(); toast("Fortschritt zurückgesetzt"); go("home"); }
   }
+}
+
+/* ---- Lokales Backup: Export / Import (unabhängig von der Cloud) ---- */
+function exportProgress() {
+  try {
+    const payload = { app: "adt-trainer", schemaVersion: SCHEMA_VERSION, exportedAt: new Date().toISOString(), state: S };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = todayStr();
+    a.href = url; a.download = "adt-trainer-backup-" + stamp + ".json";
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    toast("💾 Backup gespeichert");
+  } catch (e) {
+    console.warn("Export fehlgeschlagen", e);
+    toast("⚠️ Export nicht möglich");
+  }
+}
+
+function importProgressFile(file) {
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const parsed = JSON.parse(String(reader.result));
+      const incoming = parsed && parsed.state ? parsed.state : parsed; // roh oder verpackt
+      if (!incoming || typeof incoming !== "object") throw new Error("Ungültige Datei");
+      const cleanIncoming = sanitizeState(migrate(incoming));
+      // Verlustarm zusammenführen (nie schlechter als vorher)
+      const merged = window.ADTSync ? ADTSync.mergeStates(S, cleanIncoming) : cleanIncoming;
+      S = sanitizeState(migrate(merged));
+      persistLocal();
+      checkBadges();
+      toast("✅ Backup importiert & zusammengeführt");
+      if (syncEnabled()) runSync({});
+      go("settings");
+    } catch (e) {
+      console.warn("Import fehlgeschlagen", e);
+      toast("⚠️ Datei konnte nicht gelesen werden");
+    }
+  };
+  reader.onerror = () => toast("⚠️ Datei konnte nicht gelesen werden");
+  reader.readAsText(file);
 }
 
 /* ------------------------------------------------------------------ *
  * 9) Start
  * ------------------------------------------------------------------ */
+// Globale Fehlerabsicherung – Fehler dürfen die App nie unbedienbar machen.
+window.addEventListener("error", (e) => { console.error("Unerwarteter Fehler:", e && e.message); });
+window.addEventListener("unhandledrejection", (e) => { console.warn("Unbehandelte Promise-Ablehnung:", e && e.reason); });
+
+// Fortschritt beim Schließen/Backgrounden zuverlässig sichern (nichts geht verloren).
+window.addEventListener("pagehide", flushSave);
+document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
+
 document.getElementById("backBtn").addEventListener("click", goBack);
 
 if (!DATA_OK) {
@@ -671,9 +872,26 @@ if (!DATA_OK) {
   }
 }
 
-// Service Worker registrieren (offline)
+// Service Worker registrieren (offline) + Update-Erkennung mit In-App-Banner
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW-Registrierung fehlgeschlagen", err));
+    navigator.serviceWorker.register("./sw.js").then((reg) => {
+      const notifyIfWaiting = () => { if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting); };
+      notifyIfWaiting();
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener("statechange", () => {
+          if (nw.state === "installed" && navigator.serviceWorker.controller) showUpdateBanner(nw);
+        });
+      });
+    }).catch((err) => console.warn("SW-Registrierung fehlgeschlagen", err));
+
+    // Neu laden nur, wenn der Nutzer das Update bestätigt hat (verhindert
+    // einen unnötigen Reload beim ersten clients.claim).
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!swUpdateAccepted || reloaded) return; reloaded = true; location.reload();
+    });
   });
 }

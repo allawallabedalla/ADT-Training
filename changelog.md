@@ -11,6 +11,51 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.3.0] — 2026-07-13
+
+Robustheits-Paket: Fundament, Sync und Bedienung deutlich abgesichert.
+Leitlinie: **Die App muss makellos funktionieren.**
+
+### Hinzugefügt
+- **Migrations-Gerüst** für Speicherstände (`schemaVersion` + `MIGRATIONS`): künftige
+  Datenmodell-Änderungen migrieren alte Stände, statt sie zu verwerfen.
+- **Defensive Zustands-Sanitisierung** beim Laden/Zusammenführen: kaputte oder veraltete
+  Werte (falsche Typen, negative Zahlen, defekte Fragen-Einträge) werden geheilt statt
+  zu crashen.
+- **Fehler-Boundary** in der Navigation: ein Render-Fehler zeigt eine freundliche
+  Rückfall-Ansicht statt eines weißen Bildschirms; globale `error`/`unhandledrejection`-Handler.
+- **Sofort-Speichern beim Schließen/Backgrounden** (`pagehide`/`visibilitychange`): die
+  letzte Antwort geht auch dann nicht verloren, wenn die App unmittelbar geschlossen wird.
+- **Reset inkl. Cloud**: „Fortschritt zurücksetzen" bietet bei aktivem Sync die Wahl
+  „überall (Cloud + Gerät)" oder „nur dieses Gerät (trennt die Cloud)".
+- **Lokales Backup**: Fortschritt als `.json`-Datei exportieren und importieren
+  (wird verlustarm zusammengeführt) – Sicherung unabhängig von der Cloud.
+- **In-App-Update-Hinweis**: Banner „Neue Version verfügbar" mit „Neu laden";
+  Updates werden erst nach Bestätigung aktiviert (kein stiller Wechsel, kein Reload-Loop).
+- **Wiederverwendbarer Modal-Dialog** (statt `confirm()`), iOS-konform gestaltet.
+
+### Geändert
+- **Sync gehärtet**: Wiederholung mit Backoff bei transienten Fehlern (Netz/5xx/429),
+  „Abgleich ausstehend"-Kennzeichnung bei Offline/Fehler, Statusanzeige erweitert.
+- **Frontend nach iOS-Design-Guidelines** (Apple HIG): Tap-Ziele ≥ 44 pt (u. a.
+  Zurück-Button), 8-pt-Raster, Backdrop-Blur/Depth für Modal & Banner, Safe-Area-Beachtung.
+- **Service Worker v3**: kein automatisches `skipWaiting` mehr – Update-Aktivierung
+  wird per Banner vom Nutzer bestätigt; `message`-Handler für `SKIP_WAITING`.
+
+### Sicherheit
+- Optionale **Härtung der Supabase-Funktion** dokumentiert (README): Größenlimit
+  (~200 KB) pro Datensatz und Code-Längen-Prüfung gegen Missbrauch.
+
+### Getestet
+- Unit-Tests: Merge, Code-Erzeugung/-Normalisierung, `overwriteRemote`, Retry-Backoff,
+  Offline-„ausstehend"-Flag, korrekte Header-Logik für beide Schlüsseltypen.
+- Browser-Testlauf (Chromium/Playwright): frischer Start, **Migration/Sanitisierung eines
+  defekten Speicherstands**, Reset-Modal, Backup-Export **und** -Import (Merge), alles ohne
+  Laufzeitfehler.
+- Regressionstest Cross-Device-Sync (bidirektional) weiterhin grün.
+
+---
+
 ## [0.2.1] — 2026-07-13
 
 ### Behoben

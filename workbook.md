@@ -16,6 +16,9 @@
 
 ## 2. Spielregeln der Zusammenarbeit
 
+- **⭐ OBERSTE REGEL – makellose Funktion:** Das Allerwichtigste ist, dass die App
+  fehlerfrei und zuverlässig läuft. Kein Feature wird ausgeliefert, das die Stabilität
+  gefährdet. Jede Änderung wird vor dem Push im echten Browser getestet.
 - **Sprache:** Deutsch (Code-Kommentare & UI ebenfalls Deutsch).
 - **Fachliche Korrektheit hat Vorrang.** Fragen/Antworten müssen stimmen; im Zweifel
   konservativ und mit Quelle/Standard (TNM/UICC, ICD-O-3, ICD-10, ADT/GEKID-Basisdatensatz,
@@ -62,6 +65,10 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
 - ✅ **Geräteübergreifende Synchronisation** (Cloud-Sync via Supabase, Sync-Code, verlustarmer Merge) — v0.2.0, 2026-07-13
+- ✅ **Robustheits-Paket** (v0.3.0, 2026-07-13): Migrations-Gerüst · defensive Zustands-Sanitisierung ·
+  Fehler-Boundary · Sofort-Speichern beim Schließen · Sync-Härtung (Retry/Backoff, „ausstehend") ·
+  Reset inkl. Cloud · lokales Backup (Export/Import) · Update-Banner · iOS-konforme UI (Modal/Banner)
+- ✅ Supabase-Funktionen-Härtung dokumentiert (Größenlimit, Code-Längen-Prüfung)
 
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
@@ -75,8 +82,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
   Fragen-Navigation + Markieren/Flaggen, „Abgeben" → volle Auswertung mit Erklärungen
 - ⬜ **P1** **Spaced Repetition (Leitner-System)**: fällige Wiederholungen mit optimalen
   Abständen; Startseite zeigt „heute fällig"
-- ⬜ **P2** **Einstellungen & Backup**: Fragenanzahl wählbar, Hell/Dunkel-Umschalter,
-  Sofort-Feedback an/aus, Fortschritt **exportieren/importieren** (Sicherung gegen Safari-Datenlöschung)
+- 🟡 **P2** **Einstellungen**: Fragenanzahl wählbar, Hell/Dunkel-Umschalter, Sofort-Feedback an/aus
+  (Backup **exportieren/importieren** ist bereits erledigt, v0.3.0)
 - ⬜ **P2** **Statistik & Tagesziel**: Trefferquote je Thema über Zeit, Prüfungs-Historie,
   tägliches Lernziel mit Fortschrittsring
 
@@ -87,11 +94,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 - ⬜ **P2** **Barrierefreiheit** (größere Schrift wählbar, Kontraste, Screenreader-Labels)
 
 ### Technik / Betrieb
-- ⬜ **P2** **Reset erweitern**: optional auch den Cloud-Datensatz des verbundenen Sync-Codes leeren.
-  Aktuell wirkt „Fortschritt zurücksetzen" nur lokal – bei aktivem Sync füllt der Merge die Werte
-  aus der Cloud wieder auf. Getrennte Aktionen „nur dieses Gerät" / „überall (Cloud)" + Bestätigung.
-- ⬜ **P3** Klarere Reset-/Sync-UX (Hinweis, dass lokaler Reset bei aktivem Code aus der Cloud zurückkommt)
-- ⬜ **P2** In-App-Hinweis „neue Version verfügbar" bei Service-Worker-Update
+- ✅ **Reset erweitern**: „überall (Cloud) / nur dieses Gerät" umgesetzt (v0.3.0)
+- ✅ **In-App-Hinweis „neue Version verfügbar"** bei Service-Worker-Update (v0.3.0)
 - ⬜ **P3** Merge des Arbeits-Branches auf `main` (auf Wunsch, für dauerhafte Pages-URL)
 - ⬜ **P3** Automatischer Konsistenz-Check der Fragen (CI/Test-Skript)
 
@@ -121,6 +125,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 | 2026-07-13 | Identität per **Sync-Code** (statt Login) | Kein Passwort/OAuth nötig – einfachste Nutzung; Code = Zugriffsschlüssel (capability) |
 | 2026-07-13 | **Network-first** für `config.js` & `questions.js` im SW | Konfig-/Fragen-Updates erreichen Nutzer ohne Cache-Neuversionierung |
 | 2026-07-13 | Speicher-Schlüssel `adt_trainer_state_v1` bleibt **stabil** | Speicherstände überleben App-Updates; Änderungen nur per Migration |
+| 2026-07-13 | Frontend folgt **iOS-Design-Guidelines (Apple HIG)** | Tap-Ziele ≥ 44 pt, 8-pt-Raster, Safe-Areas, Depth/Deference – vertrautes, wertiges Look-and-feel |
+| 2026-07-13 | Service-Worker-Updates **nur nach Nutzerbestätigung** | Kein stiller Wechsel/Reload-Loop; Nutzer entscheidet über „Neu laden" |
 
 ---
 

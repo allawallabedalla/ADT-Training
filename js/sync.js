@@ -18,6 +18,7 @@
 
   const CODE_KEY = "adt_sync_code";
   const LAST_KEY = "adt_sync_last";
+  const PENDING_KEY = "adt_sync_pending";   // ausstehender Abgleich (offline/Fehler)
 
   const cfg = () => (window.ADT_CONFIG || {});
   function isConfigured() {
@@ -29,6 +30,8 @@
   function setCode(code) { try { code ? localStorage.setItem(CODE_KEY, code) : localStorage.removeItem(CODE_KEY); } catch {} }
   function getLastSynced() { try { return localStorage.getItem(LAST_KEY); } catch { return null; } }
   function setLastSynced(iso) { try { localStorage.setItem(LAST_KEY, iso); } catch {} }
+  function hasPending() { try { return localStorage.getItem(PENDING_KEY) === "1"; } catch { return false; } }
+  function setPending(on) { try { on ? localStorage.setItem(PENDING_KEY, "1") : localStorage.removeItem(PENDING_KEY); } catch {} }
 
   // Menschlich lesbaren, kryptografisch zufälligen Code erzeugen: ADT-XXXXX-XXXXX-XXXXX
   function generateCode() {
@@ -102,7 +105,7 @@
   }
 
   // ---- Supabase-RPC-Aufrufe ----
-  async function rpc(fn, body) {
+  async function rpcOnce(fn, body) {
     const c = cfg();
     const key = c.supabaseAnonKey;
     const headers = { "Content-Type": "application/json", "apikey": key };
@@ -120,8 +123,40 @@
     return txt ? JSON.parse(txt) : null;
   }
 
+  // Mit Wiederholung + Backoff: transiente Fehler (Netz/5xx/429) werden erneut versucht,
+  // dauerhafte 4xx-Fehler (z. B. 401/404) nicht – die würden ohnehin wieder scheitern.
+  async function rpc(fn, body) {
+    let lastErr;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 400 * Math.pow(2, attempt - 1))); // 400ms, 800ms
+      try { return await rpcOnce(fn, body); }
+      catch (e) {
+        lastErr = e;
+        const m = /HTTP (\d+)/.exec((e && e.message) || "");
+        const code = m ? +m[1] : 0;
+        if (code >= 400 && code < 500 && code !== 429) break; // nicht transient
+      }
+    }
+    throw lastErr;
+  }
+
   async function pull(code) { return rpc("sync_pull", { p_code: code }); }
   async function push(code, data) { return rpc("sync_push", { p_code: code, p_data: data }); }
+
+  // Cloud-Datensatz direkt überschreiben (ohne Merge) – für „überall zurücksetzen".
+  async function overwriteRemote(data) {
+    const code = getCode();
+    if (!isConfigured() || !code) return { ok: false, reason: "not-configured" };
+    if (!navigator.onLine) { setPending(true); notify("offline"); return { ok: false, reason: "offline" }; }
+    try {
+      await push(code, data);
+      setLastSynced(new Date().toISOString()); setPending(false);
+      notify("ok"); return { ok: true };
+    } catch (e) {
+      setPending(true); notify("error", { message: e && e.message });
+      return { ok: false, error: e };
+    }
+  }
 
   let syncing = false;
   let onChange = null; // Callback: (status) => void
@@ -138,7 +173,7 @@
     const code = getCode();
     if (!isConfigured()) { notify("disabled"); return { ok: false, reason: "not-configured" }; }
     if (!code) { notify("no-code"); return { ok: false, reason: "no-code" }; }
-    if (!navigator.onLine) { notify("offline"); return { ok: false, reason: "offline" }; }
+    if (!navigator.onLine) { setPending(true); notify("offline"); return { ok: false, reason: "offline" }; }
     if (syncing) return { ok: false, reason: "busy" };
     syncing = true; notify("syncing");
     try {
@@ -149,11 +184,12 @@
       if (remote) setLocal(merged);
       await push(code, merged);
       const now = new Date().toISOString();
-      setLastSynced(now);
+      setLastSynced(now); setPending(false);
       notify("ok", { at: now });
       return { ok: true, merged: !!remote };
     } catch (e) {
       console.warn("Sync fehlgeschlagen:", e && e.message);
+      setPending(true);
       notify("error", { message: e && e.message });
       return { ok: false, reason: "error", error: e };
     } finally {
@@ -170,7 +206,8 @@
   window.ADTSync = {
     isConfigured, getCode, setCode, getLastSynced,
     generateCode, normalizeCode, mergeStates,
-    syncNow, codeExists,
+    syncNow, overwriteRemote, codeExists,
+    hasPending,
     isSyncing: () => syncing,
     onChange: (fn) => { onChange = fn; },
   };

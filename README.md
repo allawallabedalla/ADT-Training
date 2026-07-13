@@ -109,6 +109,29 @@ Passwort/Login nötig.
 > Lernfluss. Zusammengeführt wird verlustarm (Fortschrittswerte wachsen nur,
 > gehen nie verloren).
 
+### Optionale Härtung (empfohlen)
+
+Diese Variante der `sync_push`-Funktion begrenzt die Datensatzgröße und prüft die
+Code-Länge (Schutz vor versehentlichem/absichtlichem Missbrauch). Einfach im
+**SQL Editor** ausführen – sie ersetzt die bestehende Funktion (`create or replace`):
+
+```sql
+create or replace function public.sync_push(p_code text, p_data jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_code is null or length(p_code) < 8 or length(p_code) > 64 then
+    raise exception 'invalid code';
+  end if;
+  if pg_column_size(p_data) > 200000 then     -- max. ~200 KB pro Fortschritt
+    raise exception 'payload too large';
+  end if;
+  insert into public.progress(code, data, updated_at)
+  values (p_code, p_data, now())
+  on conflict (code) do update set data = excluded.data, updated_at = now();
+end;
+$$;
+```
+
 ## Fragen ergänzen oder anpassen
 
 Alle Fragen stehen in **[`data/questions.js`](data/questions.js)**.
