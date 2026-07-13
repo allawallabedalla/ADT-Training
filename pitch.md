@@ -1,0 +1,82 @@
+# ADT Trainer — Pitch & Produktüberblick
+
+> Stand: 2026-07-13 · Version 0.1.0
+> Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
+> größeren Änderung mit aktualisiert.
+
+## In einem Satz
+
+Eine robuste, offline-fähige Lern-App fürs iPhone, die gezielt auf die
+ADT-Prüfung **„Tumordokumentar/in"** vorbereitet — mit prüfungsgetreuen
+Fragen, Erklärungen und motivierender Gamification.
+
+## Problem
+
+Die Vorbereitung auf die ADT-Prüfung ist trocken und umfangreich (Tumor­klassi­fikation,
+ICD-O-3/ICD-10, TNM, Krebsregister, Epidemiologie …). Es fehlt ein
+kurzweiliges Werkzeug, mit dem man **jederzeit unterwegs am Handy** üben kann —
+im echten Prüfungsformat und mit direktem Lerneffekt.
+
+## Zielgruppe
+
+Prüfungskandidat:innen des ADT-Lehrgangs „Tumordokumentar/in". Primärnutzerin:
+eine konkrete Anwenderin, die die App auf ihrem iPhone nutzt. Die App muss
+darum vor allem **einfach und absturzsicher** sein.
+
+## Lösung
+
+Eine **Progressive Web App (PWA)**:
+
+- Läuft in Safari, wird per *„Zum Home-Bildschirm"* wie eine echte App installiert
+- Danach **vollständig offline** nutzbar (kein Netz nötig)
+- Kein App Store, kein Entwickler-Account, kein Konto, kein Server
+- Fortschritt wird lokal auf dem Gerät gespeichert
+
+## Kernfunktionen (aktueller Stand 0.1.0)
+
+| Bereich | Was es kann |
+|---|---|
+| **Lernmodi** | Gemischtes Training · Nach Thema lernen · Schwachstellen wiederholen · Prüfungssimulation (30 Fragen, bestanden ab 50 %) |
+| **Prüfungsformat** | Multiple-Choice mit *mehreren* richtigen Antworten; nur *vollständig* richtig zählt (kein Teilpunkt — wie § 5 der Prüfungsordnung) |
+| **Lerneffekt** | Zu **jeder** Frage eine Erklärung — Inhalte werden vermittelt, nicht nur abgefragt |
+| **Gamification** | XP, Level (mit Titeln), Tages-Serie (Streak 🔥), Erfolge/Badges |
+| **Fortschritt** | Trefferquote, gemeisterte Fragen je Thema, Prüfungs-Rekorde |
+| **Robustheit** | Datenvalidierung der Fragen beim Start, defektsicheres Speichern, Light/Dark, große Touch-Flächen, Offline-Cache |
+
+**Kennzahlen:** 55 Fragen · 9 Themengebiete (Grundlagen, TNM, ICD-O-3,
+ICD-10 & Dignität, Grading/Residual, Krebsregister, Epidemiologie, Therapie,
+Datenschutz).
+
+## Warum PWA statt native iOS-App
+
+- **Robust & sofort nutzbar:** ein Link genügt, keine Installation über den Store
+- **Keine Hürden:** kein Mac/Xcode, kein Apple-Developer-Account (99 $/Jahr), keine Review
+- **Offline & schnell:** Service Worker cached alles lokal
+- **Einfach pflegbar:** Änderungen sind sofort live, kein App-Update-Zwang
+
+## Prüfungsnähe
+
+Basiert auf der Prüfungsordnung „Tumordokumentar/in" der ADT e. V.
+(Stand 08/2022): schriftliche Prüfung, MC-Fragen mit mehrfach richtigen
+Antworten sowie Dokumentations-/Rechenaufgaben, 180 Minuten, bestanden ab 50 %.
+Zugelassene Hilfsmittel laut PO: ICD-10, ICD-O-3, OPS.
+
+## Technik (kurz)
+
+Reines HTML/CSS/**Vanilla-JavaScript**, keine Frameworks, keine Abhängigkeiten.
+Fragen liegen als einfache Datenstruktur in `data/questions.js`. PWA über
+`manifest.webmanifest` + `sw.js` (Offline-Cache). Hosting statisch (z. B.
+GitHub Pages).
+
+## Installation (Kurzfassung)
+
+1. App-URL in **Safari** öffnen
+2. **Teilen** → **„Zum Home-Bildschirm"** → *Hinzufügen*
+3. App startet im Vollbild und läuft offline
+
+## Wo es hingeht
+
+Die inhaltliche Ausbaustufe (offizielle/Beispiel-Fragen, Rechen-/Doku-Aufgaben)
+und Feature-Ausbau (echter Prüfungsmodus mit Timer, Spaced-Repetition-Wieder­holung,
+Einstellungen & Backup, Statistik/Tagesziel) sind im
+[Backlog](workbook.md#backlog) festgehalten.
