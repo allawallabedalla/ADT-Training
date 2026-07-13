@@ -23,6 +23,9 @@ python3 -m http.server "$PORT" >/dev/null 2>&1 &
 SRV=$!
 sleep 1
 BASE="http://localhost:${PORT}/index.html" node tests/e2e-smoke.mjs || fail=1
+
+echo "== 5) Service Worker / Offline =="
+BASE="http://localhost:${PORT}/index.html" node tests/sw-cache.mjs || fail=1
 kill "$SRV" 2>/dev/null || true
 
 echo "========================================"

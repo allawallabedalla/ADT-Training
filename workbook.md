@@ -94,7 +94,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 
 **Bekannte Risiken durch bisherige Umsetzung (ehrlich dokumentiert, alle im Backlog adressiert):**
 - Cloud/Push = neue Datenverarbeitung + offene anon-Endpunkte (Capability-Schutz per geheimem Code) → RPC-Härtung + Datenschutz-Hinweis (Schritt 2).
-- Manuelles SW-Cache-Versionieren ist fehleranfällig (einmal vergessen) → stale-while-revalidate (Schritt 3-Umfeld).
+- ~~Manuelles SW-Cache-Versionieren ist fehleranfällig (einmal vergessen)~~ → ✅ behoben (v0.17.0): stale-while-revalidate, stabiler Cache-Name.
 - network-first ohne Timeout → „lie-fi"-Start-Hänger → Fetch-Timeout (Quick Wins).
 - Kein automatisches Test-Netz im Repo; app.js wächst als Monolith → Modul-Split + Test-Harness (Schritt 3).
 - Server-Versand (Push/Reminder-Zeitlogik, Abo-Aufräumen) nie end-to-end getestet (Sandbox-Limit) → auf dem Gerät verifizieren.
@@ -127,7 +127,9 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ✅ Faire Streak (v0.14.0): Gnadentag (ein verpasster Tag erlaubt) + Rekord-Serie (bestStreak)
 - ⬜ Native Zurück-Navigation (pushState/popstate, Quiz mit Bestätigung)
 - ⬜ **app.js in Module aufteilen + Node-Test-Harness + Fragen-CI-Check** (stützt „makellose Funktion")
-- ⬜ Cache-Robustheit: stale-while-revalidate + reg.update (kein manuelles Cache-Bumpen mehr)
+- ✅ Cache-Robustheit (v0.17.0): stale-while-revalidate für die App-Shell + reg.update +
+  no-cache-Revalidierung; stabiler Cache-Name → kein manuelles Cache-Bumpen mehr. Neuer
+  SW-/Offline-Test (`tests/sw-cache.mjs`).
 - ⬜ Distraktoren/Items nach Item-Writing-Standards überarbeiten (Nonsens-Distraktoren, Test-Wiseness)
 - ⬜ Content-Ausbau ≥15–20 Fragen/Thema inkl. neuem Thema **OPS/Prozeduren** (wartet teils auf Material)
 - ✅ anon-RPCs verpflichtend härten (Größen-/Längen-Check) + `codeExists` entfernt (v0.8.0; SQL: supabase/sync-hardening.sql)

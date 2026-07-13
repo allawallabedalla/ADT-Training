@@ -10,7 +10,8 @@ Der Runner führt der Reihe nach aus:
 1. **Syntaxprüfung** aller JS-Dateien (`node --check`).
 2. **Fragen-Validierung** (`validate-questions.mjs`) – IDs, Themen, correct-Indizes, Erklärungen, difficulty.
 3. **Unit-Tests** (`unit-sync.mjs`) – reine Logik in `js/sync.js`: Merge, Code-Erzeugung/-Normalisierung, Header-Logik (sb_-Key vs. JWT), Retry, Offline/Pending.
-4. **E2E-Smoke** (`e2e-smoke.mjs`, Playwright) – App lädt fehlerfrei, Sanitisierung eines defekten Stands, **Reset leert wirklich** (Regression), Backup-Import mergt, Settings/Info/Themen/Erfolge rendern – ohne Laufzeitfehler.
+4. **E2E-Smoke** (`e2e-smoke.mjs`, Playwright, Service Worker *blockiert*) – App lädt fehlerfrei, Sanitisierung, **Reset leert wirklich** (Regression), Backup-Import mergt, Prüfungsablauf, SRS/Migration, Rechenaufgaben, Barrierefreiheit (Übung + Prüfung), Tagesziel/Onboarding – ohne Laufzeitfehler.
+5. **Service Worker / Offline** (`sw-cache.mjs`, Playwright mit *aktivem* SW) – Registrierung, App-Shell im Precache, Kontrolle und **Laden ohne Netz** aus dem Cache.
 
 Exit-Code 0 = alles grün.
 

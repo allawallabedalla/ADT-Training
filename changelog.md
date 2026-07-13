@@ -11,6 +11,32 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.17.0] — 2026-07-13  ·  Selbst-aktualisierender Cache (Robustheit)
+
+Beseitigt eine bekannte Fragilität: das **manuelle Hochzählen** der Service-Worker-Cache-
+Version bei jedem Release (einmal vergessen → Nutzer bekämen keine Updates mehr).
+
+### Geändert
+- **App-Shell jetzt „stale-while-revalidate"**: HTML/CSS/JS/Icons kommen sofort aus dem
+  Cache und werden im Hintergrund frisch nachgeladen → die neue Version ist beim nächsten
+  Start automatisch da, **ohne** dass eine Cache-Version erhöht werden muss.
+- **config.js & questions.js bleiben network-first**: korrigierte Fragen/Konfiguration
+  erreichen die Nutzer weiterhin sofort (sobald online).
+- **HTTP-Cache umgangen** (`cache: "no-cache"`) bei allen SW-Netz-Abrufen – sonst hätte der
+  Browser-HTTP-Cache eine „frische" Antwort in Wahrheit veraltet ausliefern können. (Der
+  Fehler wurde im Browser-Test entdeckt und behoben.)
+- `reg.update()` beim Zurückkehren in die App (prüft selten, aber zuverlässig auf einen
+  neuen Service Worker).
+- Cache-Name ist jetzt **stabil** (`adt-shell-v1`) – kein Bumpen je Release mehr; alte
+  versionierte Caches werden beim Aktivieren aufgeräumt.
+
+### Technik
+- Neuer Test-Schritt **`tests/sw-cache.mjs`** (Playwright mit aktivem Service Worker):
+  Registrierung, Precache, Kontrolle, **Laden ohne Netz**. Zusätzlich manuell verifiziert:
+  eine geänderte Datei propagiert per SWR ohne Cache-Bump. `tests/run.sh` grün.
+
+---
+
 ## [0.16.1] — 2026-07-13  ·  Icons ohne Hintergrundkachel
 
 - **Hintergrund-„Schattierung" hinter den Icons entfernt**: Icons stehen jetzt als reine

@@ -1,6 +1,16 @@
 /* Service Worker – Offline-Cache für den ADT Trainer.
- * Cache-Version bei Änderungen erhöhen, damit Nutzer die neue Version erhalten. */
-const CACHE = "adt-trainer-v18";
+ *
+ * Strategie (selbst-aktualisierend, KEIN manuelles Hochzählen je Release nötig):
+ *  - App-Shell (HTML, CSS, JS, Icons, Manifest): stale-while-revalidate –
+ *    sofort aus dem Cache, im Hintergrund frisch nachladen → neue Version ist beim
+ *    nächsten Start automatisch da. Eine Shell-Generation ist immer in sich stimmig.
+ *  - config.js & questions.js: network-first (mit Timeout) – Konfig-/Fragen-Updates
+ *    (z. B. korrigierte Antworten) erreichen die Nutzer sofort, sobald online.
+ *  - offline: alles kommt aus dem Cache.
+ *
+ * Der Cache-Name ist stabil; NICHT je Release ändern. Nur bei strukturellen
+ * Änderungen der Caching-Logik erhöhen (dann wird der alte Cache in „activate" geleert). */
+const CACHE = "adt-shell-v1";
 const ASSETS = [
   "./",
   "./index.html",
@@ -60,12 +70,9 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Strategie:
-//  - config.js, questions.js und Navigationen: Network-first (frisch, wenn online;
-//    Cache-Fallback offline) – so erreichen Konfig-/Fragen-Updates die Nutzer sofort.
-//  - alle übrigen App-Dateien: Cache-first (schnell, offline-fest) mit Nachcachen.
+function cacheable(res) { return res && res.status === 200 && res.type === "basic"; }
 function putInCache(req, res) {
-  if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+  if (cacheable(res)) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
 }
 // Netzwerk mit Timeout: bei „lie-fi" (Netz da, aber lahm) nicht ewig hängen,
 // sondern nach kurzer Zeit auf den Cache zurückfallen.
@@ -73,15 +80,33 @@ function fetchWithTimeout(request, ms) {
   return new Promise((resolve, reject) => {
     const ctrl = new AbortController();
     const t = setTimeout(() => { ctrl.abort(); reject(new Error("timeout")); }, ms);
-    fetch(request, { signal: ctrl.signal }).then(
+    // cache:"no-cache" umgeht den HTTP-Cache des Browsers (bedingter Request) – sonst
+    // könnte eine „frische" Antwort in Wahrheit veraltet aus dem HTTP-Cache kommen.
+    fetch(request, { signal: ctrl.signal, cache: "no-cache" }).then(
       (res) => { clearTimeout(t); resolve(res); },
       (err) => { clearTimeout(t); reject(err); }
     );
   });
 }
+// Stale-while-revalidate: sofort aus dem Cache antworten und im Hintergrund
+// aktualisieren. Ohne Cache-Treffer normal aus dem Netz laden (und cachen).
+// Die Revalidierung umgeht den HTTP-Cache (no-cache), damit wirklich die neue Datei kommt.
+function staleWhileRevalidate(request) {
+  return caches.open(CACHE).then((cache) =>
+    cache.match(request).then((cached) => {
+      const network = fetch(request, { cache: "no-cache" }).then((res) => {
+        if (cacheable(res)) cache.put(request, res.clone());
+        return res;
+      }).catch(() => cached);           // offline: Cache-Kopie behalten
+      return cached || network;         // Treffer sofort, sonst aufs Netz warten
+    })
+  );
+}
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;   // Fremd-Hosts (z. B. Supabase) nie cachen
+
   const networkFirst = e.request.mode === "navigate"
     || url.pathname.endsWith("/config.js")
     || url.pathname.endsWith("/questions.js");
@@ -92,11 +117,6 @@ self.addEventListener("fetch", (e) => {
         .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./index.html")))
     );
   } else {
-    e.respondWith(
-      caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
-        if (res && res.type === "basic") putInCache(e.request, res);
-        return res;
-      }).catch(() => caches.match("./index.html")))
-    );
+    e.respondWith(staleWhileRevalidate(e.request));
   }
 });

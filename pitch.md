@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.16.1
+> Stand: 2026-07-13 · Version 0.17.0
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 
@@ -48,7 +48,7 @@ Eine **Progressive Web App (PWA)**:
 | **Geräte-Sync** | Optionaler Cloud-Abgleich (Supabase) per **Sync-Code** — auf jedem Gerät weiterlernen, offline-first, verlustarmer Merge, Retry bei Störungen |
 | **Erinnerungen** | Optionale tägliche Web-Push-Erinnerung ans Üben (Uhrzeit wählbar; auf iPhone als installierte PWA) |
 | **Sicherung** | Backup als Datei exportieren/importieren; „überall/nur hier"-Reset für saubere Übergabe |
-| **Robustheit** | Datenvalidierung, selbstheilende Zustands-Sanitisierung, Migrations-Gerüst, Sofort-Speichern beim Schließen, Fehler-Boundary (nie weißer Bildschirm), Update-Hinweis, Offline-Cache |
+| **Robustheit** | Datenvalidierung, selbstheilende Zustands-Sanitisierung, Migrations-Gerüst, Sofort-Speichern beim Schließen, Fehler-Boundary (nie weißer Bildschirm), Offline-Cache, selbst-aktualisierend (stale-while-revalidate) |
 | **Design** | Durchgängig iOS-nativ (Apple HIG): flat-monochrome Icons, Large-Titles, gruppierte Listen, iOS-Farbsystem (OLED-Dark), ≥44 pt-Tap-Ziele, Safe-Areas; im Desktop-Browser als zentrierte App-Spalte |
 | **Barrierefreiheit** | Antwortauswahl (Übung **und** Prüfung) mit ARIA-Rollen (radiogroup/checkbox), Tastaturbedienung (Pfeile/Leertaste), sichtbarer Fokus, In-place-Auswahl (VoiceOver-stabil), Bewegungsreduktion |
 
