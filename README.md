@@ -25,23 +25,23 @@ funktioniert danach **komplett offline** – ganz ohne App Store.
 
 ## Hosting (z. B. kostenlos über GitHub Pages)
 
-Der komplette App-Code liegt im Ordner [`app/`](app/). Zum Bereitstellen
-genügt ein beliebiger statischer Webserver (HTTPS erforderlich, damit der
-Offline-Modus/Service Worker funktioniert). Mit **GitHub Pages**:
-Repository-Einstellungen → *Pages* → Quelle auf den Branch und den Ordner
-`/app` setzen. Danach ist die App unter der Pages-URL erreichbar.
+Der komplette App-Code liegt im **Repository-Root** (`index.html` usw.). Zum
+Bereitstellen genügt ein beliebiger statischer Webserver (HTTPS erforderlich,
+damit der Offline-Modus/Service Worker funktioniert). Mit **GitHub Pages**:
+Repository-Einstellungen → *Pages* → *Deploy from a branch* → gewünschten
+Branch und Ordner `/(root)` wählen → *Save*. Danach ist die App unter der
+Pages-URL erreichbar.
 
 Lokal testen:
 
 ```bash
-cd app
 python3 -m http.server 8000
 # dann http://localhost:8000 im Browser öffnen
 ```
 
 ## Fragen ergänzen oder anpassen
 
-Alle Fragen stehen in **[`app/data/questions.js`](app/data/questions.js)**.
+Alle Fragen stehen in **[`data/questions.js`](app/data/questions.js)**.
 Jede Frage hat ein einfaches Format (Thema, Schwierigkeit, Typ, Optionen,
 richtige Antworten, Erklärung). Neue Fragen einfach an das Array anhängen –
 die App validiert das Format beim Start und meldet Fehler in der Konsole.
@@ -55,7 +55,7 @@ die App validiert das Format beim Start und meldet Fehler in der Konsole.
 ## Struktur
 
 ```
-app/
+(Repository-Root)
 ├── index.html              App-Grundgerüst
 ├── manifest.webmanifest    PWA-Manifest (Name, Icons, Standalone)
 ├── sw.js                   Service Worker (Offline-Cache)
