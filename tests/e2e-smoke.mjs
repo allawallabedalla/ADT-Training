@@ -13,9 +13,11 @@ const checks = [];
 const chk = (c, m) => { checks.push(c); console.log((c ? 'ok:  ' : 'FAIL:') + ' ' + m); };
 
 const browser = await chromium.launch();
-async function page() {
+async function page(opts = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block', acceptDownloads: true });
   const p = await ctx.newPage();
+  // Onboarding-Overlay standardmäßig überspringen, damit es die übrigen Tests nicht blockiert.
+  if (opts.onboarded !== false) await p.addInitScript(() => localStorage.setItem('adt_onboarded', '1'));
   p.on('console', (m) => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
   p.on('pageerror', (e) => errors.push('PAGEERROR: ' + e.message));
   return p;
@@ -306,6 +308,50 @@ async function page() {
   chk(res.graceKept === 6, 'Serie: ein Gnadentag hält die Serie (5 -> 6)');
   chk(res.reset === 1, 'Serie: zwei verpasste Tage setzen zurück (-> 1)');
   chk(res.best >= 6, 'Serie: Rekord-Serie bleibt erhalten');
+}
+
+// 15) Tagesziel: Ring auf der Startseite, Fortschritt zählt heute, Ziel änderbar
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.today-card');
+  const start = await p.textContent('.today-main .txt p');
+  chk(/0 \/ 10 Fragen/.test(start), 'Tagesziel: Startzustand 0/10 auf der Startseite');
+  // eine Frage beantworten -> Tageszähler steigt
+  await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set(q.correct)], checked: [false], correctFlags: [null] };
+    go('quiz');
+  });
+  await p.click('#checkBtn'); await p.waitForSelector('.explain');
+  await p.evaluate(() => go('home'));
+  await p.waitForSelector('.today-card');
+  const after = await p.textContent('.today-main .txt p');
+  chk(/1 \/ 10 Fragen/.test(after), 'Tagesziel: nach 1 Antwort steht 1/10');
+  const stored = await p.evaluate(() => JSON.parse(localStorage.getItem('adt_today') || '{}').count);
+  chk(stored === 1, 'Tagesziel: heutiger Zähler lokal gespeichert');
+}
+
+// 16) Onboarding: Erststart zeigt Begrüßung, setzt Tagesziel und Flag
+{
+  const p = await page({ onboarded: false });
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.modal-overlay.onboard');
+  chk(true, 'Onboarding: Begrüßung erscheint beim Erststart');
+  // anderes Ziel wählen (20) und starten
+  await p.click('.goal-chip[data-goal="20"]');
+  await p.click('#onboardStart');
+  await p.waitForSelector('.modal-overlay.onboard', { state: 'detached' });
+  const goal = await p.evaluate(() => localStorage.getItem('adt_daily_goal'));
+  const flag = await p.evaluate(() => localStorage.getItem('adt_onboarded'));
+  chk(goal === '20' && flag === '1', 'Onboarding: Ziel (20) + Flag gesetzt');
+  const ring = await p.textContent('.today-main .txt p');
+  chk(/\/ 20 Fragen/.test(ring), 'Onboarding: Startseite übernimmt das gewählte Ziel');
+  // Reload -> Onboarding erscheint NICHT erneut
+  await p.reload({ waitUntil: 'networkidle' });
+  await p.waitForSelector('.today-card');
+  const again = await p.$('.modal-overlay.onboard');
+  chk(!again, 'Onboarding: erscheint nach Abschluss nicht erneut');
 }
 
 chk(errors.length === 0, 'keine Laufzeitfehler');

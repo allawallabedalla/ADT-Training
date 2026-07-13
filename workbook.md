@@ -122,7 +122,8 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
   Hintergrund (Kopf-/Aktionsleiste ausgerichtet); iPhone-Vollbild unverändert.
 
 **P2 – danach:**
-- ⬜ Onboarding-Flow + Tagesziel (an Streak gekoppelt)
+- ✅ Onboarding-Flow + Tagesziel (v0.15.0): Erststart-Begrüßung + tägliches Lernziel mit
+  Fortschrittsring (geräte-lokal). Offen: Statistik/Historie über Zeit
 - ✅ Faire Streak (v0.14.0): Gnadentag (ein verpasster Tag erlaubt) + Rekord-Serie (bestStreak)
 - ⬜ Native Zurück-Navigation (pushState/popstate, Quiz mit Bestätigung)
 - ⬜ **app.js in Module aufteilen + Node-Test-Harness + Fragen-CI-Check** (stützt „makellose Funktion")
@@ -167,8 +168,8 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
   Abständen; Startseite zeigt „heute fällig"
 - 🟡 **P2** **Einstellungen**: Fragenanzahl wählbar, Hell/Dunkel-Umschalter, Sofort-Feedback an/aus
   (Backup **exportieren/importieren** ist bereits erledigt, v0.3.0)
-- ⬜ **P2** **Statistik & Tagesziel**: Trefferquote je Thema über Zeit, Prüfungs-Historie,
-  tägliches Lernziel mit Fortschrittsring
+- 🟡 **P2** **Statistik & Tagesziel**: ✅ tägliches Lernziel mit Fortschrittsring (v0.15.0);
+  offen: Trefferquote je Thema über Zeit, Prüfungs-Historie
 
 ### Neu / offen
 - ✅ **Info-/Anleitungs-Reiter** „So funktioniert's" (v0.6.0, 2026-07-13): erklärt Modi,

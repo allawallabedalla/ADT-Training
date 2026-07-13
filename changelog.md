@@ -11,6 +11,27 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.15.0] — 2026-07-13  ·  Tagesziel & Onboarding
+
+Für neue Nutzer:innen ein sanfter Einstieg, für alle ein täglicher Anreiz.
+
+### Hinzugefügt
+- **Tagesziel mit Fortschrittsring** auf der Startseite: zeigt „X / Ziel Fragen heute",
+  füllt sich beim Üben und wechselt bei Erreichen in einen grünen „geschafft"-Zustand.
+  Tippen startet direkt eine Übung; das Ziel ist jederzeit über „Ziel ändern" anpassbar
+  (5/10/15/20/30 Fragen).
+- **Onboarding beim Erststart**: kurze Begrüßung, die die App erklärt und das Tagesziel
+  setzen lässt – erscheint nur einmal und nur für wirklich neue Nutzer:innen (kein
+  Fortschritt vorhanden), niemals für Bestandsnutzer.
+
+### Technik / Design
+- Tageszähler & Ziel sind bewusst **geräte-lokal** (localStorage, wie die Erinnerungs-Uhrzeit)
+  – kein Eingriff in den gesyncten Lernstand, keine Schema-Änderung, keine Merge-Komplexität.
+- 6 neue Tests (Ring-Startwert, Zähler nach Antwort, Onboarding zeigt/setzt/wiederholt-nicht).
+  Test-Harness überspringt Onboarding standardmäßig. `tests/run.sh` grün. Service Worker v16.
+
+---
+
 ## [0.14.0] — 2026-07-13  ·  Faire Tages-Serie & Rekord
 
 Die Tages-Serie ist jetzt motivierender statt bestrafend.

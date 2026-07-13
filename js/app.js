@@ -152,6 +152,21 @@ function saveState() {
 // in den Hintergrund geschickt wird (auf iOS laufen Timer dann evtl. nicht mehr).
 function flushSave() { clearTimeout(saveTimer); persistLocal(); }
 
+/* ---- Tagesziel & heutiger Fortschritt (bewusst GERÄTE-LOKAL, nicht gesynct) ----
+ * Der Tageszähler ist ein täglicher Anreiz „auf diesem Gerät"; ihn zu synchronisieren
+ * würde den verlustarmen Max-Merge verkomplizieren (Zähler müssten summiert werden).
+ * Darum wie die Erinnerungs-Uhrzeit rein lokal in localStorage. */
+const GOAL_KEY = "adt_daily_goal";
+const TODAY_KEY = "adt_today";
+const ONBOARD_KEY = "adt_onboarded";
+const GOAL_CHOICES = [5, 10, 15, 20, 30];
+function getDailyGoal() { try { const v = parseInt(localStorage.getItem(GOAL_KEY), 10); return (v >= 1 && v <= 500) ? v : 10; } catch { return 10; } }
+function setDailyGoal(n) { try { localStorage.setItem(GOAL_KEY, String(n)); } catch (e) {} }
+function getToday() { try { const o = JSON.parse(localStorage.getItem(TODAY_KEY) || "{}"); return (o && o.date === todayStr()) ? (parseInt(o.count, 10) || 0) : 0; } catch { return 0; } }
+function bumpToday(n) { try { const c = getToday() + (n || 0); localStorage.setItem(TODAY_KEY, JSON.stringify({ date: todayStr(), count: c })); return c; } catch { return 0; } }
+function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch { return true; } }
+function setOnboarded() { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) {} }
+
 /* ---- Cloud-Sync-Anbindung (optional, siehe js/sync.js) ---- */
 let syncTimer = null;
 function syncEnabled() { return !!(window.ADTSync && ADTSync.isConfigured() && ADTSync.getCode()); }
@@ -531,6 +546,7 @@ function checkCurrent() {
   S.xp += gained;
   const lvlAfter = levelForXp(S.xp);
   touchStreak();
+  bumpToday(1);                            // Tagesziel-Fortschritt (lokal)
   saveState();
 
   const newBadges = checkBadges();
@@ -609,7 +625,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.14.0";
+const APP_VERSION = "0.15.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -653,6 +669,33 @@ function renderHome() {
   const acc = overallAccuracy();
   const due = dueQuestions().length;
 
+  // Tagesziel-Ring (lokal)
+  const goal = getDailyGoal();
+  const todayN = getToday();
+  const goalDone = todayN >= goal;
+  const gPct = goal ? Math.min(100, Math.round(todayN / goal * 100)) : 0;
+  const gR = 25, gC = 2 * Math.PI * gR, gOff = gC * (1 - gPct / 100);
+  const gColor = goalDone ? "var(--success)" : "var(--primary)";
+  const todayCard = `
+    <div class="today-card">
+      <button class="today-main" data-act="today" aria-label="Heute üben – ${todayN} von ${goal} Fragen">
+        <span class="ring-mini">
+          <svg width="58" height="58" viewBox="0 0 58 58" aria-hidden="true">
+            <circle cx="29" cy="29" r="${gR}" fill="none" stroke="var(--bg-elev-2)" stroke-width="6"/>
+            <circle cx="29" cy="29" r="${gR}" fill="none" stroke="${gColor}" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="${gC.toFixed(1)}" stroke-dashoffset="${gOff.toFixed(1)}" transform="rotate(-90 29 29)"/>
+          </svg>
+          <span class="ring-num">${goalDone ? "✓" : todayN}</span>
+        </span>
+        <span class="txt">
+          <b>${goalDone ? "Tagesziel erreicht 🎉" : "Tagesziel heute"}</b>
+          <p>${todayN} / ${goal} Fragen${goalDone ? " – stark!" : ""}</p>
+        </span>
+        <span class="chev">›</span>
+      </button>
+      <button class="today-edit" data-act="goal">Ziel ändern</button>
+    </div>`;
+
   const standalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
   const installTip = standalone ? "" : `
     <div class="install-tip">
@@ -669,6 +712,8 @@ function renderHome() {
       <h2>${esc(levelTitle(lvl))}</h2>
       <div class="xp-bar"><span style="width:${pctBar}%"></span></div>
     </div>
+
+    ${todayCard}
 
     <div class="stat-grid">
       <div class="stat"><div class="num">${S.totalAnswered}</div><div class="lbl">beantwortet</div></div>
@@ -703,6 +748,8 @@ function renderHome() {
   app.querySelectorAll("[data-act]").forEach(el => el.addEventListener("click", () => {
     const a = el.dataset.act;
     if (a === "mixed") { buildSession("mixed"); go("quiz"); }
+    else if (a === "today") { buildSession("mixed"); go("quiz"); }
+    else if (a === "goal") changeDailyGoal();
     else if (a === "topics") go("topics");
     else if (a === "due") { buildSession("due"); go("quiz"); }
     else if (a === "exam") examStart();
@@ -1339,7 +1386,7 @@ function submitExam(auto) {
   S.totalAnswered += total; S.totalCorrect += right;
   if (pct >= 50) S.examsPassed += 1;
   if (pct > S.bestExamPct) S.bestExamPct = pct;
-  touchStreak(); saveState(); checkBadges();
+  touchStreak(); bumpToday(total); saveState(); checkBadges();
 
   EXAM_RESULT = { results, right, total, pct, auto };
   EXAM = null; removeExam();
@@ -1477,6 +1524,7 @@ function renderInfo() {
 
     <div class="section-title">Belohnungen</div>
     <div class="ios-group">
+      ${infoRow("target", "#0a84ff", "Tagesziel", "Setze dir ein tägliches Lernziel – der Ring auf der Startseite zeigt deinen Fortschritt")}
       ${infoRow("star", "#ff2d55", "XP & Level", "Punkte fürs Üben – schwerere Fragen geben mehr")}
       ${infoRow("flame", "#ff6b22", "Tages-Serie", "Jeden Tag üben hält die Serie am Leben – ein Ausrutscher-Tag ist erlaubt (Gnadentag)")}
       ${infoRow("trophy", "#ffb300", "Erfolge", "14 Abzeichen zum Freischalten – bis 1000 Fragen")}
@@ -1616,6 +1664,47 @@ function modalChoice(title, message, buttons) {
   });
 }
 
+// Tagesziel wählen/ändern (lokal, geräteweit).
+async function changeDailyGoal() {
+  const cur = getDailyGoal();
+  const buttons = GOAL_CHOICES.map(n => ({ label: n + " Fragen" + (n === cur ? "  ·  aktuell" : ""), value: n, variant: n === cur ? "primary" : "ghost" }));
+  buttons.push({ label: "Abbrechen", value: null, variant: "ghost" });
+  const choice = await modalChoice("Tagesziel", "Wie viele Fragen möchtest du pro Tag üben?", buttons);
+  if (choice) { setDailyGoal(choice); toast("🎯 Tagesziel: " + choice + " Fragen/Tag"); if (VIEW === "home") renderHome(); }
+}
+
+// Erststart-Begrüßung: kurz erklären + Tagesziel setzen. Nur einmal (lokal gemerkt).
+function showOnboarding() {
+  return new Promise((resolve) => {
+    const ov = document.createElement("div");
+    ov.className = "modal-overlay onboard";
+    const goals = GOAL_CHOICES.map(n => `<button class="goal-chip${n === 10 ? " sel" : ""}" data-goal="${n}">${n}</button>`).join("");
+    ov.innerHTML = `<div class="modal-card onboard-card">
+      <div class="onboard-hero">${iconTile("clipboardCheck", "#34c759")}</div>
+      <h3 class="modal-title">Willkommen beim ADT&nbsp;Trainer</h3>
+      <p class="modal-msg">Übe jederzeit für die Prüfung „Tumordokumentar/in" – im echten Prüfungsformat, mit Erklärung zu jeder Frage. Alles funktioniert offline.</p>
+      <div class="onboard-goal">
+        <label>Dein Tagesziel (Fragen pro Tag):</label>
+        <div class="goal-chips">${goals}</div>
+      </div>
+      <div class="modal-actions"><button class="btn-primary modal-btn" id="onboardStart">Los geht's</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add("show"));
+    let pick = 10;
+    ov.querySelectorAll(".goal-chip").forEach(el => el.addEventListener("click", () => {
+      pick = parseInt(el.dataset.goal, 10);
+      ov.querySelectorAll(".goal-chip").forEach(c => c.classList.toggle("sel", c === el));
+    }));
+    document.getElementById("onboardStart").addEventListener("click", () => {
+      setDailyGoal(pick); setOnboarded();
+      ov.classList.remove("show"); setTimeout(() => ov.remove(), 200);
+      if (VIEW === "home") renderHome();
+      resolve();
+    });
+  });
+}
+
 async function confirmReset() {
   if (syncEnabled()) {
     const choice = await modalChoice(
@@ -1723,6 +1812,10 @@ if (!DATA_OK) {
   const t = todayStr();
   if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) > 2) { S.streak = 0; saveState(); }
   go("home");
+
+  // Erststart-Begrüßung nur für wirklich neue Nutzer (kein Fortschritt, nie gesehen).
+  try { if (!isOnboarded() && S.totalAnswered === 0) showOnboarding(); }
+  catch (e) { console.warn("Onboarding übersprungen", e); }
 
   // Cloud-Sync: Statusanzeige aktualisieren + bei passenden Ereignissen abgleichen
   if (window.ADTSync) {

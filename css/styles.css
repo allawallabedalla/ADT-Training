@@ -146,6 +146,30 @@ h1, h2, h3 { line-height: 1.2; }
 /* ---------- Stat-Kacheln ---------- */
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
 .stat-grid.two { grid-template-columns: repeat(2, 1fr); }
+
+/* ---------- Tagesziel-Karte (Heute) ---------- */
+.today-card { display: flex; align-items: stretch; background: var(--bg-elev); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 18px; overflow: hidden; }
+.today-main { flex: 1; display: flex; align-items: center; gap: 14px; padding: 12px 14px; text-align: left; min-height: 60px; background: transparent; }
+.today-main:active { background: var(--bg-elev-2); }
+.today-main .txt { flex: 1; min-width: 0; }
+.today-main .txt b { font-size: 17px; font-weight: 600; }
+.today-main .txt p { margin: 1px 0 0; font-size: 13px; color: var(--text-dim); }
+.today-main .chev { color: var(--text-faint); font-size: 18px; font-weight: 600; opacity: .55; }
+.ring-mini { position: relative; width: 58px; height: 58px; flex-shrink: 0; display: grid; place-items: center; }
+.ring-mini .ring-num { position: absolute; inset: 0; display: grid; place-items: center; font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.today-edit { flex-shrink: 0; padding: 0 14px; font-size: 13px; font-weight: 600; color: var(--primary); border-left: 0.5px solid var(--separator); background: transparent; }
+.today-edit:active { background: var(--bg-elev-2); }
+
+/* ---------- Onboarding (Erststart) ---------- */
+.modal-overlay.onboard .modal-card { text-align: center; }
+.onboard-card .onboard-hero { display: flex; justify-content: center; margin-bottom: 8px; }
+.onboard-card .onboard-hero .icon-tile { width: 54px; height: 54px; border-radius: 15px; }
+.onboard-card .onboard-hero .icon-tile svg { width: 32px; height: 32px; }
+.onboard-goal { margin-top: 16px; text-align: left; }
+.onboard-goal label { font-size: 13px; color: var(--text-dim); display: block; margin-bottom: 8px; }
+.goal-chips { display: flex; gap: 8px; }
+.goal-chip { flex: 1; min-width: 0; padding: 13px 0; border-radius: 12px; border: 1.5px solid var(--border); background: var(--bg-elev); color: var(--text); font-size: 17px; font-weight: 700; }
+.goal-chip.sel { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, var(--bg-elev)); color: var(--primary); }
 .stat {
   background: var(--bg-elev); border-radius: var(--radius-sm);
   padding: 14px 10px; text-align: center; box-shadow: var(--shadow);
