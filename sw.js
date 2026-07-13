@@ -1,6 +1,6 @@
 /* Service Worker – Offline-Cache für den ADT Trainer.
  * Cache-Version bei Änderungen erhöhen, damit Nutzer die neue Version erhalten. */
-const CACHE = "adt-trainer-v17";
+const CACHE = "adt-trainer-v18";
 const ASSETS = [
   "./",
   "./index.html",

@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.16.0
+> Stand: 2026-07-13 · Version 0.16.1
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 

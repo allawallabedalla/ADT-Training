@@ -11,6 +11,14 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.16.1] — 2026-07-13  ·  Icons ohne Hintergrundkachel
+
+- **Hintergrund-„Schattierung" hinter den Icons entfernt**: Icons stehen jetzt als reine
+  Glyphen (etwas größer) ohne Kachel – konsequenter Flat-Look. Erfolge unterscheiden
+  freigeschaltet/nicht über volle vs. blasse Glyphen. Service Worker v18.
+
+---
+
 ## [0.16.0] — 2026-07-13  ·  Flat-monochrome Icons
 
 ### Geändert
