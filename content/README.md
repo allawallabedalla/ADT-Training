@@ -20,18 +20,36 @@ Jede Frage nennt in ihrem `source`-Feld die konkrete Folie samt Zitat.
 
 ## Wie Halluzinationen ausgeschlossen wurden
 
-1. **Nur aus der Quelle:** Der komplette Folientext wurde extrahiert; jede Frage
+1. **Nur aus der Quelle:** Der komplette Folieninhalt wurde erfasst; jede Frage
    ist an einer konkreten Folie belegt. Kein Fakt aus reinem Modellwissen.
-2. **4-fache Gegenprüfung:** Vier unabhängige Prüf-Durchgänge haben jede Frage
-   gegen den Originaltext abgeglichen — je ein Durchgang für
-   Grundlagen/Lagemaße, für Korrelation/Darstellung, für Überlebenszeitanalyse
-   **plus** eigenständige Nachrechnung aller Rechenaufgaben, sowie ein
-   adversariale Gesamt-Prüfung aller 55 Fragen (Mehrdeutigkeit, falsche
-   Distraktoren, Über-Interpretation, Zitat-Treue).
-3. **Nur eindeutig Belegtes bleibt:** Eine Frage, deren Aussage der Folientext
+2. **4-fache Text-Gegenprüfung:** Vier unabhängige Prüf-Durchgänge haben jede
+   Frage gegen den Originaltext abgeglichen — Grundlagen/Lagemaße,
+   Korrelation/Darstellung, Überlebenszeitanalyse **plus** eigenständige
+   Nachrechnung aller Rechenaufgaben, sowie eine adversariale Gesamt-Prüfung
+   aller 55 Fragen (Mehrdeutigkeit, falsche Distraktoren, Über-Interpretation,
+   Zitat-Treue).
+3. **5. Durchgang – visuelle Prüfung an den Original-Folien:** Alle 77 Seiten
+   wurden als hochauflösende Bilder gerendert (`tools/pdf-to-images.py`,
+   PyMuPDF) und jede Frage **direkt an der gerenderten Folie** gegengeprüft.
+   Das fand Fehler, die reine Text-Extraktion nicht sehen konnte, u. a.:
+   - **Folie 91:** ein fett gesetztes **„nicht"** war beim Text-Auslesen
+     verlorengegangen — die Aussage war dadurch umgekehrt. In `dstat-d11`
+     korrigiert (jetzt: „kann normalerweise **nicht** auf einen Zusammenhang
+     geschlossen werden").
+   - **Folie 8:** vierte Ausprägung des Schmerzempfindens heißt „schwach"
+     (nicht „leicht") → `dstat-g04` an den Folientext angeglichen.
+   - **Folie 15 statt 14** als Fundstelle der Lage-/Streumaß-Listen
+     (`dstat-l02`), Begriff „scatter plot" (Folie 25) exakt übernommen.
+   - Alle Rechen-Tabellen (Kaplan-Meier, Cutler-Ederer) Zahl für Zahl am
+     gerenderten Raster bestätigt.
+4. **Nur eindeutig Belegtes bleibt:** Eine Frage, deren Aussage der Folientext
    nicht eindeutig deckte (Skalenniveau intervall/verhältnis/absolut), wurde auf
    die im Skript zweifelsfrei belegte Kernaussage umgeschrieben.
-4. **Struktur maschinell geprüft:** `node tools/validate-content.mjs content/deskriptive-statistik.json` → grün.
+5. **Struktur maschinell geprüft:** `node tools/validate-content.mjs content/deskriptive-statistik.json` → grün.
+
+Der visuelle Weg (Folie als Bild lesen statt Text scrapen) ist ab jetzt das
+Standardverfahren für alle künftigen Foliensätze — siehe `tools/pdf-to-images.py`
+und `requirements-dev.txt`.
 
 ## Letzter Schritt vor dem Einsatz
 

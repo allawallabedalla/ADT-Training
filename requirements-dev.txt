@@ -1,0 +1,6 @@
+# Nur für die *lokale* Inhaltsaufbereitung (nicht für die App selbst).
+# PyMuPDF rendert PDF-Folien als Bilder für die visuelle Inhaltsprüfung –
+# ein in sich geschlossenes Wheel mit eingebautem MuPDF, ohne System-Abhängigkeiten.
+#   pip install -r requirements-dev.txt
+#   python3 tools/pdf-to-images.py <datei.pdf>
+pymupdf>=1.24

@@ -64,14 +64,14 @@
 **Frage:** Welches Merkmal ist ordinal (ordinalskaliert)?
 
 **Optionen:**
-- Schmerzempfinden mit den Ausprägungen unerträglich / stark / mäßig / leicht ✅
+- Schmerzempfinden mit den Ausprägungen unerträglich / stark / mäßig / schwach ✅
 - Haarfarbe mit den Ausprägungen blond / braun / schwarz
 - Geschlecht mit den Ausprägungen männlich / weiblich
 - Diagnose mit den Ausprägungen der ICD-Codes
 
 **Erklärung:** Ein qualitatives Merkmal heißt ordinal, wenn seine Ausprägungen eine (natürliche) Ordnung bilden – wie Schmerzempfinden oder Schulzensuren. Haarfarbe, Geschlecht und Diagnose besitzen keine natürliche Rangordnung und sind nominal.
 
-**Beleg:** Foliensatz Deskriptive Statistik, Folie 8: "Ein qualitatives Merkmal heißt ordinal, wenn seine Ausprägungen eine (natürliche) Ordnung bilden. … Beispiel: Schmerzempfinden: unerträglich, stark, mäßig …"
+**Beleg:** Foliensatz Deskriptive Statistik, Folie 8: "Ein qualitatives Merkmal heißt ordinal, wenn seine Ausprägungen eine (natürliche) Ordnung bilden. Andere qualitative Merkmale werden nominal genannt. … Merkmal: Schmerzempfinden, Ausprägungen: unerträglich, stark, mäßig, schwach"
 
 ---
 
@@ -185,7 +185,7 @@
 
 **Erklärung:** Streumaße sind Spannweite, Quartilsabstand, Varianz und Standardabweichung. Der Modalwert ist ein Lagemaß (der häufigste Wert).
 
-**Beleg:** Foliensatz Deskriptive Statistik, Folie 14: "Streumaße sind Spannweite, Quartilsabstand, Varianz und Standardabweichung." / "Lagemaße sind Modalwert, Minimum, Maximum, Percentile, Median, Quartile, … Mittelwert."
+**Beleg:** Foliensatz Deskriptive Statistik, Folie 15: "Streumaße sind Spannweite, Quartilsabstand, Varianz und Standardabweichung." / "Lagemaße sind Modalwert, Minimum, Maximum, Percentile, Median, Quartile, Quintile etc. sowie der Mittelwert."
 
 ---
 
@@ -667,17 +667,17 @@
 
 ### dstat-d11 — Einfachauswahl · Schwierigkeit 3
 
-**Frage:** Eine Auffälligkeit in einer Kreuztabelle legt einen Zusammenhang nahe. Was ist nötig, um diesen abzusichern?
+**Frage:** Eine Kreuztabelle zeigt eine Auffälligkeit. Was gilt laut Skript für den Schluss auf einen Zusammenhang?
 
 **Optionen:**
-- Geeignete statistische Tests ✅
-- Nichts weiter – die Auffälligkeit beweist den Zusammenhang
-- Ein größeres Tortendiagramm
-- Die Umwandlung aller Merkmale in nominale
+- Man kann daraus normalerweise noch NICHT auf einen Zusammenhang schließen – dazu bedarf es geeigneter statistischer Tests ✅
+- Die Auffälligkeit beweist bereits den Zusammenhang
+- Ein Zusammenhang ist damit sicher ausgeschlossen
+- Ein Tortendiagramm genügt als Nachweis des Zusammenhangs
 
-**Erklärung:** Aus einer Auffälligkeit in einer Kreuztabelle kann normalerweise auf einen Zusammenhang geschlossen werden – dazu bedarf es aber geeigneter statistischer Tests. Auch bei Boxplot-Vergleichen gilt dieselbe Einschränkung.
+**Erklärung:** Aus einer Auffälligkeit in einer Kreuztabelle kann normalerweise nicht auf einen Zusammenhang geschlossen werden; dazu bedarf es geeigneter statistischer Tests. Dieselbe Einschränkung gilt auch beim Vergleich von Boxplots.
 
-**Beleg:** Foliensatz Deskriptive Statistik, Folie 91: "Aus einer Auffälligkeit in einer Kreuztabelle kann normalerweise auf einen Zusammenhang geschlossen werden. Dazu bedarf es geeigneter statistischer Tests!"
+**Beleg:** Foliensatz Deskriptive Statistik, Folie 91: "Aus einer Auffälligkeit in einer Kreuztabelle kann normalerweise nicht auf einen Zusammenhang geschlossen werden. Dazu bedarf es geeigneter statistischer Tests!"
 
 ---
 
@@ -686,14 +686,14 @@
 **Frage:** Welche Darstellung vermittelt einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale?
 
 **Optionen:**
-- Das Streudiagramm (Punktwolke, scatterplot) ✅
+- Das Streudiagramm (englisch: scatter plot, auch Punktwolke) ✅
 - Das Tortendiagramm
 - Die einfache Häufigkeitstabelle
 - Der einzelne Boxplot
 
-**Erklärung:** Das Streudiagramm (englisch scatterplot, auch Punktwolke) kann einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale vermitteln; ggf. wird eine Regressionsgerade eingezeichnet.
+**Erklärung:** Das Streudiagramm (englisch: scatter plot, auch Punktwolke genannt) kann einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale vermitteln; ggf. wird eine Regressionsgerade eingezeichnet.
 
-**Beleg:** Foliensatz Deskriptive Statistik, Folie 95: "Das Streudiagramm kann einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale vermitteln." Begriffe „Punktwolke“ und „scatterplot“: Folie 25 ("Die Darstellung aller Wertepaare als Punkte wird scatterplot … genannt" / „Streudiagramm (englisch: … Punktwolke genannt)“).
+**Beleg:** Foliensatz Deskriptive Statistik, Folie 95: "Das Streudiagramm kann einen guten Eindruck über den Zusammenhang zweier quantitativer Merkmale vermitteln." Begriffe: Folie 25 ("Die Darstellung aller Wertepaare als Punkte wird Streudiagramm (englisch: scatter plot) oder Punktwolke genannt.").
 
 ---
 

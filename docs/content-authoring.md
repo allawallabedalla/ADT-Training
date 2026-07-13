@@ -13,6 +13,7 @@ kein Veröffentlichen vertraulicher Inhalte.**
 
 ## Anti-Halluzinations-Prozess (verbindlich)
 
+0. **Folien als Bild lesen, nicht Text scrapen.** Reine Text-Extraktion zerstört Formeln/Tabellen und lässt sogar einzelne (fett gesetzte) Wörter weg — z. B. ein „nicht", das die Aussage umkehrt. Daher die Folien mit `python3 tools/pdf-to-images.py <datei.pdf>` (PyMuPDF, `requirements-dev.txt`) als PNG rendern und **visuell** prüfen. `map.json` ordnet Foliennummern den Bildern zu.
 1. **Nur aus der Quelle.** Keine Fakten aus Modellwissen ergänzen. Gibt eine Folie nichts her → keine Frage.
 2. **Quellbeleg an JEDER Frage** (`source`): Datei + Fol/Abschnitt + möglichst wörtliches Zitat.
 3. **Zweiter Prüf-Durchgang:** jede Frage *nur gegen ihr Quell-Snippet* prüfen — richtige Antwort gedeckt? Distraktoren eindeutig falsch?
