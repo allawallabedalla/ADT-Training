@@ -11,6 +11,23 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.26.0] — 2026-07-13  ·  Feiermomente & Feinschliff
+
+### Hinzugefügt
+- **Konfetti** bei bestandener Prüfung und bei starken Übungsergebnissen (≥ 80 %).
+- **Sanfte Einblendung** neuer Fragen.
+- **Haptisches Feedback** bei Antworten (an/aus in den Einstellungen; auf Android spürbar,
+  auf dem iPhone eingeschränkt).
+- Alle Effekte respektieren „Bewegung reduzieren" (Systemeinstellung).
+
+### Bewusst weggelassen
+- **Sound**: auf dem iPhone stark eingeschränkt und schnell störend – daher nicht umgesetzt.
+
+### Technik
+- 4 neue Tests. `tests/run.sh` grün.
+
+---
+
 ## [0.25.0] — 2026-07-13  ·  UI-Feinschliff
 
 ### Geändert

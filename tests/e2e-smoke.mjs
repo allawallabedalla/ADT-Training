@@ -499,6 +499,26 @@ async function page(opts = {}) {
   chk(/72%/.test(await p.textContent('#app')), 'Statistik: Prüfungs-Historie zeigt Eintrag');
 }
 
+// 24) Animation & Haptik
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  // Haptik-Einstellung persistiert
+  await p.click('[data-act="settings"]'); await p.waitForSelector('#setHaptics');
+  await p.evaluate(() => setHaptics(false));
+  chk(await p.evaluate(() => getHaptics()) === false, 'Haptik: „Aus" wird gespeichert');
+  await p.evaluate(() => setHaptics(true));
+  chk(await p.evaluate(() => getHaptics()) === true, 'Haptik: „An" wird gespeichert');
+  // Konfetti erzeugt einen Effekt-Layer
+  const has = await p.evaluate(() => { celebrate(); return !!document.querySelector('.confetti'); });
+  chk(has, 'Konfetti: celebrate() erzeugt einen Effekt-Layer');
+  // Frische Frage bekommt die Einblende-Klasse
+  await p.evaluate(() => { const q = QUESTIONS.find(x => x.type !== 'numeric'); SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] }; go('quiz'); });
+  await p.waitForSelector('.q-card.q-anim');
+  chk(true, 'Animation: neue Frage wird sanft eingeblendet (q-anim)');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

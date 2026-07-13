@@ -181,8 +181,8 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 
 ### Feinschliff (aus Abstimmung 2026-07-13 — „machen wir später")
 - ✅ **P2** **Tastatur-Steuerung** (v0.21.0): Zahlen 1–9 wählen, Enter prüft/weiter (Übung + Prüfung)
-- ⬜ **P3** **Sanfte Animationen** (Übergänge zwischen Fragen, Konfetti bei bestandener Prüfung)
-- ⬜ **P3** **Haptik & Sound** bei richtig/falsch (abschaltbar; auf iPhone teils eingeschränkt)
+- ✅ **P3** **Sanfte Animationen** (v0.26.0): Frage-Einblendung + Konfetti bei bestandener Prüfung
+- 🟡 **P3** **Haptik & Sound**: ✅ Haptik abschaltbar (v0.26.0); Sound bewusst weggelassen (iPhone-Einschränkung, störend)
 - ⬜ **P2** **Barrierefreiheit** (größere Schrift wählbar, Kontraste, Screenreader-Labels)
 
 ### Technik / Betrieb

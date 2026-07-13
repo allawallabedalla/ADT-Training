@@ -199,6 +199,32 @@ const THEME_KEY = "adt_theme";          // "auto" | "light" | "dark"
 const SIZE_CHOICES = [10, 15, 20, 30, 0];
 function getSessionSize() { try { const v = parseInt(localStorage.getItem(SIZE_KEY), 10); return SIZE_CHOICES.includes(v) ? v : 15; } catch { return 15; } }
 function setSessionSize(n) { try { localStorage.setItem(SIZE_KEY, String(n)); } catch (e) {} }
+const HAPTICS_KEY = "adt_haptics";      // "on" | "off"
+function getHaptics() { try { return localStorage.getItem(HAPTICS_KEY) !== "off"; } catch { return true; } }
+function setHaptics(on) { try { localStorage.setItem(HAPTICS_KEY, on ? "on" : "off"); } catch (e) {} }
+function reduceMotion() { try { return window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; } }
+// Kurzes haptisches Feedback (funktioniert v. a. auf Android; auf iPhone eingeschränkt).
+function hapticFeedback(ok) {
+  if (!getHaptics()) return;
+  try { if (navigator.vibrate) navigator.vibrate(ok ? 15 : [8, 30, 8]); } catch (e) {}
+}
+// Kleiner Konfetti-Regen für Erfolgsmomente (respektiert „Bewegung reduzieren").
+function celebrate() {
+  if (reduceMotion()) return;
+  const colors = ["#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#007aff", "#5e5ce6"];
+  const layer = document.createElement("div");
+  layer.className = "confetti"; layer.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 80; i++) {
+    const s = document.createElement("i");
+    s.style.left = Math.round(Math.random() * 100) + "%";
+    s.style.background = colors[i % colors.length];
+    s.style.animationDelay = (Math.random() * 0.35).toFixed(2) + "s";
+    s.style.animationDuration = (1.8 + Math.random() * 1.2).toFixed(2) + "s";
+    layer.appendChild(s);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 3200);
+}
 function getTheme() { try { const v = localStorage.getItem(THEME_KEY); return (v === "light" || v === "dark") ? v : "auto"; } catch { return "auto"; } }
 function setTheme(t) { try { t === "auto" ? localStorage.removeItem(THEME_KEY) : localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(); }
 // „auto" folgt dem System (kein data-theme → CSS-Media-Query greift); sonst fest überschreiben.
@@ -611,6 +637,7 @@ function checkCurrent() {
   saveState();
 
   const newBadges = checkBadges();
+  hapticFeedback(ok);
   renderQuiz();
   if (ok) toast(`✅ Richtig! +${gained} XP`); else toast(`+${gained} XP fürs Üben`);
   let delay = 900;
@@ -640,6 +667,7 @@ function finishSession() {
   // Ergebnis ersetzt die Quiz-Ansicht im Verlauf → „Zurück" führt sauber zur vorigen Ebene.
   RESULT = { right, total, pct };
   go("result", { replace: true });
+  if (pct >= 80) celebrate();   // starkes Ergebnis feiern
 }
 
 /* ------------------------------------------------------------------ *
@@ -691,7 +719,7 @@ const ICONS = {
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.25.0";
+const APP_VERSION = "0.26.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -897,9 +925,10 @@ function renderSettings() {
     <div class="section-title">Lern-Erinnerungen</div>
     <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
 
-  const theme = getTheme(), size = getSessionSize();
+  const theme = getTheme(), size = getSessionSize(), haptics = getHaptics();
   const tOpt = (v, l) => `<option value="${v}" ${theme === v ? "selected" : ""}>${l}</option>`;
   const sOpt = (v, l) => `<option value="${v}" ${size === v ? "selected" : ""}>${l}</option>`;
+  const hOpt = (v, l) => `<option value="${v}" ${(haptics ? "on" : "off") === v ? "selected" : ""}>${l}</option>`;
   const prefs = `
     <div class="section-title">Anzeige & Übung</div>
     <div class="q-card">
@@ -909,6 +938,9 @@ function renderSettings() {
       <label class="set-row" for="setSize"><span>Fragen pro Runde</span>
         <select id="setSize" class="ios-select">${sOpt(10, "10")}${sOpt(15, "15")}${sOpt(20, "20")}${sOpt(30, "30")}${sOpt(0, "Alle")}</select>
       </label>
+      <label class="set-row" for="setHaptics"><span>Haptisches Feedback</span>
+        <select id="setHaptics" class="ios-select">${hOpt("on", "An")}${hOpt("off", "Aus")}</select>
+      </label>
     </div>`;
 
   app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
@@ -917,6 +949,7 @@ function renderSettings() {
   const $ = (id) => document.getElementById(id);
   const stTheme = $("setTheme"); if (stTheme) stTheme.addEventListener("change", () => { setTheme(stTheme.value); toast("🎨 Design übernommen"); });
   const stSize = $("setSize"); if (stSize) stSize.addEventListener("change", () => { const n = parseInt(stSize.value, 10); setSessionSize(n); toast("✅ Fragen pro Runde: " + (n > 0 ? n : "alle")); });
+  const stHap = $("setHaptics"); if (stHap) stHap.addEventListener("change", () => { const on = stHap.value === "on"; setHaptics(on); if (on) hapticFeedback(true); toast(on ? "📳 Haptik an" : "Haptik aus"); });
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
   const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
   const bCopy = $("btnCopy"); if (bCopy) bCopy.addEventListener("click", () => copyCode(code));
@@ -1145,7 +1178,7 @@ function renderQuiz() {
       <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i + 1}" aria-label="Frage ${i + 1} von ${total}"><span style="width:${Math.round((i + 1) / total * 100)}%"></span></div>
       <span class="q-count">${i + 1} / ${total}</span>
     </div>
-    <div class="q-card">
+    <div class="q-card${checked ? "" : " q-anim"}">
       <div class="q-meta">
         <span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>
         <span class="chip">${diffTxt}</span>
@@ -1484,6 +1517,7 @@ function submitExam(auto) {
   EXAM_RESULT = { results, right, total, pct, auto };
   EXAM = null; removeExam();
   go("examresult", { replace: true });   // Prüfungsansicht durch das Ergebnis ersetzen
+  if (pct >= 50) celebrate();            // bestandene Prüfung feiern
 }
 
 function renderExamResult() {
