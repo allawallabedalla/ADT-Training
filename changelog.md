@@ -11,6 +11,41 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.4.0] — 2026-07-13
+
+iOS-natives Design-Update + wichtiger Reset-Bugfix.
+
+### Behoben (wichtig)
+- **Reset löschte den Fortschritt nicht vollständig.** Ursache: `{ ...DEFAULT_STATE }`
+  kopierte `perQuestion`/`badges` nur flach – beide teilten sich dieselbe Objekt-Referenz
+  wie die Vorlage, die beim Beantworten mutiert wurde. Ein Reset übernahm dadurch die
+  „gelöschten" Daten wieder (auch nach hartem Reload). Jetzt echte Tiefkopie
+  (`freshState()`), und `sanitizeState()` baut immer frische Objekte. Per Regressionstest
+  abgesichert (Beantworten → Reset ohne Reload → `perQuestion` wirklich leer).
+
+### Geändert – Design (Apple HIG, durchgängig iOS-nativ)
+- **SVG-Icon-Set im SF-Symbols-Stil** ersetzt alle Emoji-UI-Icons – als farbige,
+  abgerundete Icon-Kacheln (iOS-Settings-Optik) für Modi, Themen, Sync-Aktionen und Erfolge.
+- **Large-Title mit Scroll-Collapse**: große Überschrift je Ansicht, die beim Scrollen
+  in den kompakten, transluzenten Navigationsbalken übergeht.
+- **Inset-gruppierte Listen** mit Hairline-Trennern (statt Einzelkarten).
+- **iOS-Farbsystem**: system blue/green/red/orange, echtes „systemGroupedBackground";
+  im Dark Mode OLED-Schwarz mit erhöhten Karten.
+- Verfeinerter **Typo-Maßstab** (Large Title 34, Titel 22–24, klare Sekundärfarben) und
+  8-pt-Raster; SF-Systemfont.
+- **Scroll-Reset** bei jedem Ansichtswechsel (neue Ansicht startet oben).
+
+### Technik
+- Service Worker **v4** (verteilt Design- und Fix-Update; In-App-Banner „Neue Version").
+
+### Getestet
+- Reset-Regressionstest (ohne Reload) – Fortschritt wird vollständig geleert.
+- Voller Browser-Testlauf (Migration/Sanitisierung, Reset-Modal, Backup Export+Import) grün.
+- Cross-Device-Sync-Regression nach dem Settings-Redesign weiterhin grün.
+- Screenshots aller Ansichten in Light & Dark – keine Laufzeitfehler.
+
+---
+
 ## [0.3.0] — 2026-07-13
 
 Robustheits-Paket: Fundament, Sync und Bedienung deutlich abgesichert.

@@ -69,6 +69,10 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
   Fehler-Boundary · Sofort-Speichern beim Schließen · Sync-Härtung (Retry/Backoff, „ausstehend") ·
   Reset inkl. Cloud · lokales Backup (Export/Import) · Update-Banner · iOS-konforme UI (Modal/Banner)
 - ✅ Supabase-Funktionen-Härtung dokumentiert (Größenlimit, Code-Längen-Prüfung)
+- ✅ **iOS-Design-Update** (v0.4.0, 2026-07-13): SVG-Icon-Set (SF-Symbols-Stil) statt Emoji,
+  Large-Title mit Scroll-Collapse, inset-gruppierte Listen, iOS-Farbsystem (OLED-Dark),
+  Scroll-Reset bei Ansichtswechsel
+- ✅ **Bugfix Reset** (v0.4.0): geteilte Objekt-Referenz behoben – Reset leert nun vollständig
 
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)

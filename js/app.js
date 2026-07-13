@@ -57,25 +57,29 @@ function migrate(state) {
   return state;
 }
 
+// Frischer Standardzustand als echte Tiefkopie (KEINE geteilten Objekt-Referenzen!).
+function freshState() { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+
 // Defensiv säubern: ein teilweise defekter Stand darf die App nie brechen.
+// Baut IMMER frische perQuestion/badges-Objekte, damit nie eine Referenz auf
+// DEFAULT_STATE geteilt wird (sonst würde ein Reset den Fortschritt nicht leeren).
 function sanitizeState(raw) {
-  const s = { ...DEFAULT_STATE, ...(raw && typeof raw === "object" ? raw : {}) };
+  const src = (raw && typeof raw === "object") ? raw : {};
   const clampInt = (v, min, max) => {
     let n = Math.floor(Number(v)); if (!isFinite(n)) n = min;
     n = Math.max(min, n); if (max != null) n = Math.min(max, n); return n;
   };
-  s.schemaVersion = SCHEMA_VERSION;
-  s.xp = clampInt(s.xp, 0);
-  s.streak = clampInt(s.streak, 0);
-  s.totalAnswered = clampInt(s.totalAnswered, 0);
-  s.totalCorrect = clampInt(s.totalCorrect, 0);
-  s.examsPassed = clampInt(s.examsPassed, 0);
-  s.bestExamPct = clampInt(s.bestExamPct, 0, 100);
-  s.lastActiveDay = typeof s.lastActiveDay === "string" ? s.lastActiveDay : null;
-  s.perQuestion = (s.perQuestion && typeof s.perQuestion === "object") ? s.perQuestion : {};
-  s.badges = (s.badges && typeof s.badges === "object") ? s.badges : {};
-  for (const id of Object.keys(s.perQuestion)) {
-    const p = s.perQuestion[id] || {};
+  const s = freshState();
+  s.xp = clampInt(src.xp, 0);
+  s.streak = clampInt(src.streak, 0);
+  s.totalAnswered = clampInt(src.totalAnswered, 0);
+  s.totalCorrect = clampInt(src.totalCorrect, 0);
+  s.examsPassed = clampInt(src.examsPassed, 0);
+  s.bestExamPct = clampInt(src.bestExamPct, 0, 100);
+  s.lastActiveDay = typeof src.lastActiveDay === "string" ? src.lastActiveDay : null;
+  const rawPq = (src.perQuestion && typeof src.perQuestion === "object") ? src.perQuestion : {};
+  for (const id of Object.keys(rawPq)) {
+    const p = rawPq[id] || {};
     s.perQuestion[id] = {
       seen: clampInt(p.seen, 0),
       correct: clampInt(p.correct, 0),
@@ -83,17 +87,19 @@ function sanitizeState(raw) {
       lastResult: (p.lastResult === "correct" || p.lastResult === "wrong") ? p.lastResult : null,
     };
   }
+  const rawBg = (src.badges && typeof src.badges === "object") ? src.badges : {};
+  for (const k of Object.keys(rawBg)) s.badges[k] = rawBg[k];
   return s;
 }
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return { ...DEFAULT_STATE };
+    if (!raw) return freshState();
     return sanitizeState(migrate(JSON.parse(raw)));
   } catch (e) {
     console.warn("State beschädigt, setze zurück.", e);
-    return { ...DEFAULT_STATE };
+    return freshState();
   }
 }
 let S = loadState();
@@ -130,7 +136,7 @@ async function runSync(opts) {
   return res;
 }
 function refreshAfterSync() {
-  if (streakEl) streakEl.textContent = "🔥 " + S.streak;
+  setStreak();
   if (VIEW === "home") renderHome();
   else if (VIEW === "settings") renderSettings();
 }
@@ -319,10 +325,65 @@ const streakEl = document.getElementById("streakVal");
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+/* ---- SVG-Icon-System (SF-Symbols-Stil, monochром, via currentColor) ---- */
+const ICONS = {
+  shuffle: '<path d="M4 7h3c1.2 0 2 .6 2.7 1.6l4.6 6.8c.7 1 1.5 1.6 2.7 1.6h3"/><path d="M4 17h3c1.2 0 2-.6 2.7-1.6l.6-.9"/><path d="M14.4 9.5l.6-.9C15.7 7.6 16.5 7 17.7 7H20"/><path d="M17.5 4.5L20 7l-2.5 2.5"/><path d="M17.5 14.5L20 17l-2.5 2.5"/>',
+  grid: '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
+  repeat: '<path d="M20 12a8 8 0 1 0-2.4 5.7"/><path d="M20 5v4h-4"/>',
+  clipboardCheck: '<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4V3.6A1.6 1.6 0 0 1 10.6 2h2.8A1.6 1.6 0 0 1 15 3.6V4"/><path d="M8.6 13.2l2.2 2.2 4.6-4.6"/>',
+  trophy: '<path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 6H4.5v1A3 3 0 0 0 7.5 10"/><path d="M17 6h2.5v1A3 3 0 0 1 16.5 10"/><path d="M12 13v3"/><path d="M8.5 20h7"/><path d="M9.5 20a2.5 2.5 0 0 1 5 0"/>',
+  icloud: '<path d="M7.4 18a4 4 0 0 1-.5-7.97 5.5 5.5 0 0 1 10.65 1.2A3.5 3.5 0 0 1 17.5 18H7.4z"/>',
+  hexagon: '<path d="M12 2.6l8 4.6v9.6l-8 4.6-8-4.6V7.2z"/><circle cx="12" cy="12" r="2.6"/>',
+  ruler: '<rect x="2.5" y="8.5" width="19" height="7" rx="1.6"/><path d="M6.5 8.5v3M10 8.5v4M13.5 8.5v3M17 8.5v4"/>',
+  scope: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.3-4.3"/><circle cx="11" cy="11" r="2.2"/>',
+  book: '<path d="M12 6c-1.5-1.2-3.6-2-6-2-1 0-2 .1-3 .4v13c1-.3 2-.4 3-.4 2.4 0 4.5.8 6 2"/><path d="M12 6c1.5-1.2 3.6-2 6-2 1 0 2 .1 3 .4v13c-1-.3-2-.4-3-.4-2.4 0-4.5.8-6 2z"/><path d="M12 6v13"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/>',
+  columns: '<path d="M3.5 9L12 4.5 20.5 9"/><path d="M5.5 9v8M9.5 9v8M14.5 9v8M18.5 9v8"/><path d="M3.5 20.5h17"/>',
+  chart: '<path d="M5 20V11"/><path d="M12 20V5"/><path d="M19 20v-6"/><path d="M3.5 20.5h17"/>',
+  capsule: '<rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(45 12 12)"/><path d="M12 6.5v11" transform="rotate(45 12 12)"/>',
+  lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15" r="1.3"/><path d="M12 16.3V18"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  link: '<path d="M9.5 14.5l5-5"/><path d="M11 7.5l1.2-1.2a3.8 3.8 0 0 1 5.5 5.5L16.5 13"/><path d="M13 16.5l-1.2 1.2a3.8 3.8 0 0 1-5.5-5.5L7.5 11"/>',
+  copy: '<rect x="8.5" y="8.5" width="11" height="11.5" rx="2.2"/><path d="M5.5 15.5V6.2A2.2 2.2 0 0 1 7.7 4h8"/>',
+  sync: '<path d="M20 11.5A8 8 0 0 0 6.4 6"/><path d="M6 3.5V7h3.5"/><path d="M4 12.5A8 8 0 0 0 17.6 18"/><path d="M18 20.5V17h-3.5"/>',
+  xcircle: '<circle cx="12" cy="12" r="8.2"/><path d="M9.2 9.2l5.6 5.6M14.8 9.2l-5.6 5.6"/>',
+  export: '<path d="M12 15.5V4"/><path d="M8.2 7.3L12 3.5l3.8 3.8"/><path d="M6 12.5V18a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-5.5"/>',
+  import: '<path d="M12 4v11.5"/><path d="M8.2 11.7L12 15.5l3.8-3.8"/><path d="M6 12.5V18a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-5.5"/>',
+  flame: '<path d="M12 3c.6 2.6-1.9 3.9-1.9 6.6A1.9 1.9 0 0 0 13.7 10c1 1.3 2 2.8 2 4.7a3.7 3.7 0 1 1-7.4 0C8.3 9.4 11 6.7 12 3z"/>',
+  bolt: '<path d="M13 3L5.5 13.5H11l-1 7.5 8-11H12.5z"/>',
+  star: '<path d="M12 3.6l2.5 5 5.5.8-4 3.9.95 5.5L12 16.2l-4.9 2.6.95-5.5-4-3.9 5.5-.8z"/>',
+  flag: '<path d="M6 21V4"/><path d="M6 4.5h11.5l-2.2 3.3 2.2 3.3H6"/>',
+  medal: '<circle cx="12" cy="14" r="5"/><path d="M9 9.5L7 3M15 9.5L17 3M11 3h2"/><path d="M12 12.2l.9 1.7 1.9.3-1.4 1.3.3 1.9-1.7-.9-1.7.9.3-1.9-1.4-1.3 1.9-.3z" fill="currentColor" stroke="none"/>',
+  crown: '<path d="M4 9l3.2 8.5h9.6L20 9l-4.6 3.2L12 6l-3.4 6.2z"/><path d="M6.5 20.5h11"/>',
+  brain: '<path d="M9.5 5.5A2.8 2.8 0 0 0 6.7 8.4 2.8 2.8 0 0 0 5.5 13.6 2.8 2.8 0 0 0 8.3 18a2.3 2.3 0 0 0 3.7-1.85V7.4a2 2 0 0 0-2.5-1.9z"/><path d="M14.5 5.5a2.8 2.8 0 0 1 2.8 2.9 2.8 2.8 0 0 1 1.2 5.2 2.8 2.8 0 0 1-2.8 4.4 2.3 2.3 0 0 1-3.7-1.85"/>',
+};
+function icon(name) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+}
+function iconTile(name, tint) {
+  return '<span class="icon-tile" style="--tint:' + tint + '">' + icon(name) + "</span>";
+}
+const TOPIC_ICON = { grundlagen: "hexagon", tnm: "ruler", icdo: "scope", icd10: "book", grading: "target", register: "columns", epidemiologie: "chart", therapie: "capsule", datenschutz: "lock" };
+const BADGE_ICON = {
+  first: { i: "flag", c: "#34c759" }, ten: { i: "grid", c: "#007aff" }, fifty: { i: "medal", c: "#ff9500" },
+  hundred: { i: "star", c: "#ff2d55" }, streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "bolt", c: "#ffcc00" },
+  exam: { i: "clipboardCheck", c: "#34c759" }, exam90: { i: "crown", c: "#5e5ce6" },
+  sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
+};
+
+const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Sync & Sicherung", result: "Ergebnis", quiz: "" };
+function setStreak() {
+  if (streakEl) streakEl.innerHTML = '<span class="streak-flame">' + icon("flame") + "</span>" + S.streak;
+}
 function updateAppbar(view) {
   const back = document.getElementById("backBtn");
-  back.classList.toggle("hidden", view === "home");
-  streakEl.textContent = "🔥 " + S.streak;
+  if (back) back.classList.toggle("hidden", view === "home");
+  const h1 = document.querySelector(".appbar h1");
+  if (h1) h1.textContent = BAR_TITLES[view] != null ? BAR_TITLES[view] : "ADT Trainer";
+  const bar = document.querySelector(".appbar");
+  // Ansichten ohne Large-Title (Quiz/Ergebnis) zeigen den Balken-Titel direkt.
+  if (bar) bar.classList.toggle("scrolled", view === "quiz" || view === "result");
+  setStreak();
 }
 
 /* ---- Home ---- */
@@ -345,6 +406,7 @@ function renderHome() {
     </div>`;
 
   app.innerHTML = `
+    <h1 class="large-title">ADT Trainer<span class="sub">${esc(levelTitle(lvl))} · Level ${lvl}</span></h1>
     ${installTip}
     <div class="level-card">
       <div class="row"><span class="lvl">Level ${lvl}</span><span class="xp">${into} / ${span} XP</span></div>
@@ -359,16 +421,22 @@ function renderHome() {
     </div>
 
     <div class="section-title">Üben</div>
-    <button class="mode-btn" data-act="mixed"><span class="emoji">🎲</span><span class="txt"><b>Gemischtes Training</b><p>Zufällige Fragen aus allen Themen</p></span><span class="chev">›</span></button>
-    <button class="mode-btn" data-act="topics"><span class="emoji">📚</span><span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
-    <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}><span class="emoji">🩹</span><span class="txt"><b>Schwachstellen wiederholen</b><p>${weak ? weak + " Fragen zum Auffrischen" : "Super – aktuell keine offenen Fragen"}</p></span><span class="chev">›</span></button>
+    <div class="ios-group">
+      <button class="mode-btn" data-act="mixed">${iconTile("shuffle", "#007aff")}<span class="txt"><b>Gemischtes Training</b><p>Zufällige Fragen aus allen Themen</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="topics">${iconTile("grid", "#5e5ce6")}<span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Schwachstellen wiederholen</b><p>${weak ? weak + " Fragen zum Auffrischen" : "Super – aktuell keine offenen Fragen"}</p></span><span class="chev">›</span></button>
+    </div>
 
     <div class="section-title">Prüfung</div>
-    <button class="mode-btn" data-act="exam"><span class="emoji">🎓</span><span class="txt"><b>Prüfungssimulation</b><p>${Math.min(30, QUESTIONS.length)} Fragen · bestanden ab 50 %</p></span><span class="chev">›</span></button>
+    <div class="ios-group">
+      <button class="mode-btn" data-act="exam">${iconTile("clipboardCheck", "#34c759")}<span class="txt"><b>Prüfungssimulation</b><p>${Math.min(30, QUESTIONS.length)} Fragen · bestanden ab 50 %</p></span><span class="chev">›</span></button>
+    </div>
 
     <div class="section-title">Fortschritt</div>
-    <button class="mode-btn" data-act="badges"><span class="emoji">🏆</span><span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
-    <button class="mode-btn" data-act="settings"><span class="emoji">☁️</span><span class="txt"><b>Geräte-Sync</b><p>${syncSubtitle()}</p></span><span class="chev">›</span></button>
+    <div class="ios-group">
+      <button class="mode-btn" data-act="badges">${iconTile("trophy", "#ffb300")}<span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="settings">${iconTile("icloud", "#30b0c7")}<span class="txt"><b>Geräte-Sync</b><p>${syncSubtitle()}</p></span><span class="chev">›</span></button>
+    </div>
 
     <p class="muted center" style="margin-top:24px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen<br>
     <span class="link" data-act="reset">Fortschritt zurücksetzen</span></p>
@@ -405,7 +473,7 @@ function renderSettings() {
 
   let body;
   if (!configured) {
-    body = `<div class="install-tip"><span>☁️</span><div>
+    body = `<div class="install-tip">${iconTile("icloud", "#30b0c7")}<div>
       <b>Cloud-Sync ist noch nicht eingerichtet.</b><br>
       Damit der Fortschritt auf allen Geräten gleich ist, muss einmalig ein kostenloses
       Supabase-Projekt verbunden werden (zwei Werte in <b>config.js</b>).
@@ -413,9 +481,11 @@ function renderSettings() {
       <p class="muted center" style="margin-top:16px">Bis dahin funktioniert alles ganz normal – nur lokal auf diesem Gerät.</p>`;
   } else if (!code) {
     body = `
-      <p class="muted">Verbinde dieses Gerät, damit dein Fortschritt automatisch überall gleich ist.</p>
-      <button class="mode-btn" id="btnCreate"><span class="emoji">✨</span><span class="txt"><b>Neuen Sync-Code erstellen</b><p>Für dein erstes Gerät</p></span><span class="chev">›</span></button>
-      <button class="mode-btn" id="btnConnect"><span class="emoji">🔗</span><span class="txt"><b>Mit vorhandenem Code verbinden</b><p>Code vom anderen Gerät eingeben</p></span><span class="chev">›</span></button>
+      <p class="muted" style="margin:0 0 12px">Verbinde dieses Gerät, damit dein Fortschritt automatisch überall gleich ist.</p>
+      <div class="ios-group">
+        <button class="mode-btn" id="btnCreate">${iconTile("plus", "#007aff")}<span class="txt"><b>Neuen Sync-Code erstellen</b><p>Für dein erstes Gerät</p></span><span class="chev">›</span></button>
+        <button class="mode-btn" id="btnConnect">${iconTile("link", "#5e5ce6")}<span class="txt"><b>Mit vorhandenem Code verbinden</b><p>Code vom anderen Gerät eingeben</p></span><span class="chev">›</span></button>
+      </div>
       <div id="connectBox"></div>`;
   } else {
     body = `
@@ -423,23 +493,27 @@ function renderSettings() {
         <div class="q-meta"><span class="chip" id="syncChip">…</span></div>
         <p class="muted" style="margin:0 0 6px">Dein Sync-Code – auf dem anderen Gerät unter „Mit vorhandenem Code verbinden" eingeben:</p>
         <p id="codeText" style="font-size:19px;font-weight:800;letter-spacing:1px;word-break:break-all;margin:4px 0">${esc(code)}</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          <button class="btn-ghost" id="btnCopy" style="width:auto;padding:11px 15px">📋 Kopieren</button>
-          <button class="btn-ghost" id="btnSyncNow" style="width:auto;padding:11px 15px">🔄 Jetzt synchronisieren</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn-ghost" id="btnCopy" style="width:auto;padding:11px 16px">${icon("copy")} Kopieren</button>
+          <button class="btn-ghost" id="btnSyncNow" style="width:auto;padding:11px 16px">${icon("sync")} Synchronisieren</button>
         </div>
         <p class="muted" style="margin-top:12px">Zuletzt synchronisiert: ${esc(lastTxt)}</p>
       </div>
-      <button class="mode-btn" id="btnDisconnect"><span class="emoji">🚪</span><span class="txt"><b>Verbindung trennen</b><p>Code von diesem Gerät entfernen (Daten bleiben in der Cloud)</p></span><span class="chev">›</span></button>`;
+      <div class="ios-group">
+        <button class="mode-btn" id="btnDisconnect">${iconTile("xcircle", "#ff3b30")}<span class="txt"><b>Verbindung trennen</b><p>Code von diesem Gerät entfernen (Daten bleiben in der Cloud)</p></span><span class="chev">›</span></button>
+      </div>`;
   }
 
   const backup = `
-    <div class="section-title" style="margin-top:24px">Sicherung (dieses Gerät)</div>
-    <p class="muted" style="margin:0 0 10px">Fortschritt als Datei sichern – als Backup oder zum Übertragen ohne Cloud.</p>
-    <button class="mode-btn" id="btnExport"><span class="emoji">💾</span><span class="txt"><b>Backup exportieren</b><p>Fortschritt als Datei speichern</p></span><span class="chev">›</span></button>
-    <button class="mode-btn" id="btnImport"><span class="emoji">📥</span><span class="txt"><b>Backup importieren</b><p>Aus Datei wiederherstellen (wird zusammengeführt)</p></span><span class="chev">›</span></button>
+    <div class="section-title">Sicherung (dieses Gerät)</div>
+    <div class="ios-group">
+      <button class="mode-btn" id="btnExport">${iconTile("export", "#007aff")}<span class="txt"><b>Backup exportieren</b><p>Fortschritt als Datei speichern</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" id="btnImport">${iconTile("import", "#30b0c7")}<span class="txt"><b>Backup importieren</b><p>Aus Datei wiederherstellen (wird zusammengeführt)</p></span><span class="chev">›</span></button>
+    </div>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">`;
 
-  app.innerHTML = `<div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}`;
+  app.innerHTML = `<h1 class="large-title">Sync &amp; Sicherung</h1>
+    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}`;
 
   const $ = (id) => document.getElementById(id);
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
@@ -528,14 +602,16 @@ function renderTopics() {
   const rows = Object.entries(TOPICS).map(([key, t]) => {
     const st = topicStats(key);
     return `<button class="topic-row" data-topic="${key}">
-      <span class="emoji" style="background:${t.color}22">${t.icon}</span>
+      ${iconTile(TOPIC_ICON[key] || "hexagon", t.color)}
       <span class="info"><b>${esc(t.name)}</b>
         <span class="bar"><span style="width:${st.pct}%;background:${t.color}"></span></span>
       </span>
       <span class="pct">${st.mastered}/${st.total}</span>
     </button>`;
   }).join("");
-  app.innerHTML = `<div class="section-title">Wähle ein Thema</div>${rows}
+  app.innerHTML = `<h1 class="large-title">Themen</h1>
+    <div class="section-title">Wähle ein Thema</div>
+    <div class="ios-group">${rows}</div>
     <p class="muted center" style="margin-top:16px">„Gemeistert" = Frage mindestens einmal korrekt beantwortet.</p>`;
   app.querySelectorAll("[data-topic]").forEach(el => el.addEventListener("click", () => {
     const key = el.dataset.topic;
@@ -583,7 +659,7 @@ function renderQuiz() {
     </div>
     <div class="q-card">
       <div class="q-meta">
-        <span class="chip" style="background:${t.color}22;color:${t.color}">${t.icon} ${esc(t.name)}</span>
+        <span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>
         <span class="chip">${diffTxt}</span>
         ${q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>'}
       </div>
@@ -664,12 +740,14 @@ function renderBadges() {
   actionbar.classList.add("hidden");
   const cards = BADGES.map(b => {
     const earned = !!S.badges[b.id];
+    const bi = BADGE_ICON[b.id] || { i: "star", c: "#8e8e93" };
     return `<div class="badge ${earned ? "earned" : ""}">
-      <div class="ic">${b.ic}</div><div class="bt">${esc(b.name)}</div><div class="bd">${esc(b.desc)}</div></div>`;
+      ${iconTile(bi.i, bi.c)}<div class="bt">${esc(b.name)}</div><div class="bd">${esc(b.desc)}</div></div>`;
   }).join("");
   const n = Object.keys(S.badges).length;
   app.innerHTML = `
-    <div class="section-title">Erfolge · ${n}/${BADGES.length}</div>
+    <h1 class="large-title">Erfolge</h1>
+    <div class="section-title">${n}/${BADGES.length} freigeschaltet</div>
     <div class="badge-grid">${cards}</div>
     <div class="section-title" style="margin-top:26px">Prüfungs-Rekord</div>
     <div class="stat-grid">
@@ -687,6 +765,7 @@ function go(view) {
   const prev = VIEW;
   VIEW = view;
   try {
+    window.scrollTo(0, 0);   // neue Ansicht immer oben starten
     if (view === "home") renderHome();
     else if (view === "topics") renderTopics();
     else if (view === "quiz") renderQuiz();
@@ -777,13 +856,13 @@ async function confirmReset() {
     );
     if (!choice) return;
     if (choice === "all") {
-      S = { ...DEFAULT_STATE }; persistLocal();
+      S = freshState(); persistLocal();
       const r = await ADTSync.overwriteRemote(S);
       toast(r && r.ok ? "Überall zurückgesetzt" : "Lokal zurückgesetzt – Cloud folgt bei Verbindung");
     } else {
       // Verbindung trennen, damit der lokale Reset nicht aus der Cloud zurückkehrt
       ADTSync.setCode(null);
-      S = { ...DEFAULT_STATE }; persistLocal();
+      S = freshState(); persistLocal();
       toast("Zurückgesetzt · Cloud-Verbindung getrennt");
     }
     go("home");
@@ -793,7 +872,7 @@ async function confirmReset() {
       "Wirklich den gesamten Lernfortschritt (XP, Level, Serie, Erfolge) löschen? Das kann nicht rückgängig gemacht werden.",
       [{ label: "Ja, löschen", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]
     );
-    if (ok) { S = { ...DEFAULT_STATE }; persistLocal(); toast("Fortschritt zurückgesetzt"); go("home"); }
+    if (ok) { S = freshState(); persistLocal(); toast("Fortschritt zurückgesetzt"); go("home"); }
   }
 }
 
@@ -851,6 +930,14 @@ window.addEventListener("unhandledrejection", (e) => { console.warn("Unbehandelt
 // Fortschritt beim Schließen/Backgrounden zuverlässig sichern (nichts geht verloren).
 window.addEventListener("pagehide", flushSave);
 document.addEventListener("visibilitychange", () => { if (document.hidden) flushSave(); });
+
+// iOS-Large-Title: Balken-Titel erscheint beim Scrollen (auf Home/Themen/… mit Large-Title).
+window.addEventListener("scroll", () => {
+  const bar = document.querySelector(".appbar");
+  if (!bar) return;
+  if (VIEW === "quiz" || VIEW === "result") return;  // dort dauerhaft sichtbar
+  bar.classList.toggle("scrolled", window.scrollY > 24);
+}, { passive: true });
 
 document.getElementById("backBtn").addEventListener("click", goBack);
 
