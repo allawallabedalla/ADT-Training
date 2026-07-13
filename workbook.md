@@ -74,6 +74,43 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
   Scroll-Reset bei Ansichtswechsel
 - ✅ **Bugfix Reset** (v0.4.0): geteilte Objekt-Referenz behoben – Reset leert nun vollständig
 
+### 🔬 Aus Experten-Workshop (2026-07-13, kuratiert)
+Vollständiger Bericht: `docs/experten-workshop-2026-07-13.md`. Kuratiert unter den
+Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig**.
+
+**P1 – als Nächstes:**
+- ⬜ **Quick Wins (Paket)**: Pinch-Zoom entsperren · verpasste richtige Antwort sichtbar (grünes Häkchen) ·
+  Level-Up-Moment · SW-Fetch-Timeout (lie-fi) · Screenreader-Basics (aria-live, :focus-visible, reduced-motion) ·
+  Kontrast --text-faint ≥4,5:1 · Reset als rote Zeile + Quiz-confirm → iOS-Dialog
+- ⬜ **Fachkorrektur the-004** (Strahlentherapie ist lokal, nicht systemisch) – sofort
+- ⬜ **Fachliche Gesamt-Review** aller Fragen gegen UICC 8. Aufl., ICD-O-3, ICD-10-GM, oBDS-Begriff (CUP-Kode, pM0 prüfen)
+- ⬜ **Fragetyp-Abstraktion** (Handler je Typ) – Enabler für neue Aufgabentypen
+- ⬜ **Echter Prüfungsmodus** (Timer, kein Sofort-Feedback, freie Navigation/Flaggen, Themen-Blueprint, Sammelauswertung) + **Session-Persistenz**
+- ⬜ **Spaced Repetition + mehrstufige Mastery** (behebt „einmal richtig = gemeistert"); „heute fällig"; Push an Fälligkeit koppeln
+- ⬜ **Anwendungs-/Kodier-/Rechenaufgaben** (numeric/code-Eingabe) – braucht Inhalt
+- ⬜ **Quiz barrierefrei & robuster**: In-place-Toggle statt Full-Re-Render + ARIA-Rollen/Fokus
+
+**P2 – danach:**
+- ⬜ Onboarding-Flow + Tagesziel (an Streak gekoppelt)
+- ⬜ Faire Streak (Gnadentag/Schutz + Rekord-Anerkennung)
+- ⬜ Native Zurück-Navigation (pushState/popstate, Quiz mit Bestätigung)
+- ⬜ **app.js in Module aufteilen + Node-Test-Harness + Fragen-CI-Check** (stützt „makellose Funktion")
+- ⬜ Cache-Robustheit: stale-while-revalidate + reg.update (kein manuelles Cache-Bumpen mehr)
+- ⬜ Distraktoren/Items nach Item-Writing-Standards überarbeiten (Nonsens-Distraktoren, Test-Wiseness)
+- ⬜ Content-Ausbau ≥15–20 Fragen/Thema inkl. neuem Thema **OPS/Prozeduren** (wartet teils auf Material)
+- ⬜ anon-RPCs verpflichtend härten (Größen-/Längen-Check) + `codeExists` entfernen
+- ⬜ Badge-Rebalancing + Erstmeisterungs-Bonus-XP
+
+**P3 / optional:**
+- ⬜ Konfidenz-Tap + Kalibrierungs-Feedback (Metakognition)
+- ⬜ Leichter Datenschutz-/Transparenz-Hinweis + „inoffiziell"-Disclaimer in der App
+- ⬜ In-App „Cloud-Daten endgültig löschen"
+
+**Verworfen (Leitplanke „nur wenige Personen / kostenlos"):**
+- ❌ Kurs-/Lerngruppen-Code + Kohorten-Leaderboard (B2B2C-Skalierung)
+- ❌ Teilen-Button/QR-Code (Verbreitung) · ❌ Voll-Impressum/AVV/Umbenennung (erst bei öffentlicher Verbreitung)
+- ❌ Rate-Limiting der RPCs · ❌ Retention-Cron + Fragen-Index/Memoisierung (erst bei Skalierung)
+
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
 - ⬜ **P1** Kurs-Skript / Schulungsunterlagen als Quelle für neue Fragen nutzen
