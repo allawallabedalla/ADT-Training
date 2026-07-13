@@ -138,7 +138,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 **P3 / optional:**
 - ⬜ Konfidenz-Tap + Kalibrierungs-Feedback (Metakognition)
 - ✅ Leichter Datenschutz-/Transparenz-Hinweis + „inoffiziell"-Disclaimer in der App (v0.8.0)
-- ⬜ In-App „Cloud-Daten endgültig löschen"
+- ✅ In-App „Cloud-Daten löschen" (v0.23.0): leert die Cloud-Zeile + trennt, lokal bleibt
 
 **Kleinere Befunde & Cleanup (P3) – die restlichen Einzelpunkte aus dem Bericht:**
 - 🟡 Robustheit: ✅ Precache tolerant (v0.18.0) · ✅ QuotaExceeded-Hinweis (v0.18.0) · ✅ `perQuestion`-Whitelist (v0.18.0) · ✅ SW-Fetch same-origin (v0.17.0) · offen: `difficulty` in DATA_OK (Laufzeit ist bereits gegen NaN-XP abgesichert; von `validate-questions` geprüft)

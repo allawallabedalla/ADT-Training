@@ -678,7 +678,7 @@ const ICONS = {
   sliders: '<path d="M4 7h9M17 7h3"/><path d="M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
 };
-const APP_VERSION = "0.22.0";
+const APP_VERSION = "0.23.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -866,6 +866,7 @@ function renderSettings() {
       </div>
       <div class="ios-group">
         <button class="mode-btn" id="btnDisconnect">${iconTile("xcircle", "#ff3b30")}<span class="txt"><b>Verbindung trennen</b><p>Code von diesem Gerät entfernen (Daten bleiben in der Cloud)</p></span><span class="chev">›</span></button>
+        <button class="mode-btn" id="btnDeleteCloud">${iconTile("xcircle", "#ff3b30")}<span class="txt"><b>Cloud-Daten löschen</b><p>Cloud-Fortschritt entfernen – lokaler Fortschritt bleibt</p></span><span class="chev">›</span></button>
       </div>`;
   }
 
@@ -917,6 +918,7 @@ function renderSettings() {
       [{ label: "Trennen", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]);
     if (ok) { ADTSync.setCode(null); toast("Verbindung getrennt"); renderSettings(); }
   });
+  const bDel = $("btnDeleteCloud"); if (bDel) bDel.addEventListener("click", deleteCloudData);
   const bEx = $("btnExport"); if (bEx) bEx.addEventListener("click", exportProgress);
   const bIm = $("btnImport"); const imf = $("importFile");
   if (bIm && imf) {
@@ -1847,6 +1849,23 @@ function showOnboarding() {
       resolve();
     });
   });
+}
+
+// Cloud-Fortschritt löschen (Privatsphäre): überschreibt den Cloud-Eintrag mit einem
+// leeren Stand und trennt dieses Gerät. Der LOKALE Fortschritt bleibt erhalten.
+async function deleteCloudData() {
+  if (!syncEnabled()) { toast("Kein Cloud-Sync aktiv"); return; }
+  const ok = await modalChoice(
+    "Cloud-Daten löschen",
+    "Deinen in der Cloud gespeicherten Fortschritt löschen? Der Fortschritt auf diesem Gerät bleibt erhalten – dieses Gerät wird nur von der Cloud getrennt.",
+    [{ label: "Cloud-Daten löschen", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]
+  );
+  if (!ok) return;
+  const r = await ADTSync.overwriteRemote(freshState());   // Cloud-Zeile leeren
+  if (r && r.ok) { ADTSync.setCode(null); toast("☁️ Cloud-Daten gelöscht · getrennt"); }
+  else if (r && r.reason === "offline") { toast("🔌 Offline – bitte später erneut versuchen"); }
+  else { toast("⚠️ Löschen fehlgeschlagen"); }
+  renderSettings();
 }
 
 async function confirmReset() {

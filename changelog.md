@@ -11,6 +11,19 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.23.0] — 2026-07-13  ·  Cloud-Daten löschen
+
+### Hinzugefügt
+- **„Cloud-Daten löschen"** in den Einstellungen (nur bei aktivem Sync): entfernt den in der
+  Cloud gespeicherten Fortschritt und trennt dieses Gerät – der **lokale** Fortschritt bleibt
+  erhalten. Transparente Datenkontrolle ohne Backend-Eingriff (leert die Cloud-Zeile).
+
+### Technik
+- 2 neue UI-Tests (Sync in der Sandbox nicht erreichbar → Netzaufruf nicht ausgelöst).
+  `tests/run.sh` grün.
+
+---
+
 ## [0.22.0] — 2026-07-13  ·  Erfolge & Meisterschafts-Bonus
 
 ### Hinzugefügt

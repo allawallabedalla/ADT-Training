@@ -469,6 +469,22 @@ async function page(opts = {}) {
   chk(after.xp - r.xpBefore >= 25, 'Erstmeisterung: Bonus-XP vergeben (≥ Basis+15)');
 }
 
+// 22) Cloud-Daten löschen: Button + Bestätigung erscheinen bei aktivem Sync (UI-Verdrahtung)
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  await p.evaluate(() => { if (window.ADTSync) ADTSync.setCode('ADT-AAAAA-BBBBB-CCCCC'); });
+  await p.click('[data-act="settings"]');
+  await p.waitForSelector('#btnDeleteCloud');
+  chk(true, 'Cloud löschen: Button erscheint im verbundenen Zustand');
+  await p.click('#btnDeleteCloud');
+  await p.waitForSelector('.modal-card[role="dialog"]');
+  chk(true, 'Cloud löschen: Bestätigungs-Dialog erscheint');
+  await p.click('.modal-overlay .modal-btn.btn-ghost'); // Abbrechen (kein Netzaufruf)
+  await p.evaluate(() => { if (window.ADTSync) ADTSync.setCode(null); });
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();
