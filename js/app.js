@@ -445,7 +445,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.7.0";
+const APP_VERSION = "0.8.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -533,6 +533,7 @@ function renderHome() {
 
     <p class="muted center" style="margin-top:24px;margin-bottom:4px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen</p>
     <button class="link-danger" data-act="reset">Fortschritt zurücksetzen</button>
+    <p class="muted center" style="margin-top:16px;font-size:12px;opacity:.8">Inoffiziell · kein Produkt der ADT e. V. · <span class="link" data-act="info">Datenschutz</span></p>
   `;
 
   app.querySelectorAll("[data-act]").forEach(el => el.addEventListener("click", () => {
@@ -955,7 +956,21 @@ function renderInfo() {
     <div class="section-title">Als App installieren</div>
     <div class="q-card"><p style="margin:0;line-height:1.55">In <b>Safari</b> unten auf <b>Teilen</b> → <b>„Zum Home-Bildschirm"</b>. Danach startet die App im Vollbild und läuft komplett offline.</p></div>
 
-    <p class="muted center" style="margin:22px 2px 0">Version ${APP_VERSION} · Die Fragen dienen dem Üben und sind nicht die offiziellen ADT-Prüfungsfragen.</p>
+    <div class="section-title">Datenschutz & Hinweise</div>
+    <div class="q-card"><p style="margin:0;line-height:1.6">
+      Dein Lernfortschritt wird <b>lokal auf diesem Gerät</b> gespeichert. Nur wenn du <b>Geräte-Sync</b>
+      oder <b>Erinnerungen</b> aktivierst, wird zusätzlich in einem privaten Supabase-Projekt (EU) gespeichert:
+      dein Fortschritt (über einen anonymen Sync-Code) bzw. der Benachrichtigungs-Kanal deines Geräts + die Uhrzeit.
+      <b>Keine Namen, keine Patientendaten, keine Werbung, keine Weitergabe an Dritte, keine Nutzungsanalyse.</b><br><br>
+      Löschen jederzeit: „Fortschritt zurücksetzen" (lokal oder überall) und „Verbindung trennen" bzw. Erinnerung ausschalten.
+    </p></div>
+
+    <div class="q-card" style="border:1px solid var(--separator)"><p style="margin:0;line-height:1.55">
+      ⚠️ <b>Inoffiziell.</b> Diese App ist ein privates Übungswerkzeug und <b>kein Produkt der ADT e. V.</b>
+      Die Fragen dienen dem Üben und sind <b>nicht</b> die offiziellen ADT-Prüfungsfragen.
+    </p></div>
+
+    <p class="muted center" style="margin:22px 2px 0">Version ${APP_VERSION}</p>
   `;
 }
 

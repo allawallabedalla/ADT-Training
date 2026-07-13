@@ -87,7 +87,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 **Empfohlene Umsetzungsreihenfolge (vereinbart 2026-07-13):**
 0. ✅ **Sicherheitsnetz** (Test-Infrastruktur `tests/`, `bash tests/run.sh`) – erledigt 2026-07-13
 1. ✅ **Quick Wins** (Usability & Robustheit) → v0.7.0 – erledigt 2026-07-13
-2. **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die durch Cloud/Push neu entstandene Fläche)
+2. ✅ **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die Cloud/Push-Fläche) → v0.8.0 (2026-07-13)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
 4. Danach große P1-Features: Fragetyp-Abstraktion → echter Prüfungsmodus → Spaced Repetition → Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
 5. Parallel/laufend: fachliche Gesamt-Review der Fragen + Content-Ausbau (sobald Material da ist)
@@ -119,12 +119,12 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ⬜ Cache-Robustheit: stale-while-revalidate + reg.update (kein manuelles Cache-Bumpen mehr)
 - ⬜ Distraktoren/Items nach Item-Writing-Standards überarbeiten (Nonsens-Distraktoren, Test-Wiseness)
 - ⬜ Content-Ausbau ≥15–20 Fragen/Thema inkl. neuem Thema **OPS/Prozeduren** (wartet teils auf Material)
-- ⬜ anon-RPCs verpflichtend härten (Größen-/Längen-Check) + `codeExists` entfernen
+- ✅ anon-RPCs verpflichtend härten (Größen-/Längen-Check) + `codeExists` entfernt (v0.8.0; SQL: supabase/sync-hardening.sql)
 - ⬜ Badge-Rebalancing + Erstmeisterungs-Bonus-XP
 
 **P3 / optional:**
 - ⬜ Konfidenz-Tap + Kalibrierungs-Feedback (Metakognition)
-- ⬜ Leichter Datenschutz-/Transparenz-Hinweis + „inoffiziell"-Disclaimer in der App
+- ✅ Leichter Datenschutz-/Transparenz-Hinweis + „inoffiziell"-Disclaimer in der App (v0.8.0)
 - ⬜ In-App „Cloud-Daten endgültig löschen"
 
 **Kleinere Befunde & Cleanup (P3) – die restlichen Einzelpunkte aus dem Bericht:**

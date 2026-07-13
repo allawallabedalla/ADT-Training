@@ -197,12 +197,6 @@
     }
   }
 
-  // Prüft, ob unter einem Code bereits Daten existieren (für „verbinden")
-  async function codeExists(code) {
-    if (!isConfigured()) return false;
-    try { const r = await pull(code); return r != null; } catch { return false; }
-  }
-
   // ---- Web-Push: Anmeldung speichern/löschen ----
   async function savePush(sub, hour, tz) {
     if (!isConfigured()) return false;
@@ -218,7 +212,7 @@
   window.ADTSync = {
     isConfigured, getCode, setCode, getLastSynced,
     generateCode, normalizeCode, mergeStates,
-    syncNow, overwriteRemote, codeExists,
+    syncNow, overwriteRemote,
     savePush, removePush,
     hasPending,
     isSyncing: () => syncing,

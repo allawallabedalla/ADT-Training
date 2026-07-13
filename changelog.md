@@ -11,6 +11,28 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.8.0] — 2026-07-13  ·  Phase 2: Härtung & Transparenz
+
+Schließt die durch Cloud/Push entstandene Fläche.
+
+### Sicherheit
+- **`codeExists` entfernt** (kein Existenz-Orakel für Sync-Codes mehr).
+- **Pflicht-Härtung der Supabase-Funktionen** als [`supabase/sync-hardening.sql`](supabase/sync-hardening.sql):
+  Code-Längenprüfung + Größenlimits für `sync_pull`, `sync_push`, `push_save`
+  (Schutz vor Missbrauch/Kostentreiben). README entsprechend aktualisiert (Härtung empfohlen ausführen).
+  ⚠️ Serverseitig: einmal im Supabase SQL Editor ausführen.
+
+### Transparenz / Datenschutz
+- **In-App-Datenschutzhinweis** im Info-Reiter: welche Daten wo (lokal + optional Supabase/EU),
+  opt-in, keine Namen/Patientendaten/Werbung/Analyse, jederzeit löschbar.
+- **„Inoffiziell"-Disclaimer** prominent (Info-Reiter + dezent in der Home-Fußzeile):
+  kein Produkt der ADT e. V., nicht die offiziellen Prüfungsfragen.
+
+### Tests
+- E2E-Check für Datenschutz-/Disclaimer-Text ergänzt. `bash tests/run.sh` grün. Service Worker v9.
+
+---
+
 ## [0.7.0] — 2026-07-13  ·  Phase 1: Quick Wins
 
 Erstes Release der Workshop-Umsetzung – Usability, Barrierefreiheit, Robustheit.
