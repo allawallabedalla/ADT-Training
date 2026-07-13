@@ -111,8 +111,14 @@ function sanitizeState(raw) {
   s.examsPassed = clampInt(src.examsPassed, 0);
   s.bestExamPct = clampInt(src.bestExamPct, 0, 100);
   s.lastActiveDay = typeof src.lastActiveDay === "string" ? src.lastActiveDay : null;
+  // Nur bekannte Frage-IDs übernehmen (Defense-in-Depth gegen fremde/aufgeblähte Keys aus
+  // Import/Remote). Guard: nur filtern, wenn die Fragen wirklich geladen sind – sonst würde
+  // ein Ladefehler den Fortschritt löschen („Speicherstände sind heilig").
+  const knownQ = (typeof QUESTIONS !== "undefined" && Array.isArray(QUESTIONS) && QUESTIONS.length)
+    ? new Set(QUESTIONS.map(q => q.id)) : null;
   const rawPq = (src.perQuestion && typeof src.perQuestion === "object") ? src.perQuestion : {};
   for (const id of Object.keys(rawPq)) {
+    if (knownQ && !knownQ.has(id)) continue;
     const p = rawPq[id] || {};
     s.perQuestion[id] = {
       seen: clampInt(p.seen, 0),
@@ -140,9 +146,15 @@ function loadState() {
 }
 let S = loadState();
 let saveTimer = null;
+let quotaWarned = false;
 function persistLocal() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); return true; }
-  catch (e) { console.warn("Speichern fehlgeschlagen (localStorage voll?)", e); return false; }
+  catch (e) {
+    console.warn("Speichern fehlgeschlagen (localStorage voll?)", e);
+    // Einmalig sichtbar machen, damit stiller Datenverlust nicht unbemerkt bleibt.
+    if (!quotaWarned) { quotaWarned = true; try { toast("⚠️ Speicher voll – Fortschritt evtl. nicht gesichert"); } catch (_) {} }
+    return false;
+  }
 }
 function saveState() {
   clearTimeout(saveTimer);
@@ -625,7 +637,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.17.0";
+const APP_VERSION = "0.18.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }

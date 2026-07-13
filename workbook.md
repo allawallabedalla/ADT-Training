@@ -141,7 +141,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ⬜ In-App „Cloud-Daten endgültig löschen"
 
 **Kleinere Befunde & Cleanup (P3) – die restlichen Einzelpunkte aus dem Bericht:**
-- ⬜ Robustheit: `difficulty` in DATA_OK validieren (sonst NaN-XP-Risiko) · Precache tolerant machen (cache.addAll bricht sonst bei 1 fehlenden Datei komplett) · Nutzer-Hinweis bei vollem localStorage (QuotaExceeded) · `sanitizeState` fremde Objekt-Keys (Badge-/Frage-IDs aus Remote) gegen Whitelist prüfen (Defense-in-Depth) · SW-Fetch-Handler auf same-origin beschränken
+- 🟡 Robustheit: ✅ Precache tolerant (v0.18.0) · ✅ QuotaExceeded-Hinweis (v0.18.0) · ✅ `perQuestion`-Whitelist (v0.18.0) · ✅ SW-Fetch same-origin (v0.17.0) · offen: `difficulty` in DATA_OK (Laufzeit ist bereits gegen NaN-XP abgesichert; von `validate-questions` geprüft)
 - ⬜ Barrierefreiheit (ergänzend): `modalChoice` als role=dialog + Fokusfalle + Escape · aria-Rollen für Fortschrittsbalken/Ring · doppeltes `<h1>` (Appbar + Large-Title) entdoppeln · Dynamic Type (rem statt fixem px) – größer
 - ⬜ UI-Cleanup: Quiz-Fortschrittsbalken zeigt Position statt „erledigt" (0 % auf Frage 1) · Emoji in Toasts/Install-Tip → SVG, toten Code entfernen (`.emoji`/`.ic`, Dead-CSS) · `theme-color` an App-Blau (#007aff) angleichen · verschachtelten `master`-Badge-Test vereinfachen
 - ⬜ Lern-Feinheiten: „Schwachstellen" enthält auch nie gesehene Items → Benennung/Trennung schärfen · antwortspezifisches Feedback (später) · Session-Größe/Dosierung an Tagesziel koppeln
@@ -164,7 +164,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 - ⬜ **P3** Quellen-/Referenzangabe je Frage (z. B. „ICD-O-3, Regel …")
 
 ### Funktionen (aus Abstimmung 2026-07-13 — „machen wir später")
-- ⬜ **P1** **Echter Prüfungsmodus**: Timer (Prüfung 180 Min), kein Sofort-Feedback,
+- ✅ **P1** **Echter Prüfungsmodus** (v0.9.0, erledigt): Timer, kein Sofort-Feedback,
   Fragen-Navigation + Markieren/Flaggen, „Abgeben" → volle Auswertung mit Erklärungen
 - ✅ **P1** **Spaced Repetition (Leitner-System)** (v0.10.0): fällige Wiederholungen mit optimalen
   Abständen; Startseite zeigt „heute fällig"
@@ -188,7 +188,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 ### Technik / Betrieb
 - ✅ **Reset erweitern**: „überall (Cloud) / nur dieses Gerät" umgesetzt (v0.3.0)
 - ✅ **In-App-Hinweis „neue Version verfügbar"** bei Service-Worker-Update (v0.3.0)
-- ⬜ **P3** Merge des Arbeits-Branches auf `main` (auf Wunsch, für dauerhafte Pages-URL)
+- ✅ **P3** Merge des Arbeits-Branches auf `main` (jeder Release wird per Fast-Forward auf `main` deployt)
 - ⬜ **P3** Automatischer Konsistenz-Check der Fragen (CI/Test-Skript)
 
 ---

@@ -29,7 +29,11 @@ const ASSETS = [
 self.addEventListener("install", (e) => {
   // KEIN automatisches skipWaiting: ein Update wartet, bis der Nutzer es per
   // In-App-Banner bestätigt (dann sendet die App die SKIP_WAITING-Nachricht).
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
+  // Toleranter Precache: jede Datei einzeln – eine fehlende Datei darf NICHT die
+  // ganze Installation (und damit Offline) scheitern lassen (addAll wäre all-or-nothing).
+  e.waitUntil(caches.open(CACHE).then((c) =>
+    Promise.all(ASSETS.map((u) => c.add(u).catch((err) => console.warn("Precache übersprungen:", u, err))))
+  ));
 });
 
 self.addEventListener("message", (e) => {

@@ -11,6 +11,24 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.18.0] — 2026-07-13  ·  Härtung
+
+Kleine, aber wichtige Robustheits-Verbesserungen (Defense-in-Depth).
+
+### Geändert
+- **Toleranter Precache** im Service Worker: Assets werden einzeln gecacht – eine
+  fehlende Datei lässt nicht mehr die ganze Installation (und damit Offline) scheitern.
+- **Fremde Frage-IDs werden verworfen**: `sanitizeState` übernimmt nur `perQuestion`-
+  Einträge zu echten Fragen (bounded gegen aufgeblähte/fehlerhafte Import-/Remote-Daten) –
+  mit Sicherung, dass bei einem Lade-Fehler nichts gelöscht wird.
+- **Speicher-voll sichtbar**: Schlägt das lokale Speichern fehl (Quota), erscheint einmalig
+  ein Hinweis statt stillem Datenverlust.
+
+### Technik
+- 1 neuer Regressionstest (Whitelist). `tests/run.sh` grün (Cache-Name stabil, kein Bump nötig).
+
+---
+
 ## [0.17.0] — 2026-07-13  ·  Selbst-aktualisierender Cache (Robustheit)
 
 Beseitigt eine bekannte Fragilität: das **manuelle Hochzählen** der Service-Worker-Cache-

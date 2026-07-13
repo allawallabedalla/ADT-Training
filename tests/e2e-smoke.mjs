@@ -354,6 +354,20 @@ async function page(opts = {}) {
   chk(!again, 'Onboarding: erscheint nach Abschluss nicht erneut');
 }
 
+// 17) Härtung: unbekannte Frage-IDs in perQuestion werden verworfen, echte behalten
+{
+  const p = await page();
+  await p.addInitScript(() => localStorage.setItem('adt_trainer_state_v1', JSON.stringify({
+    schemaVersion: 2,
+    perQuestion: { 'gr-001': { seen: 1, correct: 1, box: 1, due: '2020-01-01' }, 'BOGUS-XYZ': { seen: 9, correct: 9 } },
+    badges: {},
+  })));
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  const pq = await p.evaluate(() => S.perQuestion);
+  chk(pq['gr-001'] && !pq['BOGUS-XYZ'], 'Härtung: fremde Frage-ID verworfen, echte behalten');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();
