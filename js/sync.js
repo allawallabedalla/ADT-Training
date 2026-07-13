@@ -60,6 +60,9 @@
     a = a || {}; b = b || {};
     const out = {};
     const maxNum = (x, y) => Math.max(Number(x) || 0, Number(y) || 0);
+    // Schema-Version mitführen: sonst hielte der gemergte Stand keine Version und
+    // eine erneute Migration würde die Spaced-Repetition-Planung überschreiben.
+    out.schemaVersion = maxNum(a.schemaVersion || 1, b.schemaVersion || 1);
     out.xp = maxNum(a.xp, b.xp);
     out.streak = maxNum(a.streak, b.streak);
     out.examsPassed = maxNum(a.examsPassed, b.examsPassed);
@@ -83,7 +86,14 @@
       if ((pa.seen || 0) > (pb.seen || 0)) lastResult = pa.lastResult || null;
       else if ((pb.seen || 0) > (pa.seen || 0)) lastResult = pb.lastResult || null;
       else lastResult = (pa.lastResult === "correct" || pb.lastResult === "correct") ? "correct" : (pa.lastResult || pb.lastResult || null);
-      pq[id] = { seen, correct, wrong, lastResult };
+      // Spaced Repetition: die weiter fortgeschrittene Box gewinnt (monotoner Lernfortschritt);
+      // bei gleicher Box das spätere Fälligkeitsdatum (zuletzt wiederholt → nicht erneut nerven).
+      const boxA = Number(pa.box) || 0, boxB = Number(pb.box) || 0;
+      let box, due;
+      if (boxA > boxB) { box = boxA; due = pa.due || null; }
+      else if (boxB > boxA) { box = boxB; due = pb.due || null; }
+      else { box = boxA; const da = pa.due || "", db = pb.due || ""; due = (da >= db ? da : db) || null; }
+      pq[id] = { seen, correct, wrong, lastResult, box, due };
     }
     out.perQuestion = pq;
 

@@ -132,6 +132,46 @@ async function page() {
   chk(!!saved, 'Prüfung: laufende Session bleibt nach Reload erhalten');
 }
 
+// 9) Schema-Migration v1 -> v2: SRS-Felder werden aus altem Fortschritt warmgestartet
+{
+  const p = await page();
+  await p.addInitScript(() => localStorage.setItem('adt_trainer_state_v1', JSON.stringify({
+    schemaVersion: 1, xp: 100, totalAnswered: 3, totalCorrect: 2,
+    perQuestion: {
+      'tnm-001': { seen: 2, correct: 2, wrong: 0, lastResult: 'correct' },   // -> Box 3 (sicher), +7 Tage
+      'gr-001':  { seen: 1, correct: 0, wrong: 1, lastResult: 'wrong' },      // -> Box 0, heute fällig
+    }, badges: {},
+  })));
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  // In-Memory-Zustand lesen (loadState migriert beim Start; localStorage wird erst beim
+  // nächsten Speichern neu geschrieben – die Migration selbst wirkt sofort auf S).
+  const st = await p.evaluate(() => S);
+  const today = await p.evaluate(() => todayStr());
+  const okMig = st.schemaVersion === 2
+    && st.perQuestion['tnm-001'].box === 3 && st.perQuestion['tnm-001'].due > today
+    && st.perQuestion['gr-001'].box === 0 && st.perQuestion['gr-001'].due === today;
+  chk(okMig, 'Migration v1->v2: Box/Fälligkeit aus altem Fortschritt warmgestartet');
+  // Home zeigt die heute fällige Wiederholung an (mind. 1)
+  const dueEnabled = await p.evaluate(() => { const b = document.querySelector('[data-act="due"]'); return b && !b.disabled; });
+  chk(dueEnabled, 'Migration: fällige Frage erscheint als aktive Wiederholung auf der Startseite');
+}
+
+// 10) SRS: richtige Antwort erhöht die Box und terminiert die Wiederholung in die Zukunft
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
+  // Eine Frage vollständig korrekt beantworten
+  const qid = await p.evaluate(() => SESSION.questions[SESSION.idx].id);
+  await p.evaluate(() => { const q = SESSION.questions[SESSION.idx]; SESSION.picks[SESSION.idx] = new Set(q.correct); renderQuiz(); });
+  await p.click('#checkBtn'); await p.waitForSelector('.explain.ok');
+  const rec = await p.evaluate((id) => S.perQuestion[id], qid);
+  const today = await p.evaluate(() => todayStr());
+  chk(rec && rec.box === 1 && rec.lastResult === 'correct' && rec.due > today,
+    'SRS: korrekte Antwort -> Box 1, Wiederholung erst in Zukunft (nicht sofort fällig)');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

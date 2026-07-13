@@ -89,7 +89,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 1. ✅ **Quick Wins** (Usability & Robustheit) → v0.7.0 – erledigt 2026-07-13
 2. ✅ **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die Cloud/Push-Fläche) → v0.8.0 (2026-07-13)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
-4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → als Nächstes: Spaced Repetition + Mastery → Fragetyp-Abstraktion + Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
+4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → ✅ Spaced Repetition + Mastery (v0.10.0) → als Nächstes: Fragetyp-Abstraktion + Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
 5. Parallel/laufend: fachliche Gesamt-Review der Fragen + Content-Ausbau (sobald Material da ist)
 
 **Bekannte Risiken durch bisherige Umsetzung (ehrlich dokumentiert, alle im Backlog adressiert):**
@@ -107,7 +107,9 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ⬜ **Fachliche Gesamt-Review** aller Fragen gegen UICC 8. Aufl., ICD-O-3, ICD-10-GM, oBDS-Begriff (CUP-Kode, pM0 prüfen)
 - ⬜ **Fragetyp-Abstraktion** (Handler je Typ) – Enabler für neue Aufgabentypen
 - ✅ **Echter Prüfungsmodus** (Timer, kein Sofort-Feedback, freie Navigation/Flaggen, Themen-Blueprint, Sammelauswertung) + **Session-Persistenz** — v0.9.0
-- ⬜ **Spaced Repetition + mehrstufige Mastery** (behebt „einmal richtig = gemeistert"); „heute fällig"; Push an Fälligkeit koppeln
+- ✅ **Spaced Repetition + mehrstufige Mastery** (v0.10.0): Leitner-Boxen 0–5 (1/3/7/16/35 Tage),
+  „Fällige Wiederholungen" mit „heute fällig", Mastery „sicher" ab Box 3, Schema-v2-Migration ohne
+  Datenverlust, Box/Fälligkeit im Merge. Offen (später): Push an Fälligkeit koppeln (heute Fixzeit)
 - ⬜ **Anwendungs-/Kodier-/Rechenaufgaben** (numeric/code-Eingabe) – braucht Inhalt
 - ⬜ **Quiz barrierefrei & robuster**: In-place-Toggle statt Full-Re-Render + ARIA-Rollen/Fokus
 
@@ -152,7 +154,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 ### Funktionen (aus Abstimmung 2026-07-13 — „machen wir später")
 - ⬜ **P1** **Echter Prüfungsmodus**: Timer (Prüfung 180 Min), kein Sofort-Feedback,
   Fragen-Navigation + Markieren/Flaggen, „Abgeben" → volle Auswertung mit Erklärungen
-- ⬜ **P1** **Spaced Repetition (Leitner-System)**: fällige Wiederholungen mit optimalen
+- ✅ **P1** **Spaced Repetition (Leitner-System)** (v0.10.0): fällige Wiederholungen mit optimalen
   Abständen; Startseite zeigt „heute fällig"
 - 🟡 **P2** **Einstellungen**: Fragenanzahl wählbar, Hell/Dunkel-Umschalter, Sofort-Feedback an/aus
   (Backup **exportieren/importieren** ist bereits erledigt, v0.3.0)

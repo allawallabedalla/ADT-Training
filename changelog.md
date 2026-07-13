@@ -11,6 +11,37 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.10.0] — 2026-07-13  ·  Spaced Repetition & mehrstufige Mastery
+
+Aus „einmal richtig = gemeistert" wird ein echtes Wiederholungssystem, das den
+Lernstoff langfristig verankert – ohne dass etwas manuell geplant werden muss.
+
+### Hinzugefügt
+- **Spaced Repetition (Leitner-System)**: Jede Frage sitzt in einer Box 0–5. Richtig
+  beantwortet steigt sie eine Box höher mit längerer Pause (**1 → 3 → 7 → 16 → 35 Tage**),
+  ein Fehler setzt sie auf Box 0 zurück. So kommt jede Frage genau dann wieder, wenn sie
+  zu verblassen droht.
+- **„Fällige Wiederholungen"** auf der Startseite (ersetzt „Schwachstellen wiederholen"):
+  zeigt an, wie viele Fragen heute dran sind, überfällige zuerst.
+- **Mehrstufige Mastery**: Ein Thema gilt erst als **„sicher"** (gemeistert), wenn seine
+  Fragen mehrfach richtig saßen (Box 3+) – nicht schon nach einem einzigen Treffer. Das
+  macht den Fortschrittsbalken ehrlicher.
+- **Info-Tab**: neuer Abschnitt „Cleveres Wiederholen", der das System erklärt.
+
+### Geändert / Datenmodell
+- Neues Schema **v2** mit sauberer Migration: bestehender Fortschritt wird warmgestartet
+  (schon Gekonntes → Box 3 mit 7-Tage-Pause, zuletzt Falsches → Box 1, Ungeübtes → heute
+  fällig). **Kein Lernstand geht verloren.**
+- Der geräteübergreifende **Merge** führt Box/Fälligkeit verlustarm zusammen (weiter
+  fortgeschrittene Box gewinnt) und trägt die Schema-Version mit, damit kein Sync die
+  Wiederholungsplanung zurücksetzt.
+
+### Technik
+- 4 neue Tests (SRS-Merge, Schema-Migration, Box-Aufstieg nach Antwort, Fälligkeits-Anzeige).
+  `tests/run.sh` grün. Service Worker v11.
+
+---
+
 ## [0.9.0] — 2026-07-13  ·  Echter Prüfungsmodus
 
 Die Prüfungssimulation ist jetzt eine realistische Generalprobe statt verkapptem Üben.

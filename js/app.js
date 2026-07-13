@@ -23,7 +23,13 @@ const DATA_OK = (() => {
  * 1) Persistenter Zustand (localStorage, robust gegen Defekte)
  * ------------------------------------------------------------------ */
 const STORE_KEY = "adt_trainer_state_v1";   // NIE umbenennen – siehe workbook.md („Speicherstände sind heilig")
-const SCHEMA_VERSION = 1;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
+const SCHEMA_VERSION = 2;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
+
+// Spaced Repetition (Leitner): Box 0–5. Pause bis zur nächsten Wiederholung in Tagen.
+// Richtig -> eine Box höher (längere Pause); falsch -> zurück auf Box 0 (heute erneut).
+// Hier oben deklariert, weil die Migration (oben) darauf zugreift, bevor Abschnitt 2 läuft.
+const SRS_INTERVALS_DAYS = [0, 1, 3, 7, 16, 35];
+const SRS_MASTER_BOX = 3;                     // ab dieser Box gilt eine Frage als „sicher"
 const DEFAULT_STATE = {
   schemaVersion: SCHEMA_VERSION,
   xp: 0,
@@ -31,7 +37,7 @@ const DEFAULT_STATE = {
   lastActiveDay: null,          // "YYYY-MM-DD"
   totalAnswered: 0,
   totalCorrect: 0,
-  perQuestion: {},              // id -> { seen, correct, wrong, lastResult }
+  perQuestion: {},              // id -> { seen, correct, wrong, lastResult, box, due }
   badges: {},                   // badgeId -> ISO-Datum
   examsPassed: 0,
   bestExamPct: 0,
@@ -40,8 +46,26 @@ const DEFAULT_STATE = {
 // Migrations-Gerüst: MIGRATIONS[n] hebt einen Stand von Version n-1 auf n.
 // So überleben Lernstände künftige Datenmodell-Änderungen (statt sie zu verwerfen).
 const MIGRATIONS = {
-  // Beispiel für die Zukunft:
-  // 2: (s) => { s.neuesFeld = 0; return s; },
+  // v1 -> v2: Spaced-Repetition-Felder (Leitner-Box + Fälligkeit) je Frage ergänzen.
+  // Warmstart aus dem bisherigen Fortschritt, damit kein Lernstand verloren geht:
+  //   - schon einmal korrekt & zuletzt NICHT falsch  -> Box 3 ("sicher", 7 Tage Pause)
+  //   - schon einmal korrekt, aber zuletzt falsch     -> Box 1
+  //   - noch nie korrekt                              -> Box 0 (heute fällig)
+  2: (s) => {
+    const pq = (s && s.perQuestion && typeof s.perQuestion === "object") ? s.perQuestion : {};
+    for (const id of Object.keys(pq)) {
+      const p = pq[id] || {};
+      const correct = Math.max(0, Math.floor(Number(p.correct) || 0));
+      let box;
+      if (correct >= 1 && p.lastResult !== "wrong") box = 3;
+      else if (correct >= 1) box = 1;
+      else box = 0;
+      p.box = box;
+      p.due = addDaysStr(SRS_INTERVALS_DAYS[box]);
+      pq[id] = p;
+    }
+    return s;
+  },
 };
 function migrate(state) {
   let v = Number(state && state.schemaVersion) || 1;
@@ -85,6 +109,8 @@ function sanitizeState(raw) {
       correct: clampInt(p.correct, 0),
       wrong: clampInt(p.wrong, 0),
       lastResult: (p.lastResult === "correct" || p.lastResult === "wrong") ? p.lastResult : null,
+      box: clampInt(p.box, 0, SRS_INTERVALS_DAYS.length - 1),
+      due: typeof p.due === "string" ? p.due : null,
     };
   }
   const rawBg = (src.badges && typeof src.badges === "object") ? src.badges : {};
@@ -221,6 +247,26 @@ function daysBetween(a, b) {
   const da = new Date(a + "T00:00:00"), db = new Date(b + "T00:00:00");
   return Math.round((db - da) / 86400000);
 }
+// Datum in n Tagen als "YYYY-MM-DD" (n=0 -> heute). Für Fälligkeiten der Wiederholung.
+function addDaysStr(n) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + (Number(n) || 0));
+  return todayStr(d);
+}
+// Leitner-Update nach einer Antwort: Box anpassen und nächste Fälligkeit setzen.
+function srsUpdate(p, ok) {
+  const cur = Math.max(0, Math.min(SRS_INTERVALS_DAYS.length - 1, Math.floor(Number(p.box) || 0)));
+  p.box = ok ? Math.min(cur + 1, SRS_INTERVALS_DAYS.length - 1) : 0;
+  p.due = addDaysStr(SRS_INTERVALS_DAYS[p.box]);
+  return p;
+}
+// Ist eine Frage heute (oder überfällig) zur Wiederholung dran?
+function isDue(p, t = todayStr()) {
+  if (!p) return false;                       // noch nie gesehen -> zählt separat (neu)
+  if (!p.due) return true;                    // gesehen, aber ohne Termin -> fällig
+  return p.due <= t;
+}
 // Level-Kurve: benötigte Gesamt-XP für Level n = 50 * n * (n-1)  (steigend)
 function levelForXp(xp) {
   let lvl = 1;
@@ -265,7 +311,7 @@ const BADGES = [
 function topicMastered(topicKey) {
   const qs = QUESTIONS.filter(q => q.topic === topicKey);
   if (!qs.length) return false;
-  return qs.every(q => { const p = S.perQuestion[q.id]; return p && p.correct >= 1; });
+  return qs.every(q => { const p = S.perQuestion[q.id]; return p && p.box >= SRS_MASTER_BOX; });
 }
 function checkBadges() {
   const newly = [];
@@ -279,11 +325,17 @@ function checkBadges() {
 /* ------------------------------------------------------------------ *
  * 4) Statistik-Hilfen
  * ------------------------------------------------------------------ */
+// „Sicher" (gemeistert) = Box ≥ 3; „am Lernen" = Box 1–2; „neu" = ungeübt/Box 0.
 function topicStats(topicKey) {
   const qs = QUESTIONS.filter(q => q.topic === topicKey);
-  let mastered = 0;
-  for (const q of qs) { const p = S.perQuestion[q.id]; if (p && p.correct >= 1) mastered++; }
-  return { total: qs.length, mastered, pct: qs.length ? Math.round(mastered / qs.length * 100) : 0 };
+  let mastered = 0, learning = 0;
+  for (const q of qs) {
+    const p = S.perQuestion[q.id];
+    if (!p) continue;
+    if (p.box >= SRS_MASTER_BOX) mastered++;
+    else if (p.box >= 1) learning++;
+  }
+  return { total: qs.length, mastered, learning, pct: qs.length ? Math.round(mastered / qs.length * 100) : 0 };
 }
 function overallAccuracy() {
   return S.totalAnswered ? Math.round(S.totalCorrect / S.totalAnswered * 100) : 0;
@@ -291,6 +343,11 @@ function overallAccuracy() {
 // Fragen, die noch nie richtig beantwortet wurden oder zuletzt falsch waren
 function weakQuestions() {
   return QUESTIONS.filter(q => { const p = S.perQuestion[q.id]; return !p || p.correct === 0 || p.lastResult === "wrong"; });
+}
+// Spaced Repetition: heute (oder überfällig) zur Wiederholung anstehende Fragen.
+// Nur bereits gesehene Fragen mit erreichter Fälligkeit – neue Fragen gehören ins Training.
+function dueQuestions(t = todayStr()) {
+  return QUESTIONS.filter(q => { const p = S.perQuestion[q.id]; return p && isDue(p, t); });
 }
 
 /* ------------------------------------------------------------------ *
@@ -309,10 +366,20 @@ function buildSession(mode, opts = {}) {
   let pool;
   if (mode === "topic") pool = QUESTIONS.filter(q => q.topic === opts.topic);
   else if (mode === "weak") pool = weakQuestions();
+  else if (mode === "due") pool = dueQuestions();
   else if (mode === "exam") pool = QUESTIONS;
   else pool = QUESTIONS; // "mixed"
 
-  let questions = shuffle(pool);
+  let questions;
+  if (mode === "due") {
+    // Fällige Wiederholungen: überfällige zuerst (frühestes Fälligkeitsdatum vorne).
+    questions = pool.slice().sort((a, b) => {
+      const da = (S.perQuestion[a.id] || {}).due || "", db = (S.perQuestion[b.id] || {}).due || "";
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
+  } else {
+    questions = shuffle(pool);
+  }
   const limit = opts.limit || (mode === "exam" ? Math.min(30, questions.length) : Math.min(15, questions.length));
   questions = questions.slice(0, limit);
 
@@ -352,9 +419,10 @@ function checkCurrent() {
   SESSION.correctFlags[i] = ok;
 
   // Fortschritt aktualisieren
-  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null };
+  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null };
   p.seen += 1;
   if (ok) { p.correct += 1; p.lastResult = "correct"; } else { p.wrong += 1; p.lastResult = "wrong"; }
+  srsUpdate(p, ok);                       // Leitner-Box + nächste Fälligkeit fortschreiben
   S.perQuestion[q.id] = p;
   S.totalAnswered += 1;
   if (ok) S.totalCorrect += 1;
@@ -445,7 +513,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.9.0";
+const APP_VERSION = "0.10.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -487,7 +555,7 @@ function renderHome() {
   const into = S.xp - floor, span = ceil - floor;
   const pctBar = Math.round(into / span * 100);
   const acc = overallAccuracy();
-  const weak = weakQuestions().length;
+  const due = dueQuestions().length;
 
   const standalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
   const installTip = standalone ? "" : `
@@ -516,7 +584,7 @@ function renderHome() {
     <div class="ios-group">
       <button class="mode-btn" data-act="mixed">${iconTile("shuffle", "#007aff")}<span class="txt"><b>Gemischtes Training</b><p>Zufällige Fragen aus allen Themen</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="topics">${iconTile("grid", "#5e5ce6")}<span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
-      <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Schwachstellen wiederholen</b><p>${weak ? weak + " Fragen zum Auffrischen" : "Super – aktuell keine offenen Fragen"}</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="due" ${due ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Fällige Wiederholungen</b><p>${due ? due + " Frage" + (due === 1 ? "" : "n") + " heute fällig" : "Super – heute nichts fällig"}</p></span><span class="chev">›</span></button>
     </div>
 
     <div class="section-title">Prüfung</div>
@@ -540,7 +608,7 @@ function renderHome() {
     const a = el.dataset.act;
     if (a === "mixed") { buildSession("mixed"); go("quiz"); }
     else if (a === "topics") go("topics");
-    else if (a === "weak") { buildSession("weak"); go("quiz"); }
+    else if (a === "due") { buildSession("due"); go("quiz"); }
     else if (a === "exam") examStart();
     else if (a === "badges") go("badges");
     else if (a === "settings") go("settings");
@@ -765,7 +833,7 @@ function renderTopics() {
   app.innerHTML = `<h1 class="large-title">Themen</h1>
     <div class="section-title">Wähle ein Thema</div>
     <div class="ios-group">${rows}</div>
-    <p class="muted center" style="margin-top:16px">„Gemeistert" = Frage mindestens einmal korrekt beantwortet.</p>`;
+    <p class="muted center" style="margin-top:16px">„Sicher" = Frage mehrfach richtig beantwortet (Box ${SRS_MASTER_BOX}+). Die App plant Wiederholungen automatisch.</p>`;
   app.querySelectorAll("[data-topic]").forEach(el => el.addEventListener("click", () => {
     const key = el.dataset.topic;
     if (!QUESTIONS.some(q => q.topic === key)) { toast("Noch keine Fragen in diesem Thema"); return; }
@@ -1076,8 +1144,9 @@ function submitExam(auto) {
 
   // Fortschritt aktualisieren (perQuestion + Gesamtzähler + Prüfungsrekord)
   for (const r of results) {
-    const p = S.perQuestion[r.q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null };
+    const p = S.perQuestion[r.q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null };
     p.seen += 1; if (r.ok) { p.correct += 1; p.lastResult = "correct"; } else { p.wrong += 1; p.lastResult = "wrong"; }
+    srsUpdate(p, r.ok);                    // Prüfungsantworten fließen ebenfalls in die Wiederholung ein
     S.perQuestion[r.q.id] = p;
   }
   S.totalAnswered += total; S.totalCorrect += right;
@@ -1198,7 +1267,7 @@ function renderInfo() {
     <div class="ios-group">
       ${infoRow("shuffle", "#007aff", "Gemischtes Training", "Zufällige Fragen aus allen Themen")}
       ${infoRow("grid", "#5e5ce6", "Nach Thema lernen", "Ein Themengebiet gezielt üben")}
-      ${infoRow("repeat", "#ff9500", "Schwachstellen wiederholen", "Fragen, die noch nicht sitzen")}
+      ${infoRow("repeat", "#ff9500", "Fällige Wiederholungen", "Spaced Repetition: die App bringt jede Frage genau dann zurück, wenn du sie zu vergessen drohst")}
       ${infoRow("clipboardCheck", "#34c759", "Prüfungssimulation", "30 Fragen · bestanden ab 50 %")}
     </div>
 
@@ -1207,6 +1276,10 @@ function renderInfo() {
     • Ein Punkt nur, wenn <b>alle</b> richtigen Antworten getroffen sind (kein Teilpunkt).<br>
     • Bestanden ab <b>50 %</b> der Punkte.<br>
     • Zugelassene Hilfsmittel in der echten Prüfung: ICD-10, ICD-O-3, OPS.</p></div>
+
+    <div class="section-title">Cleveres Wiederholen</div>
+    <div class="q-card"><p style="margin:0;line-height:1.6">Die App nutzt <b>Spaced Repetition</b> (Leitner-System): Jede Frage wandert bei richtiger Antwort in eine höhere Box mit längerer Pause (1 → 3 → 7 → 16 → 35 Tage). Bei einem Fehler geht sie zurück auf Anfang. So wiederholst du genau das, was du zu vergessen drohst – und nicht das, was längst sitzt.<br><br>
+    Eine Frage gilt als <b>„sicher"</b>, wenn sie mehrfach richtig war (Box ${SRS_MASTER_BOX}+). Unter <b>Fällige Wiederholungen</b> auf der Startseite steht, was heute dran ist.</p></div>
 
     <div class="section-title">Belohnungen</div>
     <div class="ios-group">

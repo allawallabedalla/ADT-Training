@@ -46,6 +46,24 @@ ok(m.perQuestion.q2.correct === 2, 'merge perQuestion.correct = max');
 ok(m.perQuestion.q3 && m.totalAnswered === 6 && m.totalCorrect === 5, 'merge Zähler aus perQuestion abgeleitet');
 ok(m.badges.first === '2026-07-11T10:00:00Z', 'merge badge früheres Datum behalten');
 
+// ---- Spaced Repetition: Box/Fälligkeit im Merge ----
+const SA = { schemaVersion: 2, perQuestion: {
+  qx: { seen: 3, correct: 3, wrong: 0, lastResult: 'correct', box: 3, due: '2026-07-20' },
+  qy: { seen: 2, correct: 1, wrong: 1, lastResult: 'wrong', box: 0, due: '2026-07-13' },
+}, badges: {} };
+const SB = { schemaVersion: 2, perQuestion: {
+  qx: { seen: 2, correct: 2, wrong: 0, lastResult: 'correct', box: 2, due: '2026-07-16' },
+  qy: { seen: 2, correct: 1, wrong: 1, lastResult: 'correct', box: 2, due: '2026-07-18' },
+}, badges: {} };
+const ms = S.mergeStates(SA, SB);
+ok(ms.schemaVersion === 2, 'merge schemaVersion mitgeführt (verhindert Re-Migration)');
+ok(ms.perQuestion.qx.box === 3 && ms.perQuestion.qx.due === '2026-07-20', 'merge SRS: höhere Box gewinnt mit ihrer Fälligkeit');
+ok(ms.perQuestion.qy.box === 2 && ms.perQuestion.qy.due === '2026-07-18', 'merge SRS: bei höherer Box das jeweilige Fälligkeitsdatum');
+// gegen altes Remote ohne SRS-Felder: lokale Box bleibt erhalten
+const mOld = S.mergeStates({ schemaVersion: 2, perQuestion: { qz: { seen: 1, correct: 1, box: 4, due: '2026-08-01' } }, badges: {} },
+  { perQuestion: { qz: { seen: 1, correct: 1 } }, badges: {} });
+ok(mOld.perQuestion.qz.box === 4 && mOld.perQuestion.qz.due === '2026-08-01', 'merge SRS: lokale Box überlebt altes Remote ohne SRS');
+
 // ---- Code-Erzeugung / Normalisierung ----
 ok(/^ADT-[A-Z2-9]{5}-[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(S.generateCode()), 'generateCode Format');
 ok(S.normalizeCode('adt xxxxx yyyyy zzzzz') === 'ADT-XXXXX-YYYYY-ZZZZZ', 'normalizeCode');
