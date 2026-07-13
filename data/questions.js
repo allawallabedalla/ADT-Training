@@ -12,10 +12,14 @@
  *   difficulty  1 = leicht, 2 = mittel, 3 = schwer
  *   type        "single"  = genau eine richtige Antwort
  *               "multi"   = eine ODER mehrere richtige Antworten (Prüfungsformat!)
+ *               "numeric" = Rechen-/Anwendungsaufgabe mit freier Zahl-Eingabe
  *   question    Fragetext
- *   options     Array der Antwortmöglichkeiten
- *   correct     Array der Indizes (0-basiert) der RICHTIGEN Antworten
- *   explanation Erklärung – vermittelt den Lerninhalt
+ *   options     Array der Antwortmöglichkeiten            (single/multi)
+ *   correct     Array der Indizes (0-basiert) der RICHTIGEN Antworten (single/multi)
+ *   answer      erwartete Zahl                            (numeric)
+ *   tolerance   erlaubte Abweichung ± (optional, Standard 0) (numeric)
+ *   unit        Einheit zur Anzeige (optional)            (numeric)
+ *   explanation Erklärung – vermittelt den Lerninhalt (inkl. Rechenweg bei numeric)
  *
  * Neue Fragen einfach unten anhängen. Die App validiert das Format beim Start.
  */
@@ -666,6 +670,32 @@ const QUESTIONS = [
     ],
     correct: [1],
     explanation: "Pseudonymisierung trennt Identitäts- von medizinischen Daten; ein Rückbezug ist nur über einen streng geschützten Schlüssel (z. B. Vertrauensstelle) möglich. Das ermöglicht Auswertungen bei gleichzeitigem Schutz der Betroffenen. Anonymisierung wäre unwiederbringlich – hier aber ist die Zusammenführung von Meldungen nötig.",
+  },
+
+  // ===================== RECHEN-/ANWENDUNGSAUFGABEN (numeric) =====================
+  {
+    id: "reg-007", topic: "register", difficulty: 2, type: "numeric",
+    question: "Erstdiagnose war am 15.03.2020, das Sterbedatum am 15.09.2022. Wie viele volle Monate beträgt die Überlebenszeit?",
+    answer: 30, tolerance: 0, unit: "Monate",
+    explanation: "Von 03/2020 bis 03/2022 sind es 24 Monate, plus weitere 6 Monate bis 09/2022 = 30 Monate. Da beide Daten auf den 15. fallen, ist der letzte Monat voll. Die Überlebenszeit (Zeit von Diagnose bis Tod/letztem Kontakt) ist eine zentrale Kenngröße der Verlaufsdokumentation.",
+  },
+  {
+    id: "reg-008", topic: "register", difficulty: 2, type: "numeric",
+    question: "Eine Patientin ist am 12.06.1958 geboren. Die Erstdiagnose wurde am 12.03.2021 gestellt. Wie alt (in vollen Jahren) war sie bei Diagnose?",
+    answer: 62, tolerance: 0, unit: "Jahre",
+    explanation: "Im März 2021 hatte die Patientin ihren Geburtstag im Juni 2021 noch nicht erreicht. Ihr letzter Geburtstag war der 12.06.2020 (62. Geburtstag). Das Erkrankungsalter wird in vollen Jahren zum Diagnosedatum dokumentiert – hier 62 Jahre.",
+  },
+  {
+    id: "epi-007", topic: "epidemiologie", difficulty: 2, type: "numeric",
+    question: "In einer Region mit 200.000 Einwohnern werden in einem Jahr 50 Neuerkrankungen registriert. Wie hoch ist die rohe Inzidenzrate (pro 100.000 Einwohner)?",
+    answer: 25, tolerance: 0, unit: "pro 100.000",
+    explanation: "Rohe Inzidenzrate = (Neuerkrankungen ÷ Bevölkerung) × 100.000 = (50 ÷ 200.000) × 100.000 = 25 pro 100.000 Einwohner und Jahr. „Roh“ bedeutet ohne Altersstandardisierung – für Vergleiche zwischen Regionen wird meist zusätzlich altersstandardisiert.",
+  },
+  {
+    id: "tnm-012", topic: "tnm", difficulty: 1, type: "numeric",
+    question: "Bei einer Operation wurden 18 regionäre Lymphknoten entfernt und untersucht, 3 davon waren tumorbefallen. Wie viele der untersuchten Lymphknoten waren tumorfrei?",
+    answer: 15, tolerance: 0, unit: "Lymphknoten",
+    explanation: "18 untersuchte − 3 befallene = 15 tumorfreie Lymphknoten. Dokumentiert werden sowohl die Zahl der untersuchten als auch der befallenen Lymphknoten (z. B. als „3/18“). Diese Angabe fließt in die pN-Kategorie ein.",
   },
 ];
 

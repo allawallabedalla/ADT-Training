@@ -89,7 +89,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 1. ✅ **Quick Wins** (Usability & Robustheit) → v0.7.0 – erledigt 2026-07-13
 2. ✅ **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die Cloud/Push-Fläche) → v0.8.0 (2026-07-13)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
-4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → ✅ Spaced Repetition + Mastery (v0.10.0) → als Nächstes: Fragetyp-Abstraktion + Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
+4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → ✅ Spaced Repetition + Mastery (v0.10.0) → ✅ Fragetyp-Abstraktion + Rechenaufgaben (v0.11.0) → als Nächstes: Quiz-Barrierefreiheit (In-place-Toggle + ARIA)
 5. Parallel/laufend: fachliche Gesamt-Review der Fragen + Content-Ausbau (sobald Material da ist)
 
 **Bekannte Risiken durch bisherige Umsetzung (ehrlich dokumentiert, alle im Backlog adressiert):**
@@ -105,12 +105,14 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
   Kontrast --text-faint ≥4,5:1 · Reset als roter Button + Quiz-confirm → iOS-Dialog · NaN-XP-Schutz · theme-color angeglichen
 - ✅ **Fachkorrektur the-004** (Strahlentherapie ist lokal, nicht systemisch) – v0.7.0
 - ⬜ **Fachliche Gesamt-Review** aller Fragen gegen UICC 8. Aufl., ICD-O-3, ICD-10-GM, oBDS-Begriff (CUP-Kode, pM0 prüfen)
-- ⬜ **Fragetyp-Abstraktion** (Handler je Typ) – Enabler für neue Aufgabentypen
+- ✅ **Fragetyp-Abstraktion** (v0.11.0): zentrale `hasResponse`/`gradeQuestion` je Typ – Enabler für neue Aufgabentypen (single/multi unverändert)
 - ✅ **Echter Prüfungsmodus** (Timer, kein Sofort-Feedback, freie Navigation/Flaggen, Themen-Blueprint, Sammelauswertung) + **Session-Persistenz** — v0.9.0
 - ✅ **Spaced Repetition + mehrstufige Mastery** (v0.10.0): Leitner-Boxen 0–5 (1/3/7/16/35 Tage),
   „Fällige Wiederholungen" mit „heute fällig", Mastery „sicher" ab Box 3, Schema-v2-Migration ohne
   Datenverlust, Box/Fälligkeit im Merge. Offen (später): Push an Fälligkeit koppeln (heute Fixzeit)
-- ⬜ **Anwendungs-/Kodier-/Rechenaufgaben** (numeric/code-Eingabe) – braucht Inhalt
+- 🟡 **Anwendungs-/Kodier-/Rechenaufgaben** (numeric/code-Eingabe): ✅ **numeric** end-to-end
+  (Übung + Prüfung) mit 4 ersten Rechenaufgaben (v0.11.0). Offen: **Text/Code-Eingabe** (ICD-O/ICD-10)
+  + mehr Rechenaufgaben, sobald Material da ist
 - ⬜ **Quiz barrierefrei & robuster**: In-place-Toggle statt Full-Re-Render + ARIA-Rollen/Fokus
 
 **P2 – danach:**
@@ -147,7 +149,8 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
 - ⬜ **P1** Kurs-Skript / Schulungsunterlagen als Quelle für neue Fragen nutzen
-- ⬜ **P1** **Rechen- und Dokumentationsaufgaben** als eigener Aufgabentyp (Freitext/Zahl-Eingabe, Lösungsschlüssel)
+- 🟡 **P1** **Rechen- und Dokumentationsaufgaben** als eigener Aufgabentyp: ✅ Zahl-Eingabe (v0.11.0);
+  offen: Freitext/Code-Eingabe + Ausbau des Aufgabenbestands
 - ⬜ **P2** Fragenzahl je Thema ausbauen und Gewichtung an Prüfungsrelevanz anpassen
 - ⬜ **P3** Quellen-/Referenzangabe je Frage (z. B. „ICD-O-3, Regel …")
 

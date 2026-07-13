@@ -43,7 +43,11 @@ async function page() {
   const p = await page();
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
-  for (let i = 0; i < 3; i++) { await p.waitForSelector('.q-card'); await p.click('.opt'); await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn'); }
+  for (let i = 0; i < 3; i++) {
+    await p.waitForSelector('.q-card');
+    if (await p.$('#numField')) await p.fill('#numField', '5'); else await p.click('.opt');
+    await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn');
+  }
   // Quiz verlassen: jetzt ein iOS-Modal statt confirm() -> „Beenden" klicken
   await p.click('#backBtn');
   await p.waitForSelector('.modal-overlay .modal-btn.btn-danger');
@@ -88,8 +92,9 @@ async function page() {
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
   let missedSeen = false, allHaveNote = true;
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     await p.waitForSelector('.q-card');
+    if (await p.$('#numField')) { await p.fill('#numField', '5'); await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn'); continue; }
     await p.click('.opt'); await p.click('#checkBtn'); await p.waitForSelector('.explain');
     const missed = await p.$$eval('.opt.missed', (els) => els.length);
     const notes = await p.$$eval('.opt.missed .opt-note', (els) => els.length);
@@ -107,7 +112,9 @@ async function page() {
   await p.waitForSelector('.exam-bar');
   for (let i = 0; i < 40; i++) {
     await p.waitForSelector('.q-card');
-    await p.click('.opt');
+    // Options- ODER Zahl-Frage beantworten (Prüfung kann jetzt Rechenaufgaben enthalten)
+    if (await p.$('#examNum')) await p.fill('#examNum', '7');
+    else await p.click('.opt');
     const nextDisabled = await p.getAttribute('#examNext', 'disabled');
     if (nextDisabled !== null) break; // letzte Frage erreicht
     await p.click('#examNext');
@@ -126,7 +133,8 @@ async function page() {
   const p = await page();
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.click('[data-act="exam"]'); await p.waitForSelector('.exam-bar');
-  await p.click('.opt'); await p.click('#examNext'); await p.waitForTimeout(100);
+  if (await p.$('#examNum')) await p.fill('#examNum', '7'); else await p.click('.opt');
+  await p.click('#examNext'); await p.waitForTimeout(100);
   await p.reload({ waitUntil: 'networkidle' });                 // mitten in der Prüfung neu laden
   const saved = await p.evaluate(() => localStorage.getItem('adt_exam_session_v1'));
   chk(!!saved, 'Prüfung: laufende Session bleibt nach Reload erhalten');
@@ -170,6 +178,41 @@ async function page() {
   const today = await p.evaluate(() => todayStr());
   chk(rec && rec.box === 1 && rec.lastResult === 'correct' && rec.due > today,
     'SRS: korrekte Antwort -> Box 1, Wiederholung erst in Zukunft (nicht sofort fällig)');
+}
+
+// 11) Numerische Rechenaufgabe: Eingabe, Bewertung mit Toleranz, SRS-Fortschreibung
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  // Deterministisch eine numeric-Frage als Ein-Fragen-Session rendern
+  const qid = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type === 'numeric');
+    if (!q) return null;
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [[]], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+    return q.id;
+  });
+  chk(!!qid, 'Numeric: mindestens eine Rechenaufgabe vorhanden');
+  await p.waitForSelector('#numField');
+  // Falsche Zahl -> „Nicht ganz" + richtige Lösung wird gezeigt
+  await p.fill('#numField', '999999');
+  await p.click('#checkBtn'); await p.waitForSelector('.explain.no');
+  const solvedShown = await p.$('.explain .solved');
+  chk(!!solvedShown, 'Numeric: falsche Eingabe zeigt Verdikt + richtige Lösung');
+  const recWrong = await p.evaluate((id) => S.perQuestion[id], qid);
+  chk(recWrong && recWrong.box === 0 && recWrong.lastResult === 'wrong', 'Numeric: falsche Antwort -> Box 0');
+  // Neue Session, korrekte Zahl -> „Richtig" + Box steigt
+  await p.evaluate((id) => {
+    const q = QUESTIONS.find(x => x.id === id);
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [[]], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+  }, qid);
+  await p.waitForSelector('#numField');
+  const answer = await p.evaluate((id) => String(QUESTIONS.find(x => x.id === id).answer).replace('.', ','), qid);
+  await p.fill('#numField', answer);
+  await p.click('#checkBtn'); await p.waitForSelector('.explain.ok');
+  const recOk = await p.evaluate((id) => S.perQuestion[id], qid);
+  chk(recOk && recOk.lastResult === 'correct' && recOk.box >= 1, 'Numeric: korrekte Eingabe -> Richtig, Box steigt');
 }
 
 chk(errors.length === 0, 'keine Laufzeitfehler');

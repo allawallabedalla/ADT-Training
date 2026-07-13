@@ -23,13 +23,19 @@ for (const q of QUESTIONS || []) {
   if (ids.has(q.id)) fail('Doppelte id: ' + q.id);
   ids.add(q.id);
   if (!TOPICS[q.topic]) fail(q.id + ': unbekanntes Thema ' + q.topic);
-  if (!['single', 'multi'].includes(q.type)) fail(q.id + ': ungültiger type ' + q.type);
+  if (!['single', 'multi', 'numeric'].includes(q.type)) fail(q.id + ': ungültiger type ' + q.type);
   if (![1, 2, 3].includes(q.difficulty)) fail(q.id + ': ungültige difficulty ' + q.difficulty);
-  if (!Array.isArray(q.options) || q.options.length < 2) fail(q.id + ': <2 Optionen');
-  if (!Array.isArray(q.correct) || q.correct.length < 1) fail(q.id + ': keine richtige Antwort');
-  if (new Set(q.correct).size !== (q.correct || []).length) fail(q.id + ': doppelter correct-Index');
-  for (const c of q.correct || []) if (c < 0 || c >= (q.options || []).length) fail(q.id + ': correct-Index außerhalb');
-  if (q.type === 'single' && (q.correct || []).length !== 1) fail(q.id + ': single mit != 1 richtig');
+  if (q.type === 'numeric') {
+    if (typeof q.answer !== 'number' || !isFinite(q.answer)) fail(q.id + ': numeric ohne gültige answer');
+    if (q.tolerance != null && (typeof q.tolerance !== 'number' || !isFinite(q.tolerance) || q.tolerance < 0)) fail(q.id + ': numeric tolerance ungültig');
+    if ('options' in q || 'correct' in q) fail(q.id + ': numeric darf keine options/correct haben');
+  } else {
+    if (!Array.isArray(q.options) || q.options.length < 2) fail(q.id + ': <2 Optionen');
+    if (!Array.isArray(q.correct) || q.correct.length < 1) fail(q.id + ': keine richtige Antwort');
+    if (new Set(q.correct).size !== (q.correct || []).length) fail(q.id + ': doppelter correct-Index');
+    for (const c of q.correct || []) if (c < 0 || c >= (q.options || []).length) fail(q.id + ': correct-Index außerhalb');
+    if (q.type === 'single' && (q.correct || []).length !== 1) fail(q.id + ': single mit != 1 richtig');
+  }
   if (!q.explanation || q.explanation.length < 10) fail(q.id + ': Erklärung fehlt/kurz');
 }
 

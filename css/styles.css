@@ -214,6 +214,21 @@ h1, h2, h3 { line-height: 1.2; }
 .opt-note { display: block; font-size: 12px; font-weight: 600; color: var(--success); margin-top: 4px; }
 .opt[disabled] { cursor: default; }
 
+/* ---------- Freie Zahl-Eingabe (Rechenaufgabe) ---------- */
+.num-input { margin-top: 16px; display: flex; align-items: center; gap: 10px; }
+.num-input input {
+  flex: 1; min-width: 0; font-size: 20px; font-weight: 700; letter-spacing: .5px;
+  padding: 15px 16px; border-radius: 14px; border: 1.5px solid var(--border);
+  background: var(--bg-elev); color: var(--text); -webkit-appearance: none; appearance: none;
+  transition: border-color .12s, background .12s;
+}
+.num-input input:focus { outline: none; border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, var(--bg-elev)); }
+.num-input input:disabled { opacity: 1; }
+.num-input.correct input { border-color: var(--success); background: var(--success-bg); }
+.num-input.wrong input { border-color: var(--danger); background: var(--danger-bg); }
+.num-input .num-unit { font-size: 16px; font-weight: 600; color: var(--text-faint); flex-shrink: 0; }
+.explain .solved { margin: 2px 0 8px; font-size: 15px; }
+
 .explain { margin-top: 16px; border-radius: 14px; padding: 16px; font-size: 15px; line-height: 1.55; }
 .explain.ok { background: var(--success-bg); }
 .explain.no { background: var(--danger-bg); }

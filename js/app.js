@@ -11,10 +11,17 @@ const DATA_OK = (() => {
     if (!q.id || ids.has(q.id)) { console.error("Frage-Fehler (ID fehlt/doppelt):", q); return false; }
     ids.add(q.id);
     if (!TOPICS[q.topic]) { console.error("Frage-Fehler (unbekanntes Thema):", q.id, q.topic); return false; }
-    if (!Array.isArray(q.options) || q.options.length < 2) { console.error("Frage-Fehler (Optionen):", q.id); return false; }
-    if (!Array.isArray(q.correct) || q.correct.length < 1) { console.error("Frage-Fehler (keine richtige Antwort):", q.id); return false; }
-    for (const c of q.correct) if (c < 0 || c >= q.options.length) { console.error("Frage-Fehler (correct-Index außerhalb):", q.id); return false; }
-    if (q.type === "single" && q.correct.length !== 1) { console.error("Frage-Fehler (single mit !=1 richtig):", q.id); return false; }
+    if (!["single", "multi", "numeric"].includes(q.type)) { console.error("Frage-Fehler (unbekannter Typ):", q.id, q.type); return false; }
+    if (q.type === "numeric") {
+      // Rechen-/Anwendungsaufgabe: erwartete Zahl + optionale Toleranz statt Optionen.
+      if (typeof q.answer !== "number" || !isFinite(q.answer)) { console.error("Frage-Fehler (numeric ohne gültige answer):", q.id); return false; }
+      if (q.tolerance != null && (typeof q.tolerance !== "number" || !isFinite(q.tolerance) || q.tolerance < 0)) { console.error("Frage-Fehler (numeric tolerance ungültig):", q.id); return false; }
+    } else {
+      if (!Array.isArray(q.options) || q.options.length < 2) { console.error("Frage-Fehler (Optionen):", q.id); return false; }
+      if (!Array.isArray(q.correct) || q.correct.length < 1) { console.error("Frage-Fehler (keine richtige Antwort):", q.id); return false; }
+      for (const c of q.correct) if (c < 0 || c >= q.options.length) { console.error("Frage-Fehler (correct-Index außerhalb):", q.id); return false; }
+      if (q.type === "single" && q.correct.length !== 1) { console.error("Frage-Fehler (single mit !=1 richtig):", q.id); return false; }
+    }
   }
   return true;
 })();
@@ -359,6 +366,44 @@ function shuffle(arr) {
   return a;
 }
 
+/* ---- Fragetyp-Seam: Antwort-Repräsentation & Bewertung je Typ -------------
+ * Antworten werden einheitlich als Liste geführt (Übungsmodus: Set; Prüfung: Array):
+ *   - single/multi : Original-Option-Indizes
+ *   - numeric      : ein Element = die eingegebene Zahl
+ * So bleiben Bewertung und „beantwortet?" an EINER Stelle – neue Typen (z. B. Text/
+ * Code) lassen sich später ergänzen, ohne Quiz- und Prüfungs-Flow anzufassen.        */
+function respList(resp) { return resp == null ? [] : (Array.isArray(resp) ? resp : Array.from(resp)); }
+function isInputType(q) { return q.type === "numeric"; }         // freie Eingabe statt Optionen
+function parseNum(v) { const n = Number(String(v).trim().replace(",", ".")); return isFinite(n) ? n : NaN; }
+function hasResponse(q, resp) {
+  const a = respList(resp);
+  if (q.type === "numeric") return a.length >= 1 && isFinite(Number(a[0]));
+  return a.length >= 1;
+}
+function gradeQuestion(q, resp) {
+  const a = respList(resp);
+  if (q.type === "numeric") {
+    if (!a.length) return false;
+    const v = Number(a[0]);
+    return isFinite(v) && Math.abs(v - q.answer) <= (Number(q.tolerance) || 0) + 1e-9;
+  }
+  // single/multi: Alles-oder-nichts (Prüfungsregel) – exakt die richtige Menge.
+  const correct = new Set(q.correct);
+  const picked = new Set(a);
+  if (picked.size !== correct.size) return false;
+  for (const c of correct) if (!picked.has(c)) return false;
+  return true;
+}
+// Wie die richtige Lösung im Review/Feedback dargestellt wird.
+function correctAnswerText(q) {
+  if (q.type === "numeric") {
+    const tol = Number(q.tolerance) || 0;
+    return fmtNum(q.answer) + (q.unit ? " " + q.unit : "") + (tol > 0 ? " (±" + fmtNum(tol) + ")" : "");
+  }
+  return q.correct.map(i => q.options[i]).join(", ");
+}
+function fmtNum(n) { return String(Number(n)).replace(".", ","); }   // deutsche Dezimaldarstellung
+
 // Session: { questions:[...], idx, mode, answers:{}, order:[...perQuestion shuffled option order] }
 let SESSION = null;
 
@@ -384,7 +429,7 @@ function buildSession(mode, opts = {}) {
   questions = questions.slice(0, limit);
 
   // Antwort-Optionen pro Frage mischen (Reihenfolge merken, um correct-Indizes umzurechnen)
-  const optionOrders = questions.map(q => shuffle(q.options.map((_, i) => i)));
+  const optionOrders = questions.map(q => shuffle((q.options || []).map((_, i) => i)));
 
   SESSION = {
     mode, topic: opts.topic || null,
@@ -407,14 +452,23 @@ function togglePick(origIdx) {
   renderQuiz();
 }
 
+// Freie Eingabe (numeric): Wert speichern OHNE Re-Render (sonst verliert das Feld den Fokus).
+function setNumericResponse(raw) {
+  if (SESSION.checked[SESSION.idx]) return;
+  const set = SESSION.picks[SESSION.idx];
+  set.clear();
+  const n = parseNum(raw);
+  if (isFinite(n)) set.add(n);
+  const cb = document.getElementById("checkBtn");
+  if (cb) cb.disabled = !hasResponse(currentQ(), set);
+}
+
 function checkCurrent() {
   const i = SESSION.idx, q = currentQ();
   if (SESSION.checked[i]) return;
   const picks = SESSION.picks[i];
-  const correct = new Set(q.correct);
-  // Alles-oder-nichts (Prüfungsregel): genau die richtigen Antworten getroffen
-  let ok = picks.size === correct.size;
-  if (ok) for (const c of correct) if (!picks.has(c)) { ok = false; break; }
+  if (!hasResponse(q, picks)) return;         // ohne Antwort nicht prüfen (v. a. leere Zahl-Eingabe)
+  const ok = gradeQuestion(q, picks);
   SESSION.checked[i] = true;
   SESSION.correctFlags[i] = ok;
 
@@ -513,7 +567,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.10.0";
+const APP_VERSION = "0.11.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -851,6 +905,7 @@ function renderQuiz() {
   const t = TOPICS[q.topic];
   const diffTxt = ["", "leicht", "mittel", "schwer"][q.difficulty] || "mittel";
   const order = SESSION.optionOrders[i];
+  const numeric = q.type === "numeric";
 
   const opts = order.map(origIdx => {
     const isPicked = picks.has(origIdx);
@@ -869,12 +924,34 @@ function renderQuiz() {
       <span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}${note}</span></button>`;
   }).join("");
 
+  // Freie Zahl-Eingabe (Rechen-/Anwendungsaufgabe)
+  let answerArea;
+  if (numeric) {
+    const val = picks.size ? fmtNum(Array.from(picks)[0]) : "";
+    const state = checked ? (SESSION.correctFlags[i] ? " correct" : " wrong") : "";
+    answerArea = `<div class="num-input${state}">
+      <input type="text" inputmode="decimal" id="numField" autocomplete="off" ${checked ? "disabled" : ""}
+        value="${esc(val)}" placeholder="Zahl eingeben" aria-label="Antwort als Zahl eingeben">
+      ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
+    </div>`;
+  } else {
+    answerArea = `<div class="options">${opts}</div>`;
+  }
+
   let explain = "";
   if (checked) {
     const ok = SESSION.correctFlags[i];
+    const solved = numeric ? `<div class="solved">Richtige Antwort: <b>${esc(correctAnswerText(q))}</b></div>` : "";
     explain = `<div class="explain ${ok ? "ok" : "no"}">
-      <b class="verdict">${ok ? "✅ Richtig" : "❌ Nicht ganz"}</b>${esc(q.explanation)}</div>`;
+      <b class="verdict">${ok ? "✅ Richtig" : "❌ Nicht ganz"}</b>${solved}${esc(q.explanation)}</div>`;
   }
+
+  const typeChip = numeric
+    ? '<span class="chip">Rechenaufgabe</span>'
+    : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
+  const hint = numeric
+    ? '<p class="q-hint">Ergebnis als Zahl eingeben (Komma oder Punkt).</p>'
+    : (q.type === "multi" ? '<p class="q-hint">Es können mehrere Antworten richtig sein. Nur vollständig richtig zählt (Prüfungsregel).</p>' : '');
 
   app.innerHTML = `
     <div class="quiz-top">
@@ -885,23 +962,31 @@ function renderQuiz() {
       <div class="q-meta">
         <span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>
         <span class="chip">${diffTxt}</span>
-        ${q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>'}
+        ${typeChip}
       </div>
       <p class="q-text">${esc(q.question)}</p>
-      ${q.type === "multi" ? '<p class="q-hint">Es können mehrere Antworten richtig sein. Nur vollständig richtig zählt (Prüfungsregel).</p>' : ''}
-      <div class="options">${opts}</div>
+      ${hint}
+      ${answerArea}
       ${explain}
     </div>
     <div class="spacer-lg"></div>
   `;
 
   app.querySelectorAll("[data-oi]").forEach(el => el.addEventListener("click", () => togglePick(parseInt(el.dataset.oi, 10))));
+  if (numeric && !checked) {
+    const nf = document.getElementById("numField");
+    if (nf) {
+      nf.addEventListener("input", () => setNumericResponse(nf.value));
+      nf.addEventListener("keydown", (e) => { if (e.key === "Enter" && hasResponse(q, picks)) checkCurrent(); });
+      nf.focus();
+    }
+  }
 
   // Aktionsleiste
   actionbar.classList.remove("hidden");
   const last = i === total - 1;
   if (!checked) {
-    actionbar.innerHTML = `<div class="inner"><button class="btn-primary" id="checkBtn" ${picks.size ? "" : "disabled"}>Antwort prüfen</button></div>`;
+    actionbar.innerHTML = `<div class="inner"><button class="btn-primary" id="checkBtn" ${hasResponse(q, picks) ? "" : "disabled"}>Antwort prüfen</button></div>`;
     const cb = document.getElementById("checkBtn");
     if (cb) cb.addEventListener("click", checkCurrent);
   } else {
@@ -953,7 +1038,7 @@ function renderResult(right, total, pct) {
     const qs = QUESTIONS.filter(q => wrongIds.includes(q.id));
     SESSION = null; buildSession("mixed"); // Basis, dann überschreiben:
     const questions = shuffle(qs);
-    SESSION = { mode: "review", topic: null, questions, optionOrders: questions.map(q => shuffle(q.options.map((_, i) => i))), idx: 0, picks: questions.map(() => new Set()), checked: questions.map(() => false), correctFlags: questions.map(() => null) };
+    SESSION = { mode: "review", topic: null, questions, optionOrders: questions.map(q => shuffle((q.options || []).map((_, i) => i))), idx: 0, picks: questions.map(() => new Set()), checked: questions.map(() => false), correctFlags: questions.map(() => null) };
     go("quiz");
   });
 }
@@ -1018,7 +1103,7 @@ function newExam() {
   const qs = buildExamQuestions();
   EXAM = {
     qids: qs.map(q => q.id),
-    optionOrders: qs.map(q => shuffle(q.options.map((_, i) => i))),
+    optionOrders: qs.map(q => shuffle((q.options || []).map((_, i) => i))),
     picks: qs.map(() => []),
     flags: qs.map(() => false),
     idx: 0,
@@ -1049,6 +1134,12 @@ function examTogglePick(origIdx) {
   else { const k = arr.indexOf(origIdx); if (k >= 0) arr.splice(k, 1); else arr.push(origIdx); }
   saveExam(); renderExam();
 }
+// Numerische Prüfungsantwort: speichern OHNE Re-Render (Eingabefeld behält den Fokus).
+function examSetNumeric(raw) {
+  const n = parseNum(raw);
+  EXAM.picks[EXAM.idx] = isFinite(n) ? [n] : [];
+  saveExam();
+}
 function examGoto(i) {
   const N = EXAM.qids.length;
   EXAM.idx = Math.max(0, Math.min(N - 1, i)); saveExam(); renderExam(); window.scrollTo(0, 0);
@@ -1063,12 +1154,29 @@ function renderExam() {
   const picks = new Set(EXAM.picks[i]);
   const answered = EXAM.picks.filter(p => p.length).length;
 
+  const numeric = q.type === "numeric";
   const opts = order.map(origIdx => {
     const isPicked = picks.has(origIdx);
     const cls = "opt type-" + q.type + (isPicked ? " selected" : "");
     const mark = isPicked ? (q.type === "single" ? "●" : "✓") : "";
     return `<button class="${cls}" data-eoi="${origIdx}"><span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}</span></button>`;
   }).join("");
+
+  let answerArea;
+  if (numeric) {
+    const val = EXAM.picks[i].length ? fmtNum(EXAM.picks[i][0]) : "";
+    answerArea = `<div class="num-input">
+      <input type="text" inputmode="decimal" id="examNum" autocomplete="off" value="${esc(val)}"
+        placeholder="Zahl eingeben" aria-label="Antwort als Zahl eingeben">
+      ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
+    </div>`;
+  } else {
+    answerArea = `<div class="options">${opts}</div>`;
+  }
+  const typeChip = numeric ? '<span class="chip">Rechenaufgabe</span>'
+    : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
+  const hint = numeric ? '<p class="q-hint">Ergebnis als Zahl eingeben. Auswertung erst nach Abgabe.</p>'
+    : (q.type === "multi" ? '<p class="q-hint">Mehrere Antworten möglich. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>' : '');
 
   app.innerHTML = `
     <div class="exam-bar">
@@ -1077,15 +1185,19 @@ function renderExam() {
       <button class="exam-flag ${EXAM.flags[i] ? "on" : ""}" id="examFlag" aria-label="Frage zur Überprüfung markieren">${icon("flag")}</button>
     </div>
     <div class="q-card">
-      <div class="q-meta"><span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>${q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>'}</div>
+      <div class="q-meta"><span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>${typeChip}</div>
       <p class="q-text">${esc(q.question)}</p>
-      ${q.type === "multi" ? '<p class="q-hint">Mehrere Antworten möglich. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>' : ''}
-      <div class="options">${opts}</div>
+      ${hint}
+      ${answerArea}
     </div>
     <button class="btn-ghost" id="examOverview" style="margin-top:4px">Übersicht · ${answered}/${N} beantwortet</button>
     <div class="spacer-lg"></div>
   `;
   app.querySelectorAll("[data-eoi]").forEach(el => el.addEventListener("click", () => examTogglePick(parseInt(el.dataset.eoi, 10))));
+  if (numeric) {
+    const nf = document.getElementById("examNum");
+    if (nf) nf.addEventListener("input", () => examSetNumeric(nf.value));
+  }
   document.getElementById("examFlag").addEventListener("click", examToggleFlag);
   document.getElementById("examOverview").addEventListener("click", showExamOverview);
 
@@ -1134,9 +1246,7 @@ function submitExam(auto) {
   stopExamTimer();
   const qs = examQuestions();
   const results = qs.map((q, k) => {
-    const picks = new Set(EXAM.picks[k]), correct = new Set(q.correct);
-    let ok = picks.size === correct.size;
-    if (ok) for (const c of correct) if (!picks.has(c)) { ok = false; break; }
+    const ok = gradeQuestion(q, EXAM.picks[k]);
     return { q, ok, picks: EXAM.picks[k].slice() };
   });
   const right = results.filter(r => r.ok).length, total = qs.length;
@@ -1180,8 +1290,10 @@ function renderExamResult() {
   // Review
   const review = res.results.map((r, k) => {
     const q = r.q;
-    const your = r.picks.length ? r.picks.map(i => esc(q.options[i])).join(", ") : "— (nicht beantwortet)";
-    const corr = q.correct.map(i => esc(q.options[i])).join(", ");
+    const your = r.picks.length
+      ? (q.type === "numeric" ? esc(fmtNum(r.picks[0]) + (q.unit ? " " + q.unit : "")) : r.picks.map(i => esc(q.options[i])).join(", "))
+      : "— (nicht beantwortet)";
+    const corr = esc(correctAnswerText(q));
     return `<div class="review-item ${r.ok ? "ok" : "no"}">
       <div class="ri-head">${r.ok ? "✅" : "❌"} <b>Frage ${k + 1}</b> · ${esc(TOPICS[q.topic].name)}</div>
       <p class="ri-q">${esc(q.question)}</p>
@@ -1222,7 +1334,7 @@ function renderExamResult() {
   const ea = document.getElementById("examAgain");
   if (ea) ea.addEventListener("click", () => {
     const qs = shuffle(QUESTIONS.filter(q => wrongIds.includes(q.id)));
-    SESSION = { mode: "review", topic: null, questions: qs, optionOrders: qs.map(q => shuffle(q.options.map((_, i) => i))), idx: 0, picks: qs.map(() => new Set()), checked: qs.map(() => false), correctFlags: qs.map(() => null) };
+    SESSION = { mode: "review", topic: null, questions: qs, optionOrders: qs.map(q => shuffle((q.options || []).map((_, i) => i))), idx: 0, picks: qs.map(() => new Set()), checked: qs.map(() => false), correctFlags: qs.map(() => null) };
     go("quiz");
   });
 }

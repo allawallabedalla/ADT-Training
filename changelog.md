@@ -11,6 +11,30 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.11.0] — 2026-07-13  ·  Fragetypen & Rechenaufgaben
+
+Die App kann jetzt mehr als Multiple-Choice – ein Schritt näher am echten Prüfungsformat
+(das auch Dokumentations-/Rechenaufgaben enthält).
+
+### Hinzugefügt
+- **Neuer Aufgabentyp „Rechenaufgabe" (numeric)**: freie Zahl-Eingabe statt Optionen,
+  mit optionaler Toleranz und Einheit. Funktioniert im **Übungsmodus und in der
+  Prüfungssimulation** (dort ohne Zwischen-Feedback, Auswertung mit „deine Zahl vs. richtig").
+- **4 erste Rechen-/Anwendungsaufgaben**: Überlebenszeit in Monaten, Erkrankungsalter,
+  rohe Inzidenzrate (pro 100.000), tumorfreie Lymphknoten – jeweils mit Rechenweg in der Erklärung.
+
+### Geändert / Technik
+- **Fragetyp-Seam**: „beantwortet?" und Bewertung laufen jetzt zentral über `hasResponse`/
+  `gradeQuestion` je Typ – single/multi verhalten sich unverändert, neue Typen (z. B. Text/Code)
+  lassen sich später ergänzen, ohne Quiz-/Prüfungs-Flow anzufassen.
+- Datenvalidierung (`DATA_OK` + Test) kennt den `numeric`-Typ (Zahl + Toleranz statt Optionen).
+- 4 neue Tests (Bewertung numeric, falsch → Box 0, richtig → Box steigt, richtige Lösung sichtbar);
+  Prüfungs-Tests numerik-fest gemacht. `tests/run.sh` grün. Service Worker v12.
+
+**Kennzahlen:** 59 Fragen (55 MC + 4 Rechenaufgaben) · 9 Themengebiete.
+
+---
+
 ## [0.10.0] — 2026-07-13  ·  Spaced Repetition & mehrstufige Mastery
 
 Aus „einmal richtig = gemeistert" wird ein echtes Wiederholungssystem, das den

@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.10.0
+> Stand: 2026-07-13 · Version 0.11.0
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 
@@ -32,11 +32,12 @@ Eine **Progressive Web App (PWA)**:
 - Kein App Store, kein Entwickler-Account, kein Konto, kein Server
 - Fortschritt wird lokal auf dem Gerät gespeichert
 
-## Kernfunktionen (aktueller Stand 0.10.0)
+## Kernfunktionen (aktueller Stand 0.11.0)
 
 | Bereich | Was es kann |
 |---|---|
 | **Lernmodi** | Gemischtes Training · Nach Thema lernen · Fällige Wiederholungen (Spaced Repetition) · Prüfungssimulation (30 Fragen, Timer, bestanden ab 50 %) |
+| **Aufgabentypen** | Multiple-Choice (einfach/mehrfach) **und Rechen-/Anwendungsaufgaben** mit freier Zahl-Eingabe (Toleranz + Einheit) — näher am echten Prüfungsformat |
 | **Spaced Repetition** | Leitner-System: jede Frage wandert bei richtiger Antwort in eine höhere Box mit längerer Pause (1 → 3 → 7 → 16 → 35 Tage), ein Fehler setzt zurück — die App plant Wiederholungen automatisch |
 | **Mastery** | Mehrstufig: „neu" → „am Lernen" → „sicher" (mehrfach richtig, Box 3+) — der Themenfortschritt zeigt ehrlich, was wirklich sitzt |
 | **Prüfungsformat** | Multiple-Choice mit *mehreren* richtigen Antworten; nur *vollständig* richtig zählt (kein Teilpunkt — wie § 5 der Prüfungsordnung) |
@@ -49,9 +50,9 @@ Eine **Progressive Web App (PWA)**:
 | **Robustheit** | Datenvalidierung, selbstheilende Zustands-Sanitisierung, Migrations-Gerüst, Sofort-Speichern beim Schließen, Fehler-Boundary (nie weißer Bildschirm), Update-Hinweis, Offline-Cache |
 | **Design** | Durchgängig iOS-nativ (Apple HIG): SF-Symbols-Icons, Large-Titles, gruppierte Listen, iOS-Farbsystem (OLED-Dark), ≥44 pt-Tap-Ziele, Safe-Areas |
 
-**Kennzahlen:** 55 Fragen · 9 Themengebiete (Grundlagen, TNM, ICD-O-3,
-ICD-10 & Dignität, Grading/Residual, Krebsregister, Epidemiologie, Therapie,
-Datenschutz).
+**Kennzahlen:** 59 Fragen (55 Multiple-Choice + 4 Rechenaufgaben) · 9 Themengebiete
+(Grundlagen, TNM, ICD-O-3, ICD-10 & Dignität, Grading/Residual, Krebsregister,
+Epidemiologie, Therapie, Datenschutz).
 
 ## Warum PWA statt native iOS-App
 
@@ -82,8 +83,7 @@ GitHub Pages).
 
 ## Wo es hingeht
 
-Die inhaltliche Ausbaustufe (offizielle/Beispiel-Fragen, Rechen-/Doku-Aufgaben)
-und weiterer Feature-Ausbau (Anwendungs-/Rechenaufgaben, Barrierefreiheit im Quiz,
-Onboarding/Tagesziel) sind im [Backlog](workbook.md#backlog) festgehalten.
-Bereits umgesetzt: echter Prüfungsmodus mit Timer, Spaced-Repetition-Wiederholung,
-Einstellungen & Backup.
+Die inhaltliche Ausbaustufe (offizielle/Beispiel-Fragen, mehr Rechen-/Doku-Aufgaben)
+und weiterer Feature-Ausbau (Barrierefreiheit im Quiz, Onboarding/Tagesziel) sind im
+[Backlog](workbook.md#backlog) festgehalten. Bereits umgesetzt: echter Prüfungsmodus
+mit Timer, Spaced-Repetition-Wiederholung, Rechen-/Anwendungsaufgaben, Einstellungen & Backup.
