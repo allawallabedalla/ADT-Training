@@ -196,6 +196,10 @@ function pushExamHistory(pct) {
 /* ---- App-Einstellungen (geräte-lokal) ---- */
 const SIZE_KEY = "adt_session_size";   // Fragen pro Übungsrunde (0 = alle)
 const THEME_KEY = "adt_theme";          // "auto" | "light" | "dark"
+const FONT_KEY = "adt_fontsize";        // "normal" | "large"
+function getFontSize() { try { return localStorage.getItem(FONT_KEY) === "large" ? "large" : "normal"; } catch { return "normal"; } }
+function setFontSize(v) { try { v === "large" ? localStorage.setItem(FONT_KEY, "large") : localStorage.removeItem(FONT_KEY); } catch (e) {} applyFontSize(); }
+function applyFontSize() { document.documentElement.setAttribute("data-fontsize", getFontSize()); }
 const SIZE_CHOICES = [10, 15, 20, 30, 0];
 function getSessionSize() { try { const v = parseInt(localStorage.getItem(SIZE_KEY), 10); return SIZE_CHOICES.includes(v) ? v : 15; } catch { return 15; } }
 function setSessionSize(n) { try { localStorage.setItem(SIZE_KEY, String(n)); } catch (e) {} }
@@ -234,7 +238,7 @@ function applyTheme() {
   if (t === "light" || t === "dark") root.setAttribute("data-theme", t);
   else root.removeAttribute("data-theme");
 }
-applyTheme();   // so früh wie möglich anwenden (vermeidet Farb-Flackern)
+applyTheme(); applyFontSize();   // so früh wie möglich anwenden (vermeidet Flackern)
 
 /* ---- Cloud-Sync-Anbindung (optional, siehe js/sync.js) ---- */
 let syncTimer = null;
@@ -719,7 +723,7 @@ const ICONS = {
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.26.0";
+const APP_VERSION = "0.27.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -925,15 +929,19 @@ function renderSettings() {
     <div class="section-title">Lern-Erinnerungen</div>
     <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
 
-  const theme = getTheme(), size = getSessionSize(), haptics = getHaptics();
+  const theme = getTheme(), size = getSessionSize(), haptics = getHaptics(), font = getFontSize();
   const tOpt = (v, l) => `<option value="${v}" ${theme === v ? "selected" : ""}>${l}</option>`;
   const sOpt = (v, l) => `<option value="${v}" ${size === v ? "selected" : ""}>${l}</option>`;
   const hOpt = (v, l) => `<option value="${v}" ${(haptics ? "on" : "off") === v ? "selected" : ""}>${l}</option>`;
+  const fOpt = (v, l) => `<option value="${v}" ${font === v ? "selected" : ""}>${l}</option>`;
   const prefs = `
     <div class="section-title">Anzeige & Übung</div>
     <div class="q-card">
       <label class="set-row" for="setTheme"><span>Design</span>
         <select id="setTheme" class="ios-select">${tOpt("auto", "Automatisch (System)")}${tOpt("light", "Hell")}${tOpt("dark", "Dunkel")}</select>
+      </label>
+      <label class="set-row" for="setFont"><span>Schriftgröße</span>
+        <select id="setFont" class="ios-select">${fOpt("normal", "Normal")}${fOpt("large", "Groß")}</select>
       </label>
       <label class="set-row" for="setSize"><span>Fragen pro Runde</span>
         <select id="setSize" class="ios-select">${sOpt(10, "10")}${sOpt(15, "15")}${sOpt(20, "20")}${sOpt(30, "30")}${sOpt(0, "Alle")}</select>
@@ -950,6 +958,7 @@ function renderSettings() {
   const stTheme = $("setTheme"); if (stTheme) stTheme.addEventListener("change", () => { setTheme(stTheme.value); toast("🎨 Design übernommen"); });
   const stSize = $("setSize"); if (stSize) stSize.addEventListener("change", () => { const n = parseInt(stSize.value, 10); setSessionSize(n); toast("✅ Fragen pro Runde: " + (n > 0 ? n : "alle")); });
   const stHap = $("setHaptics"); if (stHap) stHap.addEventListener("change", () => { const on = stHap.value === "on"; setHaptics(on); if (on) hapticFeedback(true); toast(on ? "📳 Haptik an" : "Haptik aus"); });
+  const stFont = $("setFont"); if (stFont) stFont.addEventListener("change", () => { setFontSize(stFont.value); toast("🔤 Schriftgröße: " + (stFont.value === "large" ? "Groß" : "Normal")); });
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
   const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
   const bCopy = $("btnCopy"); if (bCopy) bCopy.addEventListener("click", () => copyCode(code));

@@ -11,6 +11,19 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.27.0] — 2026-07-13  ·  Größere Schrift (Barrierefreiheit)
+
+### Hinzugefügt
+- **Schriftgröße „Groß"** in den Einstellungen: hebt gezielt die Lese-Flächen an (Fragen,
+  Antworten, Erklärungen, Review) – bewusst begrenzt statt globalem Skalieren, damit das
+  Layout stabil bleibt.
+
+### Technik
+- 1 neuer Test. `tests/run.sh` grün. Zusätzlich: **CI-Workflow** (GitHub Actions) prüft bei
+  jedem Push/PR Syntax, Fragen-Datenbank und Sync-Logik.
+
+---
+
 ## [0.26.0] — 2026-07-13  ·  Feiermomente & Feinschliff
 
 ### Hinzugefügt

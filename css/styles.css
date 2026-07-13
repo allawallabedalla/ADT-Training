@@ -354,6 +354,20 @@ h1, h2, h3 { line-height: 1.2; }
 .install-tip .tip-ic { flex-shrink: 0; color: var(--text); }
 .install-tip .tip-ic svg { width: 22px; height: 22px; display: block; }
 
+/* Größere Schrift (Barrierefreiheit): gezielt die Lese-Flächen anheben – bewusst
+   begrenzt statt globalem Skalieren, um das Layout stabil zu halten. */
+:root[data-fontsize="large"] body { font-size: 18px; }
+:root[data-fontsize="large"] .q-text { font-size: 23px; }
+:root[data-fontsize="large"] .opt { font-size: 18px; }
+:root[data-fontsize="large"] .explain, :root[data-fontsize="large"] .explain .solved { font-size: 17px; }
+:root[data-fontsize="large"] .q-hint { font-size: 14px; }
+:root[data-fontsize="large"] .num-input input { font-size: 22px; }
+:root[data-fontsize="large"] .modal-msg { font-size: 16px; }
+:root[data-fontsize="large"] .mode-btn .txt b { font-size: 18px; }
+:root[data-fontsize="large"] .mode-btn .txt p { font-size: 14px; }
+:root[data-fontsize="large"] .ri-q, :root[data-fontsize="large"] .ri-line, :root[data-fontsize="large"] .ri-exp { font-size: 15.5px; }
+:root[data-fontsize="large"] .q-card p { font-size: 16.5px; }
+
 /* Sanfte Einblendung einer neuen Frage */
 .q-anim { animation: cardIn .22s ease both; }
 @keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

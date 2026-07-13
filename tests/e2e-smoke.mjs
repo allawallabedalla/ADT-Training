@@ -513,6 +513,10 @@ async function page(opts = {}) {
   // Konfetti erzeugt einen Effekt-Layer
   const has = await p.evaluate(() => { celebrate(); return !!document.querySelector('.confetti'); });
   chk(has, 'Konfetti: celebrate() erzeugt einen Effekt-Layer');
+  // Schriftgröße „Groß" setzt data-fontsize
+  await p.evaluate(() => setFontSize('large'));
+  chk(await p.evaluate(() => document.documentElement.getAttribute('data-fontsize')) === 'large', 'Schrift: „Groß" setzt data-fontsize=large');
+  await p.evaluate(() => setFontSize('normal'));
   // Frische Frage bekommt die Einblende-Klasse
   await p.evaluate(() => { const q = QUESTIONS.find(x => x.type !== 'numeric'); SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] }; go('quiz'); });
   await p.waitForSelector('.q-card.q-anim');

@@ -144,7 +144,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 
 **Kleinere Befunde & Cleanup (P3) – die restlichen Einzelpunkte aus dem Bericht:**
 - 🟡 Robustheit: ✅ Precache tolerant (v0.18.0) · ✅ QuotaExceeded-Hinweis (v0.18.0) · ✅ `perQuestion`-Whitelist (v0.18.0) · ✅ SW-Fetch same-origin (v0.17.0) · offen: `difficulty` in DATA_OK (Laufzeit ist bereits gegen NaN-XP abgesichert; von `validate-questions` geprüft)
-- 🟡 Barrierefreiheit (ergänzend): ✅ `modalChoice` role=dialog + Fokusfalle + Escape (v0.21.0) · ✅ progressbar-Rollen (v0.21.0) · ✅ doppeltes `<h1>` entdoppelt (v0.21.0) · offen: Dynamic Type (rem) / größere Schrift wählbar
+- 🟡 Barrierefreiheit (ergänzend): ✅ `modalChoice` role=dialog + Fokusfalle + Escape (v0.21.0) · ✅ progressbar-Rollen (v0.21.0) · ✅ doppeltes `<h1>` entdoppelt (v0.21.0) · ✅ größere Schrift wählbar (v0.27.0); Dynamic Type (volle rem-Umstellung) bewusst zurückgestellt (Risiko am Monolithen)
 - ✅ UI-Cleanup (v0.25.0): Fortschrittsbalken zeigt Position · Install-Tip-Icon monochrom · theme-color an Hintergrund angeglichen · Dead-CSS entfernt · master-Test vereinfacht (v0.22.0). Offen: Toast-Emojis (bewusst gelassen – transiente Mikro-Rückmeldung)
 - ⬜ Lern-Feinheiten: „Schwachstellen" enthält auch nie gesehene Items → Benennung/Trennung schärfen · antwortspezifisches Feedback (später) · Session-Größe/Dosierung an Tagesziel koppeln
 - ⬜ Fachliche Detailpunkte (in die Gesamt-Review): CUP-Kode C80.- prüfen · organspezifisches Grading · Meldefristen/Meldevergütung/Vertrauensstelle ergänzen · difficulty-Labels konsistent
@@ -185,7 +185,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 - ✅ **P2** **Tastatur-Steuerung** (v0.21.0): Zahlen 1–9 wählen, Enter prüft/weiter (Übung + Prüfung)
 - ✅ **P3** **Sanfte Animationen** (v0.26.0): Frage-Einblendung + Konfetti bei bestandener Prüfung
 - 🟡 **P3** **Haptik & Sound**: ✅ Haptik abschaltbar (v0.26.0); Sound bewusst weggelassen (iPhone-Einschränkung, störend)
-- ⬜ **P2** **Barrierefreiheit** (größere Schrift wählbar, Kontraste, Screenreader-Labels)
+- ✅ **P2** **Barrierefreiheit** (v0.21.0/0.27.0): größere Schrift wählbar, ARIA/Rollen, Tastatur, Fokus, Kontraste
 
 ### Technik / Betrieb
 - ✅ **Reset erweitern**: „überall (Cloud) / nur dieses Gerät" umgesetzt (v0.3.0)
