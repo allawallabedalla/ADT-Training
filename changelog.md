@@ -11,6 +11,19 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.25.0] — 2026-07-13  ·  UI-Feinschliff
+
+### Geändert
+- **Quiz-Fortschrittsbalken zeigt die Position** (Frage 1 von N ist nicht mehr 0 %).
+- **Statusleiste an den App-Hintergrund angeglichen** (nahtlos: hell #f2f2f7 / dunkel #000).
+- **Installations-Hinweis** nutzt jetzt ein monochromes Icon statt Emoji (konsistent flat).
+- Toten CSS-Code entfernt (ungenutzte `.emoji`/Badge-`.ic`-Regeln).
+
+### Technik
+- `tests/run.sh` grün.
+
+---
+
 ## [0.24.0] — 2026-07-13  ·  Statistik & Prüfungs-Historie
 
 ### Hinzugefügt

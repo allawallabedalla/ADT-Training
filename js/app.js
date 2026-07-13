@@ -689,8 +689,9 @@ const ICONS = {
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
   sliders: '<path d="M4 7h9M17 7h3"/><path d="M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
+  share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.24.0";
+const APP_VERSION = "0.25.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -770,7 +771,7 @@ function renderHome() {
   const standalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
   const installTip = standalone ? "" : `
     <div class="install-tip">
-      <span>📲</span>
+      <span class="tip-ic">${icon("share")}</span>
       <div><b>Als App installieren:</b> in Safari unten auf <b>Teilen</b> tippen → <b>„Zum Home-Bildschirm"</b>.
       Danach funktioniert alles offline.</div>
     </div>`;
@@ -1141,7 +1142,7 @@ function renderQuiz() {
 
   app.innerHTML = `
     <div class="quiz-top">
-      <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i + 1}" aria-label="Frage ${i + 1} von ${total}"><span style="width:${Math.round((i) / total * 100)}%"></span></div>
+      <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i + 1}" aria-label="Frage ${i + 1} von ${total}"><span style="width:${Math.round((i + 1) / total * 100)}%"></span></div>
       <span class="q-count">${i + 1} / ${total}</span>
     </div>
     <div class="q-card">
