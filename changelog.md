@@ -11,6 +11,15 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.4.1] — 2026-07-13
+
+### Hinzugefügt
+- **Vier neue Erfolge** als langfristige Ziele: Ausdauernd (250), Marathon (500),
+  Unermüdlich (750) und Tausend! (1000 Fragen beantwortet) – inkl. passender
+  SF-Symbols-Icons (Diamant, Rakete, Berg, Pokal). Erfolge gesamt: 14.
+
+---
+
 ## [0.4.0] — 2026-07-13
 
 iOS-natives Design-Update + wichtiger Reset-Bugfix.

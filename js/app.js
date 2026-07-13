@@ -181,6 +181,10 @@ const BADGES = [
   { id: "ten",       ic: "🔟", name: "Warmgelaufen",      desc: "10 Fragen beantwortet",              test: () => S.totalAnswered >= 10 },
   { id: "fifty",     ic: "🏅", name: "Fleißig",           desc: "50 Fragen beantwortet",              test: () => S.totalAnswered >= 50 },
   { id: "hundred",   ic: "💯", name: "Durchstarter",      desc: "100 Fragen beantwortet",             test: () => S.totalAnswered >= 100 },
+  { id: "answered250",  ic: "💎", name: "Ausdauernd",     desc: "250 Fragen beantwortet",             test: () => S.totalAnswered >= 250 },
+  { id: "answered500",  ic: "🚀", name: "Marathon",       desc: "500 Fragen beantwortet",             test: () => S.totalAnswered >= 500 },
+  { id: "answered750",  ic: "⛰️", name: "Unermüdlich",     desc: "750 Fragen beantwortet",             test: () => S.totalAnswered >= 750 },
+  { id: "answered1000", ic: "🏆", name: "Tausend!",       desc: "1000 Fragen beantwortet",            test: () => S.totalAnswered >= 1000 },
   { id: "streak3",   ic: "🔥", name: "Dranbleiben",       desc: "3 Tage in Folge geübt",              test: () => S.streak >= 3 },
   { id: "streak7",   ic: "⚡", name: "Wochenserie",       desc: "7 Tage in Folge geübt",              test: () => S.streak >= 7 },
   { id: "exam",      ic: "🎓", name: "Prüfung bestanden", desc: "Prüfungssimulation ≥ 50 %",          test: () => S.examsPassed >= 1 },
@@ -356,6 +360,9 @@ const ICONS = {
   medal: '<circle cx="12" cy="14" r="5"/><path d="M9 9.5L7 3M15 9.5L17 3M11 3h2"/><path d="M12 12.2l.9 1.7 1.9.3-1.4 1.3.3 1.9-1.7-.9-1.7.9.3-1.9-1.4-1.3 1.9-.3z" fill="currentColor" stroke="none"/>',
   crown: '<path d="M4 9l3.2 8.5h9.6L20 9l-4.6 3.2L12 6l-3.4 6.2z"/><path d="M6.5 20.5h11"/>',
   brain: '<path d="M9.5 5.5A2.8 2.8 0 0 0 6.7 8.4 2.8 2.8 0 0 0 5.5 13.6 2.8 2.8 0 0 0 8.3 18a2.3 2.3 0 0 0 3.7-1.85V7.4a2 2 0 0 0-2.5-1.9z"/><path d="M14.5 5.5a2.8 2.8 0 0 1 2.8 2.9 2.8 2.8 0 0 1 1.2 5.2 2.8 2.8 0 0 1-2.8 4.4 2.3 2.3 0 0 1-3.7-1.85"/>',
+  gem: '<path d="M6 4.5h12l3 4.5-9 10.5L3 9z"/><path d="M3.2 9h17.6M8.5 4.5L12 9l3.5-4.5M12 9v10.2"/>',
+  rocket: '<path d="M12 3c2.8 1.2 4.5 4 4.5 7.6 0 2-.8 3.9-1.8 5.1H9.3C8.3 14.5 7.5 12.6 7.5 10.6 7.5 7 9.2 4.2 12 3z"/><circle cx="12" cy="9.8" r="1.5"/><path d="M9.3 15.7l-1.8 2.6M14.7 15.7l1.8 2.6M12 16.5v3"/>',
+  mountain: '<path d="M3 19h18L14 6l-3.2 5.6L8.5 9z"/><path d="M11.4 11.3l1.1 1.3 1.4-1.1"/>',
 };
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
@@ -366,7 +373,10 @@ function iconTile(name, tint) {
 const TOPIC_ICON = { grundlagen: "hexagon", tnm: "ruler", icdo: "scope", icd10: "book", grading: "target", register: "columns", epidemiologie: "chart", therapie: "capsule", datenschutz: "lock" };
 const BADGE_ICON = {
   first: { i: "flag", c: "#34c759" }, ten: { i: "grid", c: "#007aff" }, fifty: { i: "medal", c: "#ff9500" },
-  hundred: { i: "star", c: "#ff2d55" }, streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "bolt", c: "#ffcc00" },
+  hundred: { i: "star", c: "#ff2d55" },
+  answered250: { i: "gem", c: "#5e5ce6" }, answered500: { i: "rocket", c: "#007aff" },
+  answered750: { i: "mountain", c: "#30b0c7" }, answered1000: { i: "trophy", c: "#ffb300" },
+  streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "bolt", c: "#ffcc00" },
   exam: { i: "clipboardCheck", c: "#34c759" }, exam90: { i: "crown", c: "#5e5ce6" },
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
 };
