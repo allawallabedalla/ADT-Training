@@ -49,12 +49,16 @@
 
 ## 4. Definition of Done (pro Änderung)
 
+Ausführliche Methode: `docs/arbeitsstrategie.md`.
+
 - [ ] Fachlich geprüft (bei Inhalten)
-- [ ] `node --check` ok + Fragen-Validierung ok
-- [ ] Browser-Durchlauf ohne Laufzeitfehler
-- [ ] Offline-Betrieb weiterhin intakt (Service-Worker-Dateiliste aktuell, Cache-Version ggf. erhöht)
-- [ ] `changelog.md` (und ggf. `pitch.md`) aktualisiert
-- [ ] Auf Arbeits-Branch committet & gepusht
+- [ ] **`bash tests/run.sh` grün** (Syntax + Fragen-Validierung + Unit + E2E-Smoke)
+- [ ] Bei Bugfix: **Regressionstest** ergänzt; bei Feature: Test ergänzt
+- [ ] Bei UI: Screenshot Light **und** Dark, Konsole fehlerfrei
+- [ ] Risiko-Check (neue Kosten/Recht/Security/Usability?) – kurz notiert
+- [ ] Offline-Betrieb intakt (SW-Dateiliste aktuell, `CACHE`/`APP_VERSION` erhöht bei Client-Änderung)
+- [ ] `changelog.md` (und ggf. `pitch.md`/`workbook.md`) aktualisiert
+- [ ] Kleiner, beschreibender Commit → push Feature-Branch **und** `main`
 
 ---
 
@@ -78,7 +82,10 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 Vollständiger Bericht: `docs/experten-workshop-2026-07-13.md`. Kuratiert unter den
 Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig**.
 
+**Abarbeitungsstrategie:** siehe `docs/arbeitsstrategie.md` (Methode, Definition of Done, Phasenplan).
+
 **Empfohlene Umsetzungsreihenfolge (vereinbart 2026-07-13):**
+0. ✅ **Sicherheitsnetz** (Test-Infrastruktur `tests/`, `bash tests/run.sh`) – erledigt 2026-07-13
 1. **Quick Wins** (Usability & Robustheit) → v0.7.0
 2. **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die durch Cloud/Push neu entstandene Fläche)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features

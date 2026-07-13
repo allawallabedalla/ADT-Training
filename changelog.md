@@ -9,6 +9,13 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 ### Geplant
 - Siehe [Backlog im Workbook](workbook.md#backlog).
 
+### Entwicklung / Infrastruktur (2026-07-13)
+- **Test-Infrastruktur** im Repo (`tests/`): `validate-questions.mjs`, `unit-sync.mjs`,
+  `e2e-smoke.mjs` (Playwright) und Runner `tests/run.sh`. Läuft künftig vor jeder
+  Auslieferung („grün = auslieferbar"). Keine App-Änderung.
+- **Abarbeitungsstrategie** dokumentiert (`docs/arbeitsstrategie.md`): Methode, Definition
+  of Done, Phasenplan – Grundlage für die sukzessive, robuste Umsetzung des Backlogs.
+
 ---
 
 ## [0.6.0] — 2026-07-13
