@@ -11,6 +11,19 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.28.0] — 2026-07-13  ·  Weniger Toasts beim Lernen
+
+### Geändert
+- **Kein XP-Hinweis mehr nach jeder Frage.** Ob „Richtig/Nicht ganz" steht bereits klar in
+  der Erklärungs-Karte, und der XP-Fortschritt ist auf der Startseite/Level-Leiste sichtbar.
+  Eingeblendet werden jetzt nur noch **besondere Momente**: Frage gemeistert (Box 3),
+  Level-Aufstieg und neue Erfolge. Ruhigeres, weniger ablenkendes Lernen.
+
+### Technik
+- `tests/run.sh` grün.
+
+---
+
 ## [0.27.0] — 2026-07-13  ·  Größere Schrift (Barrierefreiheit)
 
 ### Hinzugefügt

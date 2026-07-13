@@ -643,9 +643,11 @@ function checkCurrent() {
   const newBadges = checkBadges();
   hapticFeedback(ok);
   renderQuiz();
-  if (ok) toast(`✅ Richtig! +${gained} XP`); else toast(`+${gained} XP fürs Üben`);
-  let delay = 900;
-  if (justMastered) { setTimeout(() => toast(`🛡️ Frage gemeistert! +${bonus} XP`), delay); delay += 1500; }
+  // KEIN XP-Toast je Frage mehr: „Richtig/Nicht ganz" steht bereits in der Erklärungs-Karte,
+  // und der XP-Fortschritt ist auf der Startseite/Level-Leiste sichtbar. Es werden nur noch
+  // besondere Momente gemeldet – Frage gemeistert, Level-Aufstieg, neuer Erfolg (gestaffelt).
+  let delay = 0;
+  if (justMastered) { setTimeout(() => toast(`🛡️ Frage gemeistert! +${bonus} XP`), delay); delay += 1600; }
   if (lvlAfter > lvlBefore) {
     setTimeout(() => toast(`🎉 Level ${lvlAfter} – ${levelTitle(lvlAfter)}!`), delay);
     delay += 1600;
@@ -723,7 +725,7 @@ const ICONS = {
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.27.0";
+const APP_VERSION = "0.28.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
