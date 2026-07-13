@@ -120,10 +120,20 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ⬜ Leichter Datenschutz-/Transparenz-Hinweis + „inoffiziell"-Disclaimer in der App
 - ⬜ In-App „Cloud-Daten endgültig löschen"
 
+**Kleinere Befunde & Cleanup (P3) – die restlichen Einzelpunkte aus dem Bericht:**
+- ⬜ Robustheit: `difficulty` in DATA_OK validieren (sonst NaN-XP-Risiko) · Precache tolerant machen (cache.addAll bricht sonst bei 1 fehlenden Datei komplett) · Nutzer-Hinweis bei vollem localStorage (QuotaExceeded) · `sanitizeState` fremde Objekt-Keys (Badge-/Frage-IDs aus Remote) gegen Whitelist prüfen (Defense-in-Depth) · SW-Fetch-Handler auf same-origin beschränken
+- ⬜ Barrierefreiheit (ergänzend): `modalChoice` als role=dialog + Fokusfalle + Escape · aria-Rollen für Fortschrittsbalken/Ring · doppeltes `<h1>` (Appbar + Large-Title) entdoppeln · Dynamic Type (rem statt fixem px) – größer
+- ⬜ UI-Cleanup: Quiz-Fortschrittsbalken zeigt Position statt „erledigt" (0 % auf Frage 1) · Emoji in Toasts/Install-Tip → SVG, toten Code entfernen (`.emoji`/`.ic`, Dead-CSS) · `theme-color` an App-Blau (#007aff) angleichen · verschachtelten `master`-Badge-Test vereinfachen
+- ⬜ Lern-Feinheiten: „Schwachstellen" enthält auch nie gesehene Items → Benennung/Trennung schärfen · antwortspezifisches Feedback (später) · Session-Größe/Dosierung an Tagesziel koppeln
+- ⬜ Fachliche Detailpunkte (in die Gesamt-Review): CUP-Kode C80.- prüfen · organspezifisches Grading · Meldefristen/Meldevergütung/Vertrauensstelle ergänzen · difficulty-Labels konsistent
+
 **Verworfen (Leitplanke „nur wenige Personen / kostenlos"):**
 - ❌ Kurs-/Lerngruppen-Code + Kohorten-Leaderboard (B2B2C-Skalierung)
 - ❌ Teilen-Button/QR-Code (Verbreitung) · ❌ Voll-Impressum/AVV/Umbenennung (erst bei öffentlicher Verbreitung)
 - ❌ Rate-Limiting der RPCs · ❌ Retention-Cron + Fragen-Index/Memoisierung (erst bei Skalierung)
+- ❌ Nutzungs-Analytik/Funnel-Metriken + Landingpage/Store-Auffindbarkeit (bewusst datensparsam, nur wenige Nutzer)
+
+_Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-07-13.md`._
 
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
