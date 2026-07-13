@@ -1,10 +1,12 @@
 /* Service Worker – Offline-Cache für den ADT Trainer.
  * Cache-Version bei Änderungen erhöhen, damit Nutzer die neue Version erhalten. */
-const CACHE = "adt-trainer-v1";
+const CACHE = "adt-trainer-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/styles.css",
+  "./config.js",
+  "./js/sync.js",
   "./js/app.js",
   "./data/questions.js",
   "./manifest.webmanifest",
@@ -24,19 +26,31 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Cache-first für App-Dateien; Netzwerk-Fallback mit Nachcachen.
+// Strategie:
+//  - config.js, questions.js und Navigationen: Network-first (frisch, wenn online;
+//    Cache-Fallback offline) – so erreichen Konfig-/Fragen-Updates die Nutzer sofort.
+//  - alle übrigen App-Dateien: Cache-first (schnell, offline-fest) mit Nachcachen.
+function putInCache(req, res) {
+  if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+}
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request).then((hit) => {
-      if (hit) return hit;
-      return fetch(e.request).then((res) => {
-        if (res && res.status === 200 && res.type === "basic") {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
-        }
+  const url = new URL(e.request.url);
+  const networkFirst = e.request.mode === "navigate"
+    || url.pathname.endsWith("/config.js")
+    || url.pathname.endsWith("/questions.js");
+
+  if (networkFirst) {
+    e.respondWith(
+      fetch(e.request).then((res) => { putInCache(e.request, res); return res; })
+        .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./index.html")))
+    );
+  } else {
+    e.respondWith(
+      caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
+        if (res && res.type === "basic") putInCache(e.request, res);
         return res;
-      }).catch(() => caches.match("./index.html"));
-    })
-  );
+      }).catch(() => caches.match("./index.html")))
+    );
+  }
 });

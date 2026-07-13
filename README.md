@@ -39,9 +39,79 @@ python3 -m http.server 8000
 # dann http://localhost:8000 im Browser öffnen
 ```
 
+## Geräteübergreifende Synchronisation (Cloud-Sync)
+
+Standardmäßig speichert die App den Fortschritt **lokal** auf dem Gerät. Damit
+der Fortschritt **auf allen Geräten gleich** ist (und weiterlernen auf iPhone,
+iPad, Laptop … möglich wird), kann optional ein kostenloses **Supabase**-Projekt
+angebunden werden. GitHub Pages bleibt der Host; Supabase speichert nur den
+Fortschritt. Identifiziert wird über einen geheimen **Sync-Code** – kein
+Passwort/Login nötig.
+
+**Einmalige Einrichtung (einmal für das Projekt):**
+
+1. Kostenloses Konto auf [supabase.com](https://supabase.com) anlegen und ein
+   **neues Projekt** erstellen (Region z. B. Europe, „Enable Data API" an).
+   Das Datenbank-Passwort wird für die App **nicht** benötigt.
+2. Im Projekt links **SQL Editor** öffnen, folgendes Snippet einfügen und **Run**:
+
+   ```sql
+   -- Tabelle für den Lernfortschritt (ein Datensatz je Sync-Code)
+   create table if not exists public.progress (
+     code       text primary key,
+     data       jsonb not null,
+     updated_at timestamptz not null default now()
+   );
+
+   -- Direktzugriff sperren (RLS an, keine Policies) …
+   alter table public.progress enable row level security;
+
+   -- … Zugriff nur über zwei Funktionen, die den Sync-Code kennen müssen:
+   create or replace function public.sync_pull(p_code text)
+   returns jsonb language sql security definer set search_path = public as $$
+     select data from public.progress where code = p_code;
+   $$;
+
+   create or replace function public.sync_push(p_code text, p_data jsonb)
+   returns void language plpgsql security definer set search_path = public as $$
+   begin
+     insert into public.progress(code, data, updated_at)
+     values (p_code, p_data, now())
+     on conflict (code) do update set data = excluded.data, updated_at = now();
+   end;
+   $$;
+
+   grant execute on function public.sync_pull(text)        to anon;
+   grant execute on function public.sync_push(text, jsonb)  to anon;
+   ```
+
+3. **Project-URL** und **anon public key** kopieren: Projekt → *Settings* →
+   *API* (bzw. *Data API*). Beide Werte dürfen öffentlich sein – die Daten
+   schützt der geheime Sync-Code + die Funktionen oben.
+4. In **[`config.js`](config.js)** eintragen und committen/pushen:
+
+   ```js
+   window.ADT_CONFIG = {
+     supabaseUrl: "https://DEINPROJEKT.supabase.co",
+     supabaseAnonKey: "eyJhbGciOi… (langer anon-Key)",
+   };
+   ```
+
+**Nutzung (in der App, unter „Geräte-Sync"):**
+
+- **Gerät 1:** „Neuen Sync-Code erstellen" → der Code wird angezeigt (aufschreiben/kopieren).
+- **Gerät 2:** „Mit vorhandenem Code verbinden" → Code eingeben. Der Fortschritt
+  wird zusammengeführt und ab dann automatisch abgeglichen (beim Öffnen, bei
+  Änderungen und sobald wieder online).
+
+> **Robustheit:** Die App bleibt voll **offline-fähig** – lokal wird immer
+> gespeichert, der Cloud-Abgleich passiert im Hintergrund und stört nie den
+> Lernfluss. Zusammengeführt wird verlustarm (Fortschrittswerte wachsen nur,
+> gehen nie verloren).
+
 ## Fragen ergänzen oder anpassen
 
-Alle Fragen stehen in **[`data/questions.js`](app/data/questions.js)**.
+Alle Fragen stehen in **[`data/questions.js`](data/questions.js)**.
 Jede Frage hat ein einfaches Format (Thema, Schwierigkeit, Typ, Optionen,
 richtige Antworten, Erklärung). Neue Fragen einfach an das Array anhängen –
 die App validiert das Format beim Start und meldet Fehler in der Konsole.
@@ -59,8 +129,10 @@ die App validiert das Format beim Start und meldet Fehler in der Konsole.
 ├── index.html              App-Grundgerüst
 ├── manifest.webmanifest    PWA-Manifest (Name, Icons, Standalone)
 ├── sw.js                   Service Worker (Offline-Cache)
+├── config.js               Cloud-Sync-Konfiguration (Supabase-Werte)  ← für Sync eintragen
 ├── css/styles.css          Design (Light/Dark, iOS-optimiert)
 ├── js/app.js               App-Logik (Quiz-Engine, Gamification)
+├── js/sync.js              Cloud-Sync (Merge-Logik, Supabase-Anbindung)
 ├── data/questions.js       Fragen-Datenbank  ← hier Inhalte pflegen
 └── icons/                  App-Icons (PNG)
 ```

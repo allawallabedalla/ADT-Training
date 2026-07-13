@@ -11,6 +11,47 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.2.0] — 2026-07-13
+
+Geräteübergreifende Synchronisation des Lernfortschritts.
+
+### Hinzugefügt
+- **Cloud-Sync (optional)** über ein kostenloses Supabase-Backend, angebunden per
+  einfachem `fetch` (kein externes SDK). Neue Dateien: `config.js` (Konfiguration),
+  `js/sync.js` (Sync-Engine).
+- **Sync-Code-Identität**: kryptografisch zufälliger, gut lesbarer Code
+  (`ADT-XXXXX-XXXXX-XXXXX`) statt Login/Passwort. Auf Gerät 1 erstellen, auf
+  weiteren Geräten eingeben.
+- **Einstellungsseite „Geräte-Sync"** (Startseite → Fortschritt): Code erstellen,
+  verbinden, kopieren, jetzt synchronisieren, Verbindung trennen, Statusanzeige.
+- **Automatischer Abgleich** beim App-Start, bei Änderungen (3-Sekunden-Debounce),
+  bei erneuter Online-Verbindung und beim Zurückkehren in die App.
+- **Verlustarmer Merge**: Fortschrittswerte werden monoton zusammengeführt (Maximum
+  je Feld, Vereinigung der Erfolge); Gesamtzähler werden aus den Einzelfragen neu
+  berechnet – so geht auf keinem Gerät Fortschritt verloren.
+- **Einrichtungsanleitung** inkl. SQL-Snippet in der `README.md`.
+
+### Geändert
+- **Service Worker** auf Version `v2`: `config.js` und `data/questions.js` werden
+  jetzt **Network-first** ausgeliefert, damit Konfig- und Fragen-Updates die Nutzer
+  ohne Cache-Neuversionierung erreichen (offline weiterhin aus dem Cache).
+- Skript-Ladereihenfolge in `index.html`: `config.js` und `js/sync.js` vor `app.js`.
+
+### Sicherheit
+- Direkter Tabellenzugriff ist per Row Level Security gesperrt; Zugriff nur über
+  zwei `security definer`-Funktionen, die den geheimen Sync-Code kennen müssen.
+  Der öffentliche `anon`-Key ist bewusst clientseitig (Standard bei Supabase).
+
+### Getestet
+- Merge-Logik als Unit-Test (Maximum/Union/Ableitung der Gesamtzähler) – bestanden.
+- Sync-Code-Erzeugung/-Normalisierung, 1000 Codes eindeutig – bestanden.
+- **Cross-Device-Integrationstest** (Browser, zwei getrennte Speicher, gemockter
+  Supabase-Server): Gerät A lernt → Gerät B übernimmt per Code → Gerät B lernt
+  weiter → Gerät A übernimmt beim Öffnen. Bidirektional erfolgreich, keine Laufzeitfehler.
+- App **ohne** Konfiguration weiterhin voll funktionsfähig (nur lokal, keine Fehler).
+
+---
+
 ## [0.1.0] — 2026-07-13
 
 Erste funktionsfähige Version der Trainings-App (PWA) zur Vorbereitung auf die

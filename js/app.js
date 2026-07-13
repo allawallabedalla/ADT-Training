@@ -53,7 +53,33 @@ function saveState() {
   saveTimer = setTimeout(() => {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
     catch (e) { console.warn("Speichern fehlgeschlagen", e); }
+    scheduleSync();
   }, 120);
+}
+
+/* ---- Cloud-Sync-Anbindung (optional, siehe js/sync.js) ---- */
+let syncTimer = null;
+function syncEnabled() { return !!(window.ADTSync && ADTSync.isConfigured() && ADTSync.getCode()); }
+function scheduleSync() {
+  if (!syncEnabled()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => runSync(), 3000);
+}
+function getLocalState() { return S; }
+function setLocalState(merged) {
+  S = { ...DEFAULT_STATE, ...merged, perQuestion: merged.perQuestion || {}, badges: merged.badges || {} };
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignorieren */ }
+}
+async function runSync(opts) {
+  if (!window.ADTSync) return { ok: false };
+  const res = await ADTSync.syncNow(getLocalState, setLocalState, opts || {});
+  refreshAfterSync();
+  return res;
+}
+function refreshAfterSync() {
+  if (streakEl) streakEl.textContent = "🔥 " + S.streak;
+  if (VIEW === "home") renderHome();
+  else if (VIEW === "settings") renderSettings();
 }
 
 /* ------------------------------------------------------------------ *
@@ -289,6 +315,7 @@ function renderHome() {
 
     <div class="section-title">Fortschritt</div>
     <button class="mode-btn" data-act="badges"><span class="emoji">🏆</span><span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
+    <button class="mode-btn" data-act="settings"><span class="emoji">☁️</span><span class="txt"><b>Geräte-Sync</b><p>${syncSubtitle()}</p></span><span class="chev">›</span></button>
 
     <p class="muted center" style="margin-top:24px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen<br>
     <span class="link" data-act="reset">Fortschritt zurücksetzen</span></p>
@@ -301,8 +328,129 @@ function renderHome() {
     else if (a === "weak") { buildSession("weak"); go("quiz"); }
     else if (a === "exam") { buildSession("exam"); go("quiz"); }
     else if (a === "badges") go("badges");
+    else if (a === "settings") go("settings");
     else if (a === "reset") confirmReset();
   }));
+}
+
+function syncSubtitle() {
+  if (!window.ADTSync || !ADTSync.isConfigured()) return "Noch nicht eingerichtet";
+  if (!ADTSync.getCode()) return "Einrichten – auf allen Geräten weiterlernen";
+  const last = ADTSync.getLastSynced();
+  return last ? "Aktiv · zuletzt " + new Date(last).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "Aktiv";
+}
+
+/* ---- Einstellungen / Geräte-Sync ---- */
+function renderSettings() {
+  updateAppbar("settings");
+  actionbar.classList.add("hidden");
+  const hasSync = !!window.ADTSync;
+  const configured = hasSync && ADTSync.isConfigured();
+  const code = hasSync ? ADTSync.getCode() : null;
+  const last = hasSync ? ADTSync.getLastSynced() : null;
+  const lastTxt = last ? new Date(last).toLocaleString("de-DE") : "noch nie";
+
+  let body;
+  if (!configured) {
+    body = `<div class="install-tip"><span>☁️</span><div>
+      <b>Cloud-Sync ist noch nicht eingerichtet.</b><br>
+      Damit der Fortschritt auf allen Geräten gleich ist, muss einmalig ein kostenloses
+      Supabase-Projekt verbunden werden (zwei Werte in <b>config.js</b>).
+      Schritt-für-Schritt-Anleitung: <b>README.md</b> → „Geräteübergreifende Synchronisation".</div></div>
+      <p class="muted center" style="margin-top:16px">Bis dahin funktioniert alles ganz normal – nur lokal auf diesem Gerät.</p>`;
+  } else if (!code) {
+    body = `
+      <p class="muted">Verbinde dieses Gerät, damit dein Fortschritt automatisch überall gleich ist.</p>
+      <button class="mode-btn" id="btnCreate"><span class="emoji">✨</span><span class="txt"><b>Neuen Sync-Code erstellen</b><p>Für dein erstes Gerät</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" id="btnConnect"><span class="emoji">🔗</span><span class="txt"><b>Mit vorhandenem Code verbinden</b><p>Code vom anderen Gerät eingeben</p></span><span class="chev">›</span></button>
+      <div id="connectBox"></div>`;
+  } else {
+    body = `
+      <div class="q-card">
+        <div class="q-meta"><span class="chip" id="syncChip">…</span></div>
+        <p class="muted" style="margin:0 0 6px">Dein Sync-Code – auf dem anderen Gerät unter „Mit vorhandenem Code verbinden" eingeben:</p>
+        <p id="codeText" style="font-size:19px;font-weight:800;letter-spacing:1px;word-break:break-all;margin:4px 0">${esc(code)}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn-ghost" id="btnCopy" style="width:auto;padding:11px 15px">📋 Kopieren</button>
+          <button class="btn-ghost" id="btnSyncNow" style="width:auto;padding:11px 15px">🔄 Jetzt synchronisieren</button>
+        </div>
+        <p class="muted" style="margin-top:12px">Zuletzt synchronisiert: ${esc(lastTxt)}</p>
+      </div>
+      <button class="mode-btn" id="btnDisconnect"><span class="emoji">🚪</span><span class="txt"><b>Verbindung trennen</b><p>Code von diesem Gerät entfernen (Daten bleiben in der Cloud)</p></span><span class="chev">›</span></button>`;
+  }
+
+  app.innerHTML = `<div class="section-title">Geräteübergreifende Synchronisation</div>${body}`;
+
+  const $ = (id) => document.getElementById(id);
+  const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
+  const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
+  const bCopy = $("btnCopy"); if (bCopy) bCopy.addEventListener("click", () => copyCode(code));
+  const bSync = $("btnSyncNow"); if (bSync) bSync.addEventListener("click", async () => {
+    toast("🔄 Synchronisiere…");
+    const r = await runSync({});
+    if (r && r.ok) toast("✅ Synchronisiert");
+    else if (r && r.reason === "offline") toast("🔌 Offline – wird später abgeglichen");
+    else toast("⚠️ Sync fehlgeschlagen");
+  });
+  const bD = $("btnDisconnect"); if (bD) bD.addEventListener("click", () => {
+    if (confirm("Verbindung auf diesem Gerät trennen? Der Fortschritt bleibt lokal und in der Cloud erhalten.")) {
+      ADTSync.setCode(null); toast("Verbindung getrennt"); renderSettings();
+    }
+  });
+  updateSyncChip();
+}
+
+function updateSyncChip() {
+  const chip = document.getElementById("syncChip");
+  if (!chip || !window.ADTSync) return;
+  if (!navigator.onLine) chip.textContent = "🔌 offline";
+  else if (ADTSync.isSyncing()) chip.textContent = "🔄 synchronisiere…";
+  else chip.textContent = "☁️ verbunden";
+}
+
+async function createSyncCode() {
+  const code = ADTSync.generateCode();
+  ADTSync.setCode(code);
+  toast("✨ Sync-Code erstellt");
+  await runSync({});
+  renderSettings();
+}
+
+function showConnectBox() {
+  const box = document.getElementById("connectBox");
+  if (!box) return;
+  box.innerHTML = `
+    <div class="q-card" style="margin-top:12px">
+      <p class="muted" style="margin:0 0 8px">Code vom anderen Gerät eingeben:</p>
+      <input id="codeInput" inputmode="text" autocapitalize="characters" autocomplete="off"
+        placeholder="ADT-XXXXX-XXXXX-XXXXX"
+        style="width:100%;padding:14px;font-size:17px;border-radius:12px;border:2px solid var(--border);background:var(--bg);color:var(--text);letter-spacing:1px">
+      <button class="btn-primary" id="btnDoConnect" style="margin-top:12px">Verbinden</button>
+    </div>`;
+  const inp = document.getElementById("codeInput");
+  inp.focus();
+  document.getElementById("btnDoConnect").addEventListener("click", () => connectWithCode(inp.value));
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") connectWithCode(inp.value); });
+}
+
+async function connectWithCode(raw) {
+  const code = ADTSync.normalizeCode(raw);
+  if (!code || code.replace(/[^A-Z0-9]/g, "").length < 8) { toast("⚠️ Ungültiger Code"); return; }
+  ADTSync.setCode(code);
+  toast("🔗 Verbinde…");
+  const r = await runSync({});
+  if (r && r.ok) toast(r.merged ? "✅ Fortschritt übernommen" : "✅ Verbunden");
+  else if (r && r.reason === "offline") toast("🔌 Offline – wird später abgeglichen");
+  else toast("⚠️ Verbindung fehlgeschlagen");
+  renderSettings();
+}
+
+function copyCode(code) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(() => toast("📋 Code kopiert")).catch(() => toast("Code: " + code));
+  } else {
+    toast("Code: " + code);
+  }
 }
 
 /* ---- Themenauswahl ---- */
@@ -473,12 +621,13 @@ function go(view) {
   else if (view === "topics") renderTopics();
   else if (view === "quiz") renderQuiz();
   else if (view === "badges") renderBadges();
+  else if (view === "settings") renderSettings();
   history.replaceState({ view }, "");
 }
 function goBack() {
   if (VIEW === "quiz") {
     if (confirm("Training beenden? Der bisherige Fortschritt bleibt gespeichert.")) go("home");
-  } else if (VIEW === "topics" || VIEW === "badges" || VIEW === "result") go("home");
+  } else if (VIEW === "topics" || VIEW === "badges" || VIEW === "result" || VIEW === "settings") go("home");
   else go("home");
 }
 
@@ -512,6 +661,14 @@ if (!DATA_OK) {
   const t = todayStr();
   if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) > 1) { S.streak = 0; saveState(); }
   go("home");
+
+  // Cloud-Sync: Statusanzeige aktualisieren + bei passenden Ereignissen abgleichen
+  if (window.ADTSync) {
+    ADTSync.onChange(() => { updateSyncChip(); refreshAfterSync(); });
+    if (syncEnabled()) runSync({});                              // beim Start
+    window.addEventListener("online", () => { if (syncEnabled()) runSync({}); });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && syncEnabled()) runSync({}); });
+  }
 }
 
 // Service Worker registrieren (offline)

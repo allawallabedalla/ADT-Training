@@ -38,7 +38,8 @@
 | **Hosting** | GitHub Pages (statisch, HTTPS) — Quelle: gewählter Branch + Ordner `/(root)` |
 | **Live-URL (geplant)** | `https://allawallabedalla.github.io/ADT-Training/` |
 | **Fachinhalte pflegen** | `data/questions.js` |
-| **Version** | 0.1.0 (siehe `changelog.md`) |
+| **Version** | 0.2.0 (siehe `changelog.md`) |
+| **Cloud-Sync** | Supabase (kostenlos), Konfiguration in `config.js`; Identität per Sync-Code |
 
 ## 4. Definition of Done (pro Änderung)
 
@@ -55,6 +56,9 @@
 
 Priorisierung: **P1** = als Nächstes sinnvoll · **P2** = danach · **P3** = nice-to-have.
 Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
+
+### Kürzlich erledigt
+- ✅ **Geräteübergreifende Synchronisation** (Cloud-Sync via Supabase, Sync-Code, verlustarmer Merge) — v0.2.0, 2026-07-13
 
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
@@ -106,6 +110,9 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 | 2026-07-13 | App-Dateien im **Repo-Root** | GitHub Pages liefert nur aus `/(root)` oder `/docs` |
 | 2026-07-13 | **Vanilla JS**, keine Frameworks | Weniger Abhängigkeiten = robuster & langlebiger |
 | 2026-07-13 | Startfragen aus **stabilen Fachstandards** | Bis offizielles Material vorliegt: korrekt & prüfungsnah |
+| 2026-07-13 | Cloud-Sync über **Supabase** (statt Firebase) | REST/RPC per einfachem `fetch`, kein SDK → robuster, offline-first, kein CDN-Zwang |
+| 2026-07-13 | Identität per **Sync-Code** (statt Login) | Kein Passwort/OAuth nötig – einfachste Nutzung; Code = Zugriffsschlüssel (capability) |
+| 2026-07-13 | **Network-first** für `config.js` & `questions.js` im SW | Konfig-/Fragen-Updates erreichen Nutzer ohne Cache-Neuversionierung |
 
 ---
 
@@ -113,4 +120,4 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 - Findet die Prüfung weiterhin am Laptop statt (→ Tastatur-Steuerung sinnvoll)?
 - Gibt es eine offizielle Themen-/Gewichtungsvorgabe der ADT?
-- Soll die App später mehrere Nutzerprofile unterstützen, oder bleibt sie Single-User?
+- Cloud-Sync eingerichtet? (Supabase-Projekt anlegen + `config.js` befüllen — siehe README)
