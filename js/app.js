@@ -127,6 +127,8 @@ function sanitizeState(raw) {
       lastResult: (p.lastResult === "correct" || p.lastResult === "wrong") ? p.lastResult : null,
       box: clampInt(p.box, 0, SRS_INTERVALS_DAYS.length - 1),
       due: typeof p.due === "string" ? p.due : null,
+      // Bereits „sichere" Fragen gelten als schon gemeistert → kein nachträglicher Bonus.
+      masteredOnce: (p.masteredOnce === true) || (clampInt(p.box, 0, SRS_INTERVALS_DAYS.length - 1) >= SRS_MASTER_BOX),
     };
   }
   const rawBg = (src.badges && typeof src.badges === "object") ? src.badges : {};
@@ -364,12 +366,21 @@ const BADGES = [
   { id: "exam",      ic: "🎓", name: "Prüfung bestanden", desc: "Prüfungssimulation ≥ 50 %",          test: () => S.examsPassed >= 1 },
   { id: "exam90",    ic: "👑", name: "Bravour",           desc: "Prüfungssimulation ≥ 90 %",          test: () => S.bestExamPct >= 90 },
   { id: "sharp",     ic: "🎯", name: "Treffsicher",       desc: "80 % Gesamt-Trefferquote (ab 30 Fragen)", test: () => S.totalAnswered >= 30 && S.totalCorrect / S.totalAnswered >= 0.8 },
-  { id: "master",    ic: "🧠", name: "Themen-Meister",    desc: "Ein Thema komplett gemeistert",      test: () => Object.values(TOPICS).some((_, i) => topicMastered(Object.keys(TOPICS)[i])) },
+  { id: "secure25",  ic: "🛡️", name: "Gefestigt",         desc: "25 Fragen sicher (Box 3+)",          test: () => masteredCount() >= 25 },
+  { id: "streak14",  ic: "🗓️", name: "Eiserne Serie",     desc: "14 Tage in Folge (Rekord)",          test: () => S.bestStreak >= 14 },
+  { id: "master",    ic: "🧠", name: "Themen-Meister",    desc: "Ein Thema komplett gemeistert",      test: () => Object.keys(TOPICS).some(topicMastered) },
+  { id: "allmaster", ic: "🏵️", name: "Alles sitzt",       desc: "Alle Fragen sicher (Box 3+)",        test: () => QUESTIONS.length > 0 && masteredCount() >= QUESTIONS.length },
 ];
 function topicMastered(topicKey) {
   const qs = QUESTIONS.filter(q => q.topic === topicKey);
   if (!qs.length) return false;
   return qs.every(q => { const p = S.perQuestion[q.id]; return p && p.box >= SRS_MASTER_BOX; });
+}
+// Zahl der „sicheren" Fragen (Box ≥ 3) – für Erfolge und den Meisterschafts-Bonus.
+function masteredCount() {
+  let n = 0;
+  for (const q of QUESTIONS) { const p = S.perQuestion[q.id]; if (p && p.box >= SRS_MASTER_BOX) n++; }
+  return n;
 }
 function checkBadges() {
   const newly = [];
@@ -563,20 +574,25 @@ function checkCurrent() {
   SESSION.correctFlags[i] = ok;
 
   // Fortschritt aktualisieren
-  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null };
+  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null, masteredOnce: false };
+  const boxBefore = Number(p.box) || 0;
   p.seen += 1;
   if (ok) { p.correct += 1; p.lastResult = "correct"; } else { p.wrong += 1; p.lastResult = "wrong"; }
   srsUpdate(p, ok);                       // Leitner-Box + nächste Fälligkeit fortschreiben
+  // Erstmeisterung: Frage erreicht zum ersten Mal Box 3+ („sicher") → einmaliger Bonus.
+  const justMastered = ok && boxBefore < SRS_MASTER_BOX && p.box >= SRS_MASTER_BOX && !p.masteredOnce;
+  if (justMastered) p.masteredOnce = true;
   S.perQuestion[q.id] = p;
   S.totalAnswered += 1;
   if (ok) S.totalCorrect += 1;
 
-  // XP: richtig = 10 + Schwierigkeitsbonus; falsch = 2 (fürs Dranbleiben).
+  // XP: richtig = 10 + Schwierigkeitsbonus; falsch = 2 (fürs Dranbleiben); Erstmeisterung +15.
   // difficulty defensiv absichern, damit nie NaN-XP entstehen können.
   const diff = (q.difficulty >= 1 && q.difficulty <= 3) ? q.difficulty : 1;
   const gained = ok ? (10 + (diff - 1) * 5) : 2;
+  const bonus = justMastered ? 15 : 0;
   const lvlBefore = levelForXp(S.xp);
-  S.xp += gained;
+  S.xp += gained + bonus;
   const lvlAfter = levelForXp(S.xp);
   touchStreak();
   bumpToday(1);                            // Tagesziel-Fortschritt (lokal)
@@ -586,6 +602,7 @@ function checkCurrent() {
   renderQuiz();
   if (ok) toast(`✅ Richtig! +${gained} XP`); else toast(`+${gained} XP fürs Üben`);
   let delay = 900;
+  if (justMastered) { setTimeout(() => toast(`🛡️ Frage gemeistert! +${bonus} XP`), delay); delay += 1500; }
   if (lvlAfter > lvlBefore) {
     setTimeout(() => toast(`🎉 Level ${lvlAfter} – ${levelTitle(lvlAfter)}!`), delay);
     delay += 1600;
@@ -659,8 +676,9 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
   sliders: '<path d="M4 7h9M17 7h3"/><path d="M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
+  shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
 };
-const APP_VERSION = "0.21.0";
+const APP_VERSION = "0.22.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -676,6 +694,7 @@ const BADGE_ICON = {
   streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "bolt", c: "#ffcc00" },
   exam: { i: "clipboardCheck", c: "#34c759" }, exam90: { i: "crown", c: "#5e5ce6" },
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
+  secure25: { i: "shield", c: "#34c759" }, streak14: { i: "bolt", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
 };
 
 const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
@@ -1583,7 +1602,7 @@ function renderInfo() {
       ${infoRow("target", "#0a84ff", "Tagesziel", "Setze dir ein tägliches Lernziel – der Ring auf der Startseite zeigt deinen Fortschritt")}
       ${infoRow("star", "#ff2d55", "XP & Level", "Punkte fürs Üben – schwerere Fragen geben mehr")}
       ${infoRow("flame", "#ff6b22", "Tages-Serie", "Jeden Tag üben hält die Serie am Leben – ein Ausrutscher-Tag ist erlaubt (Gnadentag)")}
-      ${infoRow("trophy", "#ffb300", "Erfolge", "14 Abzeichen zum Freischalten – bis 1000 Fragen")}
+      ${infoRow("trophy", "#ffb300", "Erfolge", BADGES.length + " Abzeichen – Fleiß, Serien, Prüfung & sichere Fragen")}
     </div>
 
     <div class="section-title">Auf allen Geräten</div>

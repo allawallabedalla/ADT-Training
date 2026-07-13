@@ -11,6 +11,24 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.22.0] — 2026-07-13  ·  Erfolge & Meisterschafts-Bonus
+
+### Hinzugefügt
+- **3 neue Erfolge** (weniger reine Mengen-Abzeichen, mehr echtes Können): „Gefestigt"
+  (25 Fragen sicher), „Eiserne Serie" (14-Tage-Rekord), „Alles sitzt" (alle Fragen sicher).
+  Jetzt 17 Abzeichen.
+- **Erstmeisterungs-Bonus**: Erreicht eine Frage zum ersten Mal Box 3 („sicher"), gibt es
+  einmalig **+15 XP** – belohnt echtes Beherrschen statt bloßer Wiederholung.
+
+### Geändert
+- Verschachtelten `master`-Erfolgstest vereinfacht. Badge-Zähler im Info-Tab dynamisch.
+
+### Technik
+- Neues Feld `masteredOnce` (additiv; bereits sichere Fragen zählen als gemeistert → kein
+  nachträglicher Bonus). 2 neue Tests. `tests/run.sh` grün.
+
+---
+
 ## [0.21.0] — 2026-07-13  ·  Barrierefreiheit & Tastatur
 
 ### Hinzugefügt

@@ -450,6 +450,25 @@ async function page(opts = {}) {
   chk(true, 'Tastatur: Enter prüft die Antwort');
 }
 
+// 21) Erstmeisterung: Frage erreicht Box 3 → einmaliger Bonus-XP
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  const r = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    S.perQuestion[q.id] = { seen: 2, correct: 2, wrong: 0, lastResult: 'correct', box: 2, due: todayStr(), masteredOnce: false };
+    const xpBefore = S.xp;
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set(q.correct)], checked: [false], correctFlags: [null] };
+    go('quiz');
+    return { id: q.id, xpBefore };
+  });
+  await p.click('#checkBtn'); await p.waitForSelector('.explain.ok');
+  const after = await p.evaluate((id) => ({ xp: S.xp, rec: S.perQuestion[id] }), r.id);
+  chk(after.rec.box >= 3 && after.rec.masteredOnce === true, 'Erstmeisterung: Box 3+ erreicht, Einmal-Flag gesetzt');
+  chk(after.xp - r.xpBefore >= 25, 'Erstmeisterung: Bonus-XP vergeben (≥ Basis+15)');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

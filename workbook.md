@@ -133,7 +133,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ⬜ Distraktoren/Items nach Item-Writing-Standards überarbeiten (Nonsens-Distraktoren, Test-Wiseness)
 - ⬜ Content-Ausbau ≥15–20 Fragen/Thema inkl. neuem Thema **OPS/Prozeduren** (wartet teils auf Material)
 - ✅ anon-RPCs verpflichtend härten (Größen-/Längen-Check) + `codeExists` entfernt (v0.8.0; SQL: supabase/sync-hardening.sql)
-- ⬜ Badge-Rebalancing + Erstmeisterungs-Bonus-XP
+- ✅ Badge-Rebalancing + Erstmeisterungs-Bonus-XP (v0.22.0): 3 SRS-/Rekord-Erfolge, +15 XP bei Erstmeisterung
 
 **P3 / optional:**
 - ⬜ Konfidenz-Tap + Kalibrierungs-Feedback (Metakognition)
