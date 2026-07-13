@@ -359,3 +359,8 @@ h1, h2, h3 { line-height: 1.2; }
   border: 1px solid var(--border); background: var(--bg-elev-2); color: var(--text);
   font-size: 16px; font-family: inherit; -webkit-appearance: none; appearance: none;
 }
+
+/* ---------- Info-Zeilen (nicht interaktiv) ---------- */
+.mode-btn.info-row { cursor: default; }
+.mode-btn.info-row:active { transform: none; background: transparent; }
+.ios-group .mode-btn.info-row:active { background: transparent; }

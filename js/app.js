@@ -433,7 +433,10 @@ const ICONS = {
   gem: '<path d="M6 4.5h12l3 4.5-9 10.5L3 9z"/><path d="M3.2 9h17.6M8.5 4.5L12 9l3.5-4.5M12 9v10.2"/>',
   rocket: '<path d="M12 3c2.8 1.2 4.5 4 4.5 7.6 0 2-.8 3.9-1.8 5.1H9.3C8.3 14.5 7.5 12.6 7.5 10.6 7.5 7 9.2 4.2 12 3z"/><circle cx="12" cy="9.8" r="1.5"/><path d="M9.3 15.7l-1.8 2.6M14.7 15.7l1.8 2.6M12 16.5v3"/>',
   mountain: '<path d="M3 19h18L14 6l-3.2 5.6L8.5 9z"/><path d="M11.4 11.3l1.1 1.3 1.4-1.1"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
+const APP_VERSION = "0.6.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -451,7 +454,7 @@ const BADGE_ICON = {
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
 };
 
-const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Sync & Sicherung", result: "Ergebnis", quiz: "" };
+const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Sync & Sicherung", info: "Info", result: "Ergebnis", quiz: "" };
 function setStreak() {
   if (streakEl) streakEl.innerHTML = '<span class="streak-flame">' + icon("flame") + "</span>" + S.streak;
 }
@@ -516,6 +519,7 @@ function renderHome() {
     <div class="ios-group">
       <button class="mode-btn" data-act="badges">${iconTile("trophy", "#ffb300")}<span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="settings">${iconTile("icloud", "#30b0c7")}<span class="txt"><b>Geräte-Sync</b><p>${syncSubtitle()}</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="info">${iconTile("info", "#8e8e93")}<span class="txt"><b>So funktioniert's</b><p>Kurzanleitung & Erklärung</p></span><span class="chev">›</span></button>
     </div>
 
     <p class="muted center" style="margin-top:24px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen<br>
@@ -530,6 +534,7 @@ function renderHome() {
     else if (a === "exam") { buildSession("exam"); go("quiz"); }
     else if (a === "badges") go("badges");
     else if (a === "settings") go("settings");
+    else if (a === "info") go("info");
     else if (a === "reset") confirmReset();
   }));
 }
@@ -895,6 +900,53 @@ function renderBadges() {
     </div>`;
 }
 
+/* ---- Info / Anleitung ---- */
+function infoRow(name, tint, title, text) {
+  return `<div class="mode-btn info-row">${iconTile(name, tint)}<span class="txt"><b>${title}</b><p>${text}</p></span></div>`;
+}
+function renderInfo() {
+  updateAppbar("info");
+  actionbar.classList.add("hidden");
+  app.innerHTML = `
+    <h1 class="large-title">So funktioniert's<span class="sub">ADT Trainer · Kurzanleitung</span></h1>
+
+    <div class="section-title">Die App</div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Diese App bereitet dich auf die ADT-Prüfung <b>„Tumordokumentar/in"</b> vor. Übe jederzeit am Handy – im echten Prüfungsformat, mit einer Erklärung zu jeder Frage. Alles funktioniert offline.</p></div>
+
+    <div class="section-title">Lernmodi</div>
+    <div class="ios-group">
+      ${infoRow("shuffle", "#007aff", "Gemischtes Training", "Zufällige Fragen aus allen Themen")}
+      ${infoRow("grid", "#5e5ce6", "Nach Thema lernen", "Ein Themengebiet gezielt üben")}
+      ${infoRow("repeat", "#ff9500", "Schwachstellen wiederholen", "Fragen, die noch nicht sitzen")}
+      ${infoRow("clipboardCheck", "#34c759", "Prüfungssimulation", "30 Fragen · bestanden ab 50 %")}
+    </div>
+
+    <div class="section-title">Prüfungsformat</div>
+    <div class="q-card"><p style="margin:0;line-height:1.6">• Multiple-Choice mit <b>mehreren</b> richtigen Antworten.<br>
+    • Ein Punkt nur, wenn <b>alle</b> richtigen Antworten getroffen sind (kein Teilpunkt).<br>
+    • Bestanden ab <b>50 %</b> der Punkte.<br>
+    • Zugelassene Hilfsmittel in der echten Prüfung: ICD-10, ICD-O-3, OPS.</p></div>
+
+    <div class="section-title">Belohnungen</div>
+    <div class="ios-group">
+      ${infoRow("star", "#ff2d55", "XP & Level", "Punkte fürs Üben – schwerere Fragen geben mehr")}
+      ${infoRow("flame", "#ff6b22", "Tages-Serie", "Jeden Tag üben hält die Serie am Leben")}
+      ${infoRow("trophy", "#ffb300", "Erfolge", "14 Abzeichen zum Freischalten – bis 1000 Fragen")}
+    </div>
+
+    <div class="section-title">Auf allen Geräten</div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Unter <b>Sync &amp; Sicherung</b> einen <b>Sync-Code</b> erstellen und auf weiteren Geräten eingeben – dein Fortschritt ist überall gleich. Jeder eigene Code steht für einen eigenen, unabhängigen Fortschritt.</p></div>
+
+    <div class="section-title">Lern-Erinnerungen</div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Optionale <b>tägliche Erinnerung</b> ans Üben zur Wunsch-Uhrzeit (unter Sync &amp; Sicherung). Auf dem iPhone nur, wenn die App zum Home-Bildschirm hinzugefügt ist.</p></div>
+
+    <div class="section-title">Als App installieren</div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">In <b>Safari</b> unten auf <b>Teilen</b> → <b>„Zum Home-Bildschirm"</b>. Danach startet die App im Vollbild und läuft komplett offline.</p></div>
+
+    <p class="muted center" style="margin:22px 2px 0">Version ${APP_VERSION} · Die Fragen dienen dem Üben und sind nicht die offiziellen ADT-Prüfungsfragen.</p>
+  `;
+}
+
 /* ------------------------------------------------------------------ *
  * 7) Navigation
  * ------------------------------------------------------------------ */
@@ -909,6 +961,7 @@ function go(view) {
     else if (view === "quiz") renderQuiz();
     else if (view === "badges") renderBadges();
     else if (view === "settings") renderSettings();
+    else if (view === "info") renderInfo();
     history.replaceState({ view }, "");
   } catch (e) {
     console.error("Render-Fehler in Ansicht '" + view + "':", e);
@@ -928,7 +981,7 @@ function go(view) {
 function goBack() {
   if (VIEW === "quiz") {
     if (confirm("Training beenden? Der bisherige Fortschritt bleibt gespeichert.")) go("home");
-  } else if (VIEW === "topics" || VIEW === "badges" || VIEW === "result" || VIEW === "settings") go("home");
+  } else if (VIEW === "topics" || VIEW === "badges" || VIEW === "result" || VIEW === "settings" || VIEW === "info") go("home");
   else go("home");
 }
 

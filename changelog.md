@@ -11,6 +11,20 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.6.0] — 2026-07-13
+
+### Hinzugefügt
+- **Info-/Anleitungs-Reiter** („So funktioniert's", Startseite → Fortschritt): erklärt die
+  App verständlich – Lernmodi, Prüfungsformat, Belohnungen, Geräte-Sync, Erinnerungen und
+  Installation als Home-Bildschirm-App. iOS-Layout mit Icon-Zeilen; zeigt die App-Version.
+- Bestätigt: **Lern-Erinnerungen** serverseitig eingerichtet und auf dem Gerät verifiziert
+  (echter Web Push kam an).
+
+### Service Worker v7
+- verteilt den Info-Reiter an installierte Nutzer.
+
+---
+
 ## [0.5.0] — 2026-07-13
 
 ### Hinzugefügt – Lern-Erinnerungen (Web Push)

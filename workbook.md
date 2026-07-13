@@ -92,10 +92,10 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
   tägliches Lernziel mit Fortschrittsring
 
 ### Neu / offen
-- ⬜ **P2** **Info-/Anleitungs-Reiter**: eigener Bereich, der die App erklärt (Modi, Prüfungsformat,
-  Sync, Erinnerungen) – für neue Nutzer/innen. (Wunsch 2026-07-13)
-- 🟡 **P2** **Lern-Erinnerungen**: Client + Service Worker + Edge Function + Anleitung fertig (v0.5.0);
-  offen ist die **serverseitige Einrichtung** durch Nico (VAPID-Key in config.js, SQL, Edge Function, Cron).
+- ✅ **Info-/Anleitungs-Reiter** „So funktioniert's" (v0.6.0, 2026-07-13): erklärt Modi,
+  Prüfungsformat, Belohnungen, Sync, Erinnerungen, Installation.
+- ✅ **Lern-Erinnerungen** (v0.5.0): Client + Service Worker + Edge Function + stündlicher Zeitplan.
+  Serverseitig eingerichtet und **auf dem Gerät verifiziert** (echter Push kam an) — 2026-07-13.
 
 ### Feinschliff (aus Abstimmung 2026-07-13 — „machen wir später")
 - ⬜ **P2** **Tastatur-Steuerung** (Zahlen 1–4 wählen, Enter prüfen/weiter) — relevant, da echte Prüfung am Laptop
