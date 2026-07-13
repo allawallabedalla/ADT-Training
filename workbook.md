@@ -131,6 +131,7 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 | 2026-07-13 | Speicher-Schlüssel `adt_trainer_state_v1` bleibt **stabil** | Speicherstände überleben App-Updates; Änderungen nur per Migration |
 | 2026-07-13 | Frontend folgt **iOS-Design-Guidelines (Apple HIG)** | Tap-Ziele ≥ 44 pt, 8-pt-Raster, Safe-Areas, Depth/Deference – vertrautes, wertiges Look-and-feel |
 | 2026-07-13 | Service-Worker-Updates **nur nach Nutzerbestätigung** | Kein stiller Wechsel/Reload-Loop; Nutzer entscheidet über „Neu laden" |
+| 2026-07-13 | **Mehrbenutzer über unabhängige Sync-Codes** – kein Account-System | Jeder Code = eigener, unabhängiger Fortschritt auf beliebig vielen Geräten. Ein Gerät = ein Profil; getrennte Nutzer = getrennte Codes. Einfachste robuste Lösung (Nutzerentscheidung). |
 
 ---
 
@@ -138,4 +139,10 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 - Findet die Prüfung weiterhin am Laptop statt (→ Tastatur-Steuerung sinnvoll)?
 - Gibt es eine offizielle Themen-/Gewichtungsvorgabe der ADT?
-- Cloud-Sync eingerichtet? (Supabase-Projekt anlegen + `config.js` befüllen — siehe README)
+
+## 9a. Nutzermodell (entschieden)
+
+Ein Profil pro Gerät (localStorage). Geräteübergreifend & mehrbenutzerfähig über
+**Sync-Codes**: jeder Code trägt einen eigenen, unabhängigen Fortschritt. Getrennte
+Personen verwenden getrennte Codes → vollständig isoliert. Kein Login/Account nötig.
+Benannte lokale Profile auf einem Gerät sind bewusst nicht umgesetzt (P3, nur falls je gewünscht).
