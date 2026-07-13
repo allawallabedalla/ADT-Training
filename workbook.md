@@ -125,7 +125,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - ✅ Onboarding-Flow + Tagesziel (v0.15.0): Erststart-Begrüßung + tägliches Lernziel mit
   Fortschrittsring (geräte-lokal). Offen: Statistik/Historie über Zeit
 - ✅ Faire Streak (v0.14.0): Gnadentag (ein verpasster Tag erlaubt) + Rekord-Serie (bestStreak)
-- ⬜ Native Zurück-Navigation (pushState/popstate, Quiz mit Bestätigung)
+- ✅ Native Zurück-Navigation (v0.19.0): pushState/popstate, Quiz/Prüfung mit Bestätigung, Ergebnis ersetzt Ansicht
 - ⬜ **app.js in Module aufteilen + Node-Test-Harness + Fragen-CI-Check** (stützt „makellose Funktion")
 - ✅ Cache-Robustheit (v0.17.0): stale-while-revalidate für die App-Shell + reg.update +
   no-cache-Revalidierung; stabiler Cache-Name → kein manuelles Cache-Bumpen mehr. Neuer

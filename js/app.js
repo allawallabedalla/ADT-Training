@@ -587,8 +587,9 @@ function finishSession() {
     saveState();
     checkBadges();
   }
-  renderResult(right, total, pct);
-  window.scrollTo(0, 0);
+  // Ergebnis ersetzt die Quiz-Ansicht im Verlauf → „Zurück" führt sauber zur vorigen Ebene.
+  RESULT = { right, total, pct };
+  go("result", { replace: true });
 }
 
 /* ------------------------------------------------------------------ *
@@ -637,7 +638,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.18.0";
+const APP_VERSION = "0.19.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -1402,7 +1403,7 @@ function submitExam(auto) {
 
   EXAM_RESULT = { results, right, total, pct, auto };
   EXAM = null; removeExam();
-  go("examresult");
+  go("examresult", { replace: true });   // Prüfungsansicht durch das Ergebnis ersetzen
 }
 
 function renderExamResult() {
@@ -1573,21 +1574,22 @@ function renderInfo() {
  * 7) Navigation
  * ------------------------------------------------------------------ */
 let VIEW = "home";
-function go(view) {
-  const prev = VIEW;
-  VIEW = view;
-  if (view !== "exam") stopExamTimer();   // Timer läuft nur in der Prüfungsansicht
+let RESULT = null;   // Ergebnis der letzten Übungs-Session (für erneutes Rendern bei Navigation)
+
+// Reines Rendern einer Ansicht (ohne History-Nebenwirkungen).
+function renderView(view) {
   try {
     window.scrollTo(0, 0);   // neue Ansicht immer oben starten
     if (view === "home") renderHome();
     else if (view === "topics") renderTopics();
     else if (view === "quiz") renderQuiz();
+    else if (view === "result") renderResult(RESULT ? RESULT.right : 0, RESULT ? RESULT.total : 0, RESULT ? RESULT.pct : 0);
     else if (view === "exam") renderExam();
     else if (view === "examresult") renderExamResult();
     else if (view === "badges") renderBadges();
     else if (view === "settings") renderSettings();
     else if (view === "info") renderInfo();
-    history.replaceState({ view }, "");
+    return true;
   } catch (e) {
     console.error("Render-Fehler in Ansicht '" + view + "':", e);
     // Nie weißer Bildschirm: sichere Rückfallanzeige mit Weg zurück.
@@ -1599,29 +1601,44 @@ function go(view) {
       actionbar.classList.remove("hidden");
       actionbar.innerHTML = `<div class="inner"><button class="btn-primary" id="recoverBtn">Zur Startseite</button></div>`;
       const rb = document.getElementById("recoverBtn");
-      if (rb) rb.addEventListener("click", () => { try { go("home"); } catch (_) { location.reload(); } });
-    } catch (_) { /* im Extremfall bleibt die letzte Ansicht stehen */ VIEW = prev; }
+      if (rb) rb.addEventListener("click", () => { try { go("home", { replace: true }); } catch (_) { location.reload(); } });
+    } catch (_) { /* im Extremfall bleibt die letzte Ansicht stehen */ }
+    return false;
   }
 }
-async function goBack() {
-  if (VIEW === "quiz") {
-    const ok = await modalChoice(
-      "Training beenden?",
-      "Der bisherige Fortschritt bleibt gespeichert.",
-      [{ label: "Beenden", value: true, variant: "danger" }, { label: "Weiter üben", value: false, variant: "ghost" }]
-    );
-    if (ok) go("home");
-  } else if (VIEW === "exam") {
-    const ok = await modalChoice(
-      "Prüfung verlassen?",
-      "Die Prüfung läuft weiter (die Zeit tickt) – du kannst sie später fortsetzen.",
-      [{ label: "Verlassen", value: true, variant: "danger" }, { label: "Weiter prüfen", value: false, variant: "ghost" }]
-    );
-    if (ok) go("home");
-  } else {
-    go("home");
-  }
+
+// Vorwärts navigieren: rendern + einen History-Eintrag anlegen (oder ersetzen).
+// So funktioniert System-/Browser-Zurück nativ innerhalb der App (popstate unten).
+function go(view, opts = {}) {
+  VIEW = view;
+  if (view !== "exam") stopExamTimer();   // Timer läuft nur in der Prüfungsansicht
+  renderView(view);
+  const state = { view: VIEW };            // VIEW kann bei Render-Fehler auf "home" fallen
+  if (opts.replace) history.replaceState(state, ""); else history.pushState(state, "");
 }
+
+function confirmLeaveView(view) {
+  const cfg = view === "exam"
+    ? ["Prüfung verlassen?", "Die Prüfung läuft weiter (die Zeit tickt) – du kannst sie später fortsetzen.", "Verlassen", "Weiter prüfen"]
+    : ["Training beenden?", "Der bisherige Fortschritt bleibt gespeichert.", "Beenden", "Weiter üben"];
+  return modalChoice(cfg[0], cfg[1], [{ label: cfg[2], value: true, variant: "danger" }, { label: cfg[3], value: false, variant: "ghost" }]);
+}
+
+// System-/Browser-Zurück (und der Zurück-Pfeil) landen hier.
+async function onPopState(e) {
+  const target = (e && e.state && e.state.view) || "home";
+  // Aus Quiz/Prüfung heraus zurück: erst bestätigen; bei Abbruch den Pop rückgängig machen.
+  if ((VIEW === "quiz" || VIEW === "exam") && target !== VIEW) {
+    const ok = await confirmLeaveView(VIEW);
+    if (!ok) { history.pushState({ view: VIEW }, ""); return; }
+  }
+  VIEW = target;
+  if (target !== "exam") stopExamTimer();
+  renderView(target);   // KEIN erneuter pushState – der Browser hat bereits navigiert
+}
+
+// Zurück-Pfeil verhält sich exakt wie System-Zurück.
+function goBack() { history.back(); }
 
 /* ------------------------------------------------------------------ *
  * 8) Toast & Reset
@@ -1823,7 +1840,8 @@ if (!DATA_OK) {
   // genau einen verpassten Tag). Nur Anzeige-Konsistenz beim Start.
   const t = todayStr();
   if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) > 2) { S.streak = 0; saveState(); }
-  go("home");
+  go("home", { replace: true });   // Basis-Eintrag des Verlaufs
+  window.addEventListener("popstate", onPopState);
 
   // Erststart-Begrüßung nur für wirklich neue Nutzer (kein Fortschritt, nie gesehen).
   try { if (!isOnboarded() && S.totalAnswered === 0) showOnboarding(); }

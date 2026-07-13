@@ -11,6 +11,21 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.19.0] — 2026-07-13  ·  Native Zurück-Navigation
+
+### Hinzugefügt
+- **System-/Browser-Zurück bleibt in der App**: Die Ansichten legen echte Verlaufseinträge
+  an (pushState/popstate). Der Zurück-Wisch bzw. die Zurück-Taste führen zur vorigen Ebene,
+  statt die App zu verlassen. Aus Quiz/Prüfung heraus kommt wie gewohnt die Rückfrage
+  („Beenden?/Verlassen?"); bei „Weiter" bleibt man drin. Ergebnis-Ansichten ersetzen die
+  Quiz-/Prüfungsansicht im Verlauf (sauberes Zurück).
+
+### Technik
+- Rendern von der History-Logik getrennt (`renderView` vs. `go`), zentraler `popstate`-Handler.
+  3 neue E2E-Tests. `tests/run.sh` grün.
+
+---
+
 ## [0.18.0] — 2026-07-13  ·  Härtung
 
 Kleine, aber wichtige Robustheits-Verbesserungen (Defense-in-Depth).

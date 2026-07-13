@@ -368,6 +368,32 @@ async function page(opts = {}) {
   chk(pq['gr-001'] && !pq['BOGUS-XYZ'], 'Härtung: fremde Frage-ID verworfen, echte behalten');
 }
 
+// 18) Native Zurück-Navigation (System-/Browser-Zurück bleibt in der App)
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  // Themen -> Zurück -> Startseite
+  await p.click('[data-act="topics"]'); await p.waitForSelector('.topic-row');
+  await p.evaluate(() => history.back());
+  await p.waitForSelector('.level-card');
+  chk(true, 'Zurück: Themen → Startseite (in der App)');
+  // Quiz -> Zurück -> Bestätigung -> verlassen -> Startseite
+  await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
+  await p.evaluate(() => history.back());
+  await p.waitForSelector('.modal-overlay .modal-btn.btn-danger');
+  await p.click('.modal-overlay .modal-btn.btn-danger');
+  await p.waitForSelector('.level-card');
+  chk(true, 'Zurück aus Quiz: fragt nach und führt zur Startseite');
+  // Quiz -> Zurück -> „Weiter üben" -> bleibt im Quiz
+  await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
+  await p.evaluate(() => history.back());
+  await p.waitForSelector('.modal-overlay .modal-btn.btn-ghost');
+  await p.click('.modal-overlay .modal-btn.btn-ghost');
+  await p.waitForTimeout(200);
+  chk(!!(await p.$('.q-card')), 'Zurück aus Quiz: „Weiter üben" bleibt im Quiz');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();
