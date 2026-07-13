@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.11.0
+> Stand: 2026-07-13 · Version 0.12.0
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 
@@ -32,7 +32,7 @@ Eine **Progressive Web App (PWA)**:
 - Kein App Store, kein Entwickler-Account, kein Konto, kein Server
 - Fortschritt wird lokal auf dem Gerät gespeichert
 
-## Kernfunktionen (aktueller Stand 0.11.0)
+## Kernfunktionen (aktueller Stand 0.12.0)
 
 | Bereich | Was es kann |
 |---|---|
@@ -49,6 +49,7 @@ Eine **Progressive Web App (PWA)**:
 | **Sicherung** | Backup als Datei exportieren/importieren; „überall/nur hier"-Reset für saubere Übergabe |
 | **Robustheit** | Datenvalidierung, selbstheilende Zustands-Sanitisierung, Migrations-Gerüst, Sofort-Speichern beim Schließen, Fehler-Boundary (nie weißer Bildschirm), Update-Hinweis, Offline-Cache |
 | **Design** | Durchgängig iOS-nativ (Apple HIG): SF-Symbols-Icons, Large-Titles, gruppierte Listen, iOS-Farbsystem (OLED-Dark), ≥44 pt-Tap-Ziele, Safe-Areas |
+| **Barrierefreiheit** | Antwortauswahl mit ARIA-Rollen (radiogroup/checkbox), Tastaturbedienung (Pfeile/Leertaste), sichtbarer Fokus, In-place-Auswahl (VoiceOver-stabil), Bewegungsreduktion |
 
 **Kennzahlen:** 59 Fragen (55 Multiple-Choice + 4 Rechenaufgaben) · 9 Themengebiete
 (Grundlagen, TNM, ICD-O-3, ICD-10 & Dignität, Grading/Residual, Krebsregister,

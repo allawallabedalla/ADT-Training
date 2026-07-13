@@ -215,6 +215,49 @@ async function page() {
   chk(recOk && recOk.lastResult === 'correct' && recOk.box >= 1, 'Numeric: korrekte Eingabe -> Richtig, Box steigt');
 }
 
+// 12) Barrierefreie & robuste Antwortauswahl: In-place-Toggle + ARIA-Rollen + Tastatur
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  // Deterministisch eine Einfachauswahl-Frage rendern
+  await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type === 'single');
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+  });
+  await p.waitForSelector('.options[role="radiogroup"]');
+  chk(true, 'A11y: Optionsfeld hat role=radiogroup');
+  const roleOk = await p.$$eval('.opt', els => els.every(e => e.getAttribute('role') === 'radio'));
+  chk(roleOk, 'A11y: Optionen haben role=radio + aria-checked');
+  // In-place-Toggle: Container-Knoten darf NICHT ersetzt werden
+  await p.evaluate(() => { document.querySelector('.options').dataset.probe = 'keep'; });
+  await p.$$eval('.opt', els => els[1].click());
+  const inPlace = await p.evaluate(() => document.querySelector('.options').dataset.probe === 'keep');
+  chk(inPlace, 'A11y: Auswahl aktualisiert in-place (kein Full-Re-Render)');
+  const checkedState = await p.$$eval('.opt', els => [els[0].getAttribute('aria-checked'), els[1].getAttribute('aria-checked')]);
+  chk(checkedState[1] === 'true' && checkedState[0] === 'false', 'A11y: aria-checked spiegelt die Auswahl');
+  const btnEnabled = await p.evaluate(() => !document.getElementById('checkBtn').disabled);
+  chk(btnEnabled, 'A11y: „Antwort prüfen" wird nach Auswahl aktiv');
+  // Tastatur: Pfeiltaste bewegt Auswahl (Einfachauswahl wählt zugleich)
+  await p.$$eval('.opt', els => els[0].focus());
+  await p.keyboard.press('ArrowDown');
+  const afterKey = await p.$$eval('.opt', els => els.map(e => e.getAttribute('aria-checked')));
+  chk(afterKey.filter(v => v === 'true').length === 1 && afterKey[0] !== 'true', 'A11y: Pfeiltaste verschiebt die Auswahl (Einfachauswahl)');
+
+  // Mehrfachauswahl: Toggle an/aus
+  await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type === 'multi');
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+  });
+  await p.waitForSelector('.options[role="group"]');
+  await p.$$eval('.opt', els => els[0].click());
+  const on = await p.$$eval('.opt', els => els[0].getAttribute('aria-checked'));
+  await p.$$eval('.opt', els => els[0].click());
+  const off = await p.$$eval('.opt', els => els[0].getAttribute('aria-checked'));
+  chk(on === 'true' && off === 'false', 'A11y: Mehrfachauswahl toggelt an und wieder aus');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

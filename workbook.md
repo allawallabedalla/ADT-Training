@@ -89,7 +89,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 1. ✅ **Quick Wins** (Usability & Robustheit) → v0.7.0 – erledigt 2026-07-13
 2. ✅ **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die Cloud/Push-Fläche) → v0.8.0 (2026-07-13)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
-4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → ✅ Spaced Repetition + Mastery (v0.10.0) → ✅ Fragetyp-Abstraktion + Rechenaufgaben (v0.11.0) → als Nächstes: Quiz-Barrierefreiheit (In-place-Toggle + ARIA)
+4. Große P1-Features: ✅ echter Prüfungsmodus (v0.9.0) → ✅ Spaced Repetition + Mastery (v0.10.0) → ✅ Fragetyp-Abstraktion + Rechenaufgaben (v0.11.0) → ✅ Quiz-Barrierefreiheit (In-place-Toggle + ARIA, v0.12.0) → als Nächstes: P2-Paket (Onboarding/Tagesziel, faire Streak, Zurück-Navigation, Modul-Split, Cache-Robustheit …)
 5. Parallel/laufend: fachliche Gesamt-Review der Fragen + Content-Ausbau (sobald Material da ist)
 
 **Bekannte Risiken durch bisherige Umsetzung (ehrlich dokumentiert, alle im Backlog adressiert):**
@@ -113,7 +113,9 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - 🟡 **Anwendungs-/Kodier-/Rechenaufgaben** (numeric/code-Eingabe): ✅ **numeric** end-to-end
   (Übung + Prüfung) mit 4 ersten Rechenaufgaben (v0.11.0). Offen: **Text/Code-Eingabe** (ICD-O/ICD-10)
   + mehr Rechenaufgaben, sobald Material da ist
-- ⬜ **Quiz barrierefrei & robuster**: In-place-Toggle statt Full-Re-Render + ARIA-Rollen/Fokus
+- ✅ **Quiz barrierefrei & robuster** (v0.12.0): In-place-Toggle statt Full-Re-Render, ARIA-Rollen
+  (radiogroup/checkbox + aria-checked), Tastatur (Pfeile/Home/End/Leertaste, Roving-Tabindex),
+  Ergebnis-Fokus. Offen (später, gleiches Muster): Prüfungsansicht auf In-place-Toggle umstellen
 
 **P2 – danach:**
 - ⬜ Onboarding-Flow + Tagesziel (an Streak gekoppelt)

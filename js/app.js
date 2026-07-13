@@ -443,13 +443,47 @@ function buildSession(mode, opts = {}) {
 
 function currentQ() { return SESSION.questions[SESSION.idx]; }
 
-function togglePick(origIdx) {
+// In-place-Auswahl: aktualisiert NUR die betroffenen Optionen im DOM statt die ganze
+// Ansicht neu zu rendern. Das hält Fokus/VoiceOver stabil, vermeidet Flackern und ist
+// deutlich leichter. `buttons` = alle Options-Buttons der aktuellen Frage.
+function applyPick(origIdx, buttons) {
   const q = currentQ();
   if (SESSION.checked[SESSION.idx]) return;
   const set = SESSION.picks[SESSION.idx];
   if (q.type === "single") { set.clear(); set.add(origIdx); }
   else { set.has(origIdx) ? set.delete(origIdx) : set.add(origIdx); }
-  renderQuiz();
+  for (const el of buttons) {
+    const oi = parseInt(el.dataset.oi, 10);
+    const on = set.has(oi);
+    el.classList.toggle("selected", on);
+    el.setAttribute("aria-checked", on ? "true" : "false");
+    const box = el.querySelector(".box");
+    if (box) box.textContent = on ? (q.type === "single" ? "●" : "✓") : "";
+  }
+  const cb = document.getElementById("checkBtn");
+  if (cb) cb.disabled = !hasResponse(q, set);
+}
+// Roving Tabindex: nur das aktive Element bleibt im Tab-Stopp.
+function setRovingActive(buttons, activeEl) {
+  for (const el of buttons) el.setAttribute("tabindex", el === activeEl ? "0" : "-1");
+}
+// Tastaturbedienung im Optionsfeld (WAI-ARIA radiogroup/checkbox-Muster):
+// Pfeile/Home/End bewegen den Fokus; bei Einfachauswahl wählen die Pfeile zugleich aus.
+// Leertaste/Enter lösen als native Button-Aktivierung den Klick (applyPick) aus.
+function onOptionKeydown(e, buttons, q) {
+  if (!buttons.length) return;
+  const cur = buttons.indexOf(document.activeElement);
+  let idx = cur < 0 ? 0 : cur;
+  if (e.key === "ArrowDown" || e.key === "ArrowRight") idx = (idx + 1) % buttons.length;
+  else if (e.key === "ArrowUp" || e.key === "ArrowLeft") idx = (idx - 1 + buttons.length) % buttons.length;
+  else if (e.key === "Home") idx = 0;
+  else if (e.key === "End") idx = buttons.length - 1;
+  else return;
+  e.preventDefault();
+  const target = buttons[idx];
+  setRovingActive(buttons, target);
+  target.focus();
+  if (q.type === "single") applyPick(parseInt(target.dataset.oi, 10), buttons);
 }
 
 // Freie Eingabe (numeric): Wert speichern OHNE Re-Render (sonst verliert das Feld den Fokus).
@@ -567,7 +601,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.11.0";
+const APP_VERSION = "0.12.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -906,6 +940,10 @@ function renderQuiz() {
   const diffTxt = ["", "leicht", "mittel", "schwer"][q.difficulty] || "mittel";
   const order = SESSION.optionOrders[i];
   const numeric = q.type === "numeric";
+  const optRole = q.type === "single" ? "radio" : "checkbox";
+  // Roving Tabindex: im Optionsfeld ist genau EIN Element im Tab-Stopp (WAI-ARIA-Muster).
+  let activeIdx = order.find(oi => picks.has(oi));
+  if (activeIdx === undefined) activeIdx = order.length ? order[0] : -1;
 
   const opts = order.map(origIdx => {
     const isPicked = picks.has(origIdx);
@@ -920,7 +958,8 @@ function renderQuiz() {
       else if (!isCorrect && isPicked) { cls += " wrong"; mark = "✕"; aria = "falsch, ausgewählt"; }
     } else if (isPicked) cls += " selected";
     const ariaAttr = aria ? ` aria-label="${esc(q.options[origIdx] + " – " + aria)}"` : "";
-    return `<button class="${cls}" data-oi="${origIdx}" ${checked ? "disabled" : ""}${ariaAttr}>
+    const tabindex = checked ? "-1" : (origIdx === activeIdx ? "0" : "-1");
+    return `<button class="${cls}" data-oi="${origIdx}" role="${optRole}" aria-checked="${isPicked ? "true" : "false"}" tabindex="${tabindex}" ${checked ? "disabled aria-disabled=\"true\"" : ""}${ariaAttr}>
       <span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}${note}</span></button>`;
   }).join("");
 
@@ -935,14 +974,15 @@ function renderQuiz() {
       ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
     </div>`;
   } else {
-    answerArea = `<div class="options">${opts}</div>`;
+    const groupRole = q.type === "single" ? "radiogroup" : "group";
+    answerArea = `<div class="options" role="${groupRole}" aria-label="Antwortmöglichkeiten">${opts}</div>`;
   }
 
   let explain = "";
   if (checked) {
     const ok = SESSION.correctFlags[i];
     const solved = numeric ? `<div class="solved">Richtige Antwort: <b>${esc(correctAnswerText(q))}</b></div>` : "";
-    explain = `<div class="explain ${ok ? "ok" : "no"}">
+    explain = `<div class="explain ${ok ? "ok" : "no"}" id="explainBox" tabindex="-1" role="status">
       <b class="verdict">${ok ? "✅ Richtig" : "❌ Nicht ganz"}</b>${solved}${esc(q.explanation)}</div>`;
   }
 
@@ -972,7 +1012,12 @@ function renderQuiz() {
     <div class="spacer-lg"></div>
   `;
 
-  app.querySelectorAll("[data-oi]").forEach(el => el.addEventListener("click", () => togglePick(parseInt(el.dataset.oi, 10))));
+  if (!numeric && !checked) {
+    const optsEl = app.querySelector(".options");
+    const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-oi]")) : [];
+    buttons.forEach(el => el.addEventListener("click", () => { applyPick(parseInt(el.dataset.oi, 10), buttons); setRovingActive(buttons, el); }));
+    if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, q));
+  }
   if (numeric && !checked) {
     const nf = document.getElementById("numField");
     if (nf) {
@@ -981,6 +1026,8 @@ function renderQuiz() {
       nf.focus();
     }
   }
+  // Nach dem Prüfen den Ergebnis-Block fokussieren → Screenreader liest das Verdikt vor.
+  if (checked) { const eb = document.getElementById("explainBox"); if (eb) requestAnimationFrame(() => { try { eb.focus(); } catch (_) {} }); }
 
   // Aktionsleiste
   actionbar.classList.remove("hidden");

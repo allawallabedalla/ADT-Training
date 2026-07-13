@@ -11,6 +11,29 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.12.0] — 2026-07-13  ·  Barrierefreie & robuste Antwortauswahl
+
+Die Antwortauswahl im Übungsquiz ist jetzt barrierefrei und leichter – ein wichtiger
+Baustein für „makellose Funktion" (v. a. mit VoiceOver auf dem iPhone).
+
+### Geändert
+- **In-place-Auswahl statt Full-Re-Render**: Ein Tippen aktualisiert nur die betroffenen
+  Optionen im DOM, statt die ganze Ansicht neu aufzubauen. Das hält den (VoiceOver-)Fokus
+  stabil, verhindert Flackern und ist deutlich sparsamer.
+- **ARIA-Rollen**: Optionsfeld als `radiogroup` (Einfachauswahl) bzw. `group` (Mehrfachauswahl);
+  jede Option als `radio`/`checkbox` mit `aria-checked`. Screenreader kündigen Auswahl-Status korrekt an.
+- **Tastaturbedienung** nach WAI-ARIA-Muster: Pfeiltasten/Home/End bewegen den Fokus
+  (Einfachauswahl wählt dabei zugleich), Leertaste/Enter schalten um; Roving-Tabindex
+  (ein Tab-Stopp je Frage).
+- **Ergebnis-Fokus**: Nach „Antwort prüfen" springt der Fokus auf den Erklärungsblock
+  (`role="status"`), damit das Verdikt vorgelesen wird.
+
+### Technik
+- 1 neuer E2E-Test-Block (7 Prüfungen: Rollen, In-place-Toggle, aria-checked, Tastatur,
+  Mehrfach-Toggle). `tests/run.sh` grün. Service Worker v13.
+
+---
+
 ## [0.11.0] — 2026-07-13  ·  Fragetypen & Rechenaufgaben
 
 Die App kann jetzt mehr als Multiple-Choice – ein Schritt näher am echten Prüfungsformat
