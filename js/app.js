@@ -660,7 +660,7 @@ const ICONS = {
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
   sliders: '<path d="M4 7h9M17 7h3"/><path d="M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
 };
-const APP_VERSION = "0.20.0";
+const APP_VERSION = "0.21.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -685,11 +685,16 @@ function setStreak() {
 function updateAppbar(view) {
   const back = document.getElementById("backBtn");
   if (back) back.classList.toggle("hidden", view === "home");
+  const noLargeTitle = view === "quiz" || view === "result" || view === "exam" || view === "examresult";
   const h1 = document.querySelector(".appbar h1");
-  if (h1) h1.textContent = BAR_TITLES[view] != null ? BAR_TITLES[view] : "ADT Trainer";
+  if (h1) {
+    h1.textContent = BAR_TITLES[view] != null ? BAR_TITLES[view] : "ADT Trainer";
+    // Doppeltes <h1> vermeiden: Wo die Ansicht einen Large-Title (h1) hat, ist der
+    // Balken-Titel nur ein visuelles Duplikat → für Screenreader ausblenden.
+    h1.setAttribute("aria-hidden", noLargeTitle ? "false" : "true");
+  }
   const bar = document.querySelector(".appbar");
-  // Ansichten ohne Large-Title (Quiz/Ergebnis) zeigen den Balken-Titel direkt.
-  if (bar) bar.classList.toggle("scrolled", view === "quiz" || view === "result" || view === "exam" || view === "examresult");
+  if (bar) bar.classList.toggle("scrolled", noLargeTitle);
   setStreak();
 }
 
@@ -745,7 +750,7 @@ function renderHome() {
     <div class="level-card">
       <div class="row"><span class="lvl">Level ${lvl}</span><span class="xp">${into} / ${span} XP</span></div>
       <h2>${esc(levelTitle(lvl))}</h2>
-      <div class="xp-bar"><span style="width:${pctBar}%"></span></div>
+      <div class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctBar}" aria-label="Level-Fortschritt"><span style="width:${pctBar}%"></span></div>
     </div>
 
     ${todayCard}
@@ -1101,7 +1106,7 @@ function renderQuiz() {
 
   app.innerHTML = `
     <div class="quiz-top">
-      <div class="progress-track"><span style="width:${Math.round((i) / total * 100)}%"></span></div>
+      <div class="progress-track" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${i + 1}" aria-label="Frage ${i + 1} von ${total}"><span style="width:${Math.round((i) / total * 100)}%"></span></div>
       <span class="q-count">${i + 1} / ${total}</span>
     </div>
     <div class="q-card">
@@ -1678,6 +1683,38 @@ async function onPopState(e) {
 // Zurück-Pfeil verhält sich exakt wie System-Zurück.
 function goBack() { history.back(); }
 
+/* ---- Tastatur-Komfort (Laptop): Zahlen 1–9 wählen Optionen, Enter prüft/weiter ----
+ * Die echte Prüfung findet am Laptop statt – Tastaturbedienung ist darum relevant. */
+function optionButtons() { return Array.from(app.querySelectorAll(".options .opt")); }
+function handleQuizKey(e) {
+  const i = SESSION.idx;
+  if (SESSION.checked[i]) { if (e.key === "Enter") { const nb = document.getElementById("nextBtn"); if (nb) { e.preventDefault(); nb.click(); } } return; }
+  if (currentQ().type === "numeric") return;   // Zahl-Eingabefeld hat eigenen Enter-Handler
+  if (/^[1-9]$/.test(e.key)) {
+    const btns = optionButtons(), n = parseInt(e.key, 10) - 1;
+    if (btns[n]) { e.preventDefault(); btns[n].click(); }
+  } else if (e.key === "Enter") {
+    const cb = document.getElementById("checkBtn"); if (cb && !cb.disabled) { e.preventDefault(); cb.click(); }
+  }
+}
+function handleExamKey(e) {
+  if (examQuestions()[EXAM.idx].type === "numeric") return;
+  if (/^[1-9]$/.test(e.key)) {
+    const btns = optionButtons(), n = parseInt(e.key, 10) - 1;
+    if (btns[n]) { e.preventDefault(); btns[n].click(); }
+  } else if (e.key === "Enter") {
+    const nx = document.getElementById("examNext"); if (nx && !nx.disabled) { e.preventDefault(); nx.click(); }
+  }
+}
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;  // echte Eingaben nicht stören
+  if (document.querySelector(".modal-overlay")) return;                  // Dialog hat eigene Tasten
+  if (VIEW === "quiz" && SESSION) handleQuizKey(e);
+  else if (VIEW === "exam" && EXAM) handleExamKey(e);
+});
+
 /* ------------------------------------------------------------------ *
  * 8) Toast & Reset
  * ------------------------------------------------------------------ */
@@ -1711,23 +1748,44 @@ function showUpdateBanner(worker) {
 }
 
 // Wiederverwendbarer Auswahl-Dialog. buttons: [{label, value, variant}]. Promise -> value.
+// Barrierefrei: role=dialog + aria-modal, Fokus wird gefangen, Escape schließt (null),
+// Fokus kehrt nach dem Schließen zum vorher aktiven Element zurück.
+let modalTitleSeq = 0;
 function modalChoice(title, message, buttons) {
   return new Promise((resolve) => {
+    const prevFocus = document.activeElement;
+    const tid = "modalTitle" + (++modalTitleSeq);
     const ov = document.createElement("div");
     ov.className = "modal-overlay";
     const btnHtml = buttons.map((b, i) => {
       const cls = b.variant === "danger" ? "btn-danger" : b.variant === "ghost" ? "btn-ghost" : "btn-primary";
       return `<button class="${cls} modal-btn" data-i="${i}">${esc(b.label)}</button>`;
     }).join("");
-    ov.innerHTML = `<div class="modal-card">
-      <h3 class="modal-title">${esc(title)}</h3>
+    ov.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="${tid}">
+      <h3 class="modal-title" id="${tid}">${esc(title)}</h3>
       ${message ? `<p class="modal-msg">${esc(message)}</p>` : ""}
       <div class="modal-actions">${btnHtml}</div></div>`;
     document.body.appendChild(ov);
     requestAnimationFrame(() => ov.classList.add("show"));
-    const close = (val) => { ov.classList.remove("show"); setTimeout(() => ov.remove(), 200); resolve(val); };
-    ov.querySelectorAll(".modal-btn").forEach((el) => el.addEventListener("click", () => close(buttons[+el.dataset.i].value)));
+    const btns = Array.from(ov.querySelectorAll(".modal-btn"));
+    const close = (val) => {
+      ov.removeEventListener("keydown", onKey);
+      ov.classList.remove("show"); setTimeout(() => ov.remove(), 200);
+      try { if (prevFocus && prevFocus.focus) prevFocus.focus(); } catch (_) {}
+      resolve(val);
+    };
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); close(null); return; }
+      if (e.key === "Tab" && btns.length) {   // Fokusfalle: Tab bleibt im Dialog
+        const first = btns[0], last = btns[btns.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    btns.forEach((el) => el.addEventListener("click", () => close(buttons[+el.dataset.i].value)));
+    ov.addEventListener("keydown", onKey);
     ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
+    if (btns[0]) btns[0].focus();   // Fokus in den Dialog setzen
   });
 }
 

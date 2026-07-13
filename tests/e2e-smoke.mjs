@@ -418,6 +418,38 @@ async function page(opts = {}) {
   chk(await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === null, 'Design: Automatisch folgt System (kein data-theme)');
 }
 
+// 20) Barrierefreiheit-Paket + Tastatur (Laptop)
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  // Doppeltes h1 vermeiden: Balken-Titel auf Home für Screenreader ausgeblendet
+  chk(await p.getAttribute('.appbar h1', 'aria-hidden') === 'true', 'A11y: Balken-h1 auf Home ausgeblendet');
+  // Dialog: role=dialog + Escape schließt (Abbruch)
+  await p.click('[data-act="reset"]');
+  await p.waitForSelector('.modal-card[role="dialog"]');
+  chk(true, 'A11y: Auswahl-Dialog hat role=dialog');
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(300);
+  chk(!(await p.$('.modal-overlay')), 'A11y: Escape schließt den Dialog (Abbruch)');
+
+  // Deterministische Options-Frage rendern und per Zahl/Enter bedienen
+  await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+  });
+  await p.waitForSelector('.options .opt');
+  chk(await p.getAttribute('.progress-track', 'role') === 'progressbar', 'A11y: Quiz-Fortschritt ist progressbar');
+  chk(await p.getAttribute('.appbar h1', 'aria-hidden') === 'false', 'A11y: im Quiz ist der Balken-Titel das (einzige) h1');
+  await p.keyboard.press('1');
+  await p.waitForTimeout(100);
+  chk(await p.$$eval('.options .opt', els => els[0].getAttribute('aria-checked')) === 'true', 'Tastatur: „1" wählt die erste Option');
+  await p.keyboard.press('Enter');
+  await p.waitForSelector('.explain');
+  chk(true, 'Tastatur: Enter prüft die Antwort');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

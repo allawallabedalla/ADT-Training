@@ -142,7 +142,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 
 **Kleinere Befunde & Cleanup (P3) – die restlichen Einzelpunkte aus dem Bericht:**
 - 🟡 Robustheit: ✅ Precache tolerant (v0.18.0) · ✅ QuotaExceeded-Hinweis (v0.18.0) · ✅ `perQuestion`-Whitelist (v0.18.0) · ✅ SW-Fetch same-origin (v0.17.0) · offen: `difficulty` in DATA_OK (Laufzeit ist bereits gegen NaN-XP abgesichert; von `validate-questions` geprüft)
-- ⬜ Barrierefreiheit (ergänzend): `modalChoice` als role=dialog + Fokusfalle + Escape · aria-Rollen für Fortschrittsbalken/Ring · doppeltes `<h1>` (Appbar + Large-Title) entdoppeln · Dynamic Type (rem statt fixem px) – größer
+- 🟡 Barrierefreiheit (ergänzend): ✅ `modalChoice` role=dialog + Fokusfalle + Escape (v0.21.0) · ✅ progressbar-Rollen (v0.21.0) · ✅ doppeltes `<h1>` entdoppelt (v0.21.0) · offen: Dynamic Type (rem) / größere Schrift wählbar
 - ⬜ UI-Cleanup: Quiz-Fortschrittsbalken zeigt Position statt „erledigt" (0 % auf Frage 1) · Emoji in Toasts/Install-Tip → SVG, toten Code entfernen (`.emoji`/`.ic`, Dead-CSS) · `theme-color` an App-Blau (#007aff) angleichen · verschachtelten `master`-Badge-Test vereinfachen
 - ⬜ Lern-Feinheiten: „Schwachstellen" enthält auch nie gesehene Items → Benennung/Trennung schärfen · antwortspezifisches Feedback (später) · Session-Größe/Dosierung an Tagesziel koppeln
 - ⬜ Fachliche Detailpunkte (in die Gesamt-Review): CUP-Kode C80.- prüfen · organspezifisches Grading · Meldefristen/Meldevergütung/Vertrauensstelle ergänzen · difficulty-Labels konsistent
@@ -180,7 +180,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
   Serverseitig eingerichtet und **auf dem Gerät verifiziert** (echter Push kam an) — 2026-07-13.
 
 ### Feinschliff (aus Abstimmung 2026-07-13 — „machen wir später")
-- ⬜ **P2** **Tastatur-Steuerung** (Zahlen 1–4 wählen, Enter prüfen/weiter) — relevant, da echte Prüfung am Laptop
+- ✅ **P2** **Tastatur-Steuerung** (v0.21.0): Zahlen 1–9 wählen, Enter prüft/weiter (Übung + Prüfung)
 - ⬜ **P3** **Sanfte Animationen** (Übergänge zwischen Fragen, Konfetti bei bestandener Prüfung)
 - ⬜ **P3** **Haptik & Sound** bei richtig/falsch (abschaltbar; auf iPhone teils eingeschränkt)
 - ⬜ **P2** **Barrierefreiheit** (größere Schrift wählbar, Kontraste, Screenreader-Labels)

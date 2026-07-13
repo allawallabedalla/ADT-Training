@@ -11,6 +11,22 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.21.0] — 2026-07-13  ·  Barrierefreiheit & Tastatur
+
+### Hinzugefügt
+- **Tastaturbedienung am Laptop** (die echte Prüfung ist am Rechner): Zahlen **1–9** wählen
+  Antwortoptionen, **Enter** prüft bzw. geht weiter – in Übung UND Prüfung.
+- **Barrierefreier Dialog**: Auswahl-Dialoge sind jetzt `role="dialog"` (aria-modal) mit
+  **Fokusfalle**, **Escape** schließt (Abbruch), und der Fokus kehrt danach zurück.
+- **Fortschrittsbalken** (Level & Quiz) als `role="progressbar"` mit Werten.
+- **Doppeltes `<h1>` behoben**: Wo eine Ansicht einen Large-Title hat, wird der Balken-Titel
+  für Screenreader ausgeblendet (sonst zwei H1 pro Seite).
+
+### Technik
+- 7 neue Prüfungen im A11y-/Tastatur-Test. `tests/run.sh` grün.
+
+---
+
 ## [0.20.0] — 2026-07-13  ·  Einstellungen (Design & Rundengröße)
 
 Der bisherige „Sync & Sicherung"-Bereich wird zur zentralen **Einstellungen**-Seite.
