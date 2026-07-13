@@ -108,11 +108,13 @@ h1, h2, h3 { line-height: 1.2; }
 .large-title { font-size: 34px; font-weight: 800; letter-spacing: -0.6px; margin: 4px 2px 16px; }
 .large-title .sub { display: block; font-size: 15px; font-weight: 500; color: var(--text-dim); letter-spacing: 0; margin-top: 4px; }
 
-/* ---------- Icon-Kacheln (SF-Symbols-Stil, iOS-Settings-Optik) ---------- */
+/* ---------- Icon-Kacheln (Flat, monochrom) ----------
+   Bewusst einfarbig statt bunter iOS-Kacheln: neutrale Fläche, Glyph in Labelfarbe.
+   Die je Aufruf übergebene Tint-Farbe (--tint) wird absichtlich ignoriert. */
 .icon-tile {
   width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
   display: grid; place-items: center;
-  background: var(--tint, var(--primary)); color: #fff;
+  background: var(--bg-elev-2); color: var(--text);
 }
 .icon-tile svg { width: 19px; height: 19px; display: block; }
 .icon-tile svg * { vector-effect: non-scaling-stroke; }
@@ -390,11 +392,13 @@ h1, h2, h3 { line-height: 1.2; }
 /* ---------- Icon-Feinheiten ---------- */
 .streak-pill { gap: 4px; }
 .streak-pill .streak-flame { display: inline-flex; }
-.streak-pill .streak-flame svg { width: 15px; height: 15px; color: #ff6b22; }
+.streak-pill .streak-flame svg { width: 15px; height: 15px; color: currentColor; }
 .chip .cdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: middle; }
 .badge .icon-tile { width: 46px; height: 46px; border-radius: 12px; margin: 0 auto; }
 .badge .icon-tile svg { width: 26px; height: 26px; }
-.badge:not(.earned) .icon-tile { filter: grayscale(1); opacity: .32; }
+/* Freigeschaltet = gefüllte, invertierte Kachel (hebt sich monochrom klar ab); noch nicht = blass. */
+.badge.earned .icon-tile { background: var(--text); color: var(--bg-elev); }
+.badge:not(.earned) .icon-tile { opacity: .3; }
 .btn-ghost svg { width: 17px; height: 17px; vertical-align: -3px; margin-right: 5px; }
 
 /* ---------- Auswahlfeld (iOS) ---------- */

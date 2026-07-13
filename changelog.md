@@ -11,6 +11,20 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.16.0] — 2026-07-13  ·  Flat-monochrome Icons
+
+### Geändert
+- **Icon-Optik auf flat & monochrom umgestellt**: Statt der bunten iOS-Kacheln jetzt
+  durchgängig neutrale, einfarbige Icons (Glyph in Labelfarbe auf dezenter Fläche) –
+  einheitlich in Hell und Dunkel. Betrifft alle Icon-Kacheln (Startseite, Themen, Sync,
+  Info, Onboarding) sowie die Serien-Flamme.
+- **Erfolge**: freigeschaltete Abzeichen erscheinen als **gefüllte, invertierte** Kachel
+  (heben sich monochrom klar ab), noch nicht erreichte bleiben blass.
+- Umsetzung zentral in `css/styles.css` (eine Stelle) – funktionale Farben (Fortschritts­balken,
+  Prüf-Feedback grün/rot, Level-Hero) bleiben erhalten. Service Worker v17.
+
+---
+
 ## [0.15.0] — 2026-07-13  ·  Tagesziel & Onboarding
 
 Für neue Nutzer:innen ein sanfter Einstieg, für alle ein täglicher Anreiz.

@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.15.0
+> Stand: 2026-07-13 · Version 0.16.0
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 
@@ -32,7 +32,7 @@ Eine **Progressive Web App (PWA)**:
 - Kein App Store, kein Entwickler-Account, kein Konto, kein Server
 - Fortschritt wird lokal auf dem Gerät gespeichert
 
-## Kernfunktionen (aktueller Stand 0.15.0)
+## Kernfunktionen (aktueller Stand 0.16.0)
 
 | Bereich | Was es kann |
 |---|---|
@@ -49,7 +49,7 @@ Eine **Progressive Web App (PWA)**:
 | **Erinnerungen** | Optionale tägliche Web-Push-Erinnerung ans Üben (Uhrzeit wählbar; auf iPhone als installierte PWA) |
 | **Sicherung** | Backup als Datei exportieren/importieren; „überall/nur hier"-Reset für saubere Übergabe |
 | **Robustheit** | Datenvalidierung, selbstheilende Zustands-Sanitisierung, Migrations-Gerüst, Sofort-Speichern beim Schließen, Fehler-Boundary (nie weißer Bildschirm), Update-Hinweis, Offline-Cache |
-| **Design** | Durchgängig iOS-nativ (Apple HIG): SF-Symbols-Icons, Large-Titles, gruppierte Listen, iOS-Farbsystem (OLED-Dark), ≥44 pt-Tap-Ziele, Safe-Areas; im Desktop-Browser als zentrierte App-Spalte |
+| **Design** | Durchgängig iOS-nativ (Apple HIG): flat-monochrome Icons, Large-Titles, gruppierte Listen, iOS-Farbsystem (OLED-Dark), ≥44 pt-Tap-Ziele, Safe-Areas; im Desktop-Browser als zentrierte App-Spalte |
 | **Barrierefreiheit** | Antwortauswahl (Übung **und** Prüfung) mit ARIA-Rollen (radiogroup/checkbox), Tastaturbedienung (Pfeile/Leertaste), sichtbarer Fokus, In-place-Auswahl (VoiceOver-stabil), Bewegungsreduktion |
 
 **Kennzahlen:** 59 Fragen (55 Multiple-Choice + 4 Rechenaufgaben) · 9 Themengebiete
