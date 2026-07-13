@@ -203,10 +203,23 @@
     try { const r = await pull(code); return r != null; } catch { return false; }
   }
 
+  // ---- Web-Push: Anmeldung speichern/löschen ----
+  async function savePush(sub, hour, tz) {
+    if (!isConfigured()) return false;
+    try { await rpc("push_save", { p_endpoint: sub.endpoint, p_sub: sub, p_hour: hour, p_tz: tz }); return true; }
+    catch (e) { console.warn("push_save fehlgeschlagen", e && e.message); return false; }
+  }
+  async function removePush(endpoint) {
+    if (!isConfigured()) return false;
+    try { await rpc("push_remove", { p_endpoint: endpoint }); return true; }
+    catch (e) { console.warn("push_remove fehlgeschlagen", e && e.message); return false; }
+  }
+
   window.ADTSync = {
     isConfigured, getCode, setCode, getLastSynced,
     generateCode, normalizeCode, mergeStates,
     syncNow, overwriteRemote, codeExists,
+    savePush, removePush,
     hasPending,
     isSyncing: () => syncing,
     onChange: (fn) => { onChange = fn; },

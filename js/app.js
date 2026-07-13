@@ -141,6 +141,76 @@ function refreshAfterSync() {
   else if (VIEW === "settings") renderSettings();
 }
 
+/* ---- Web-Push-Erinnerungen (optional, siehe README → „Lern-Erinnerungen") ---- */
+const REMIND_KEY = "adt_reminder_hour";
+function pushSupported() {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+function pushConfigured() {
+  return !!(window.ADT_CONFIG && window.ADT_CONFIG.vapidPublicKey && window.ADTSync && ADTSync.isConfigured());
+}
+function getReminderHour() { try { const v = localStorage.getItem(REMIND_KEY); return v == null ? null : parseInt(v, 10); } catch { return null; } }
+function setReminderHour(h) { try { h == null ? localStorage.removeItem(REMIND_KEY) : localStorage.setItem(REMIND_KEY, String(h)); } catch (e) {} }
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+async function getPushSubscription() {
+  try {
+    if (!pushSupported()) return null;
+    const reg = await navigator.serviceWorker.getRegistration();
+    return reg ? await reg.pushManager.getSubscription() : null;
+  } catch (e) { return null; }
+}
+async function remindersActive() {
+  return !!(pushSupported() && Notification.permission === "granted" && getReminderHour() != null && (await getPushSubscription()));
+}
+async function enableReminders(hour) {
+  if (!pushSupported()) { toast("⚠️ Auf dem iPhone: App erst zum Home-Bildschirm hinzufügen"); return false; }
+  if (!pushConfigured()) { toast("⚠️ Erinnerungen sind serverseitig noch nicht eingerichtet"); return false; }
+  try {
+    let perm = Notification.permission;
+    if (perm === "default") perm = await Notification.requestPermission();
+    if (perm !== "granted") { toast("🔕 Ohne Erlaubnis keine Erinnerungen"); return false; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(window.ADT_CONFIG.vapidPublicKey),
+      });
+    }
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || "Europe/Berlin";
+    const ok = await ADTSync.savePush(sub.toJSON(), hour, tz);
+    if (!ok) { toast("⚠️ Konnte Erinnerung nicht speichern"); return false; }
+    setReminderHour(hour);
+    return true;
+  } catch (e) {
+    console.warn("enableReminders", e);
+    toast("⚠️ Erinnerung konnte nicht aktiviert werden");
+    return false;
+  }
+}
+async function disableReminders() {
+  try {
+    const sub = await getPushSubscription();
+    if (sub) { await ADTSync.removePush(sub.endpoint); await sub.unsubscribe(); }
+  } catch (e) { console.warn("disableReminders", e); }
+  setReminderHour(null);
+}
+async function sendTestNotification() {
+  try {
+    if (Notification.permission !== "granted") { toast("Erst Erinnerung aktivieren"); return; }
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification("ADT Trainer", { body: "So sieht deine Lern-Erinnerung aus 📚", icon: "./icons/icon-192.png", badge: "./icons/icon-192.png", tag: "adt-test" });
+    toast("🔔 Test-Benachrichtigung gesendet");
+  } catch (e) { toast("⚠️ Test nicht möglich"); }
+}
+
 /* ------------------------------------------------------------------ *
  * 2) Hilfen: Datum, Level, XP, Streak
  * ------------------------------------------------------------------ */
@@ -522,8 +592,12 @@ function renderSettings() {
     </div>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">`;
 
+  const remind = `
+    <div class="section-title">Lern-Erinnerungen</div>
+    <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
+
   app.innerHTML = `<h1 class="large-title">Sync &amp; Sicherung</h1>
-    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}`;
+    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${remind}`;
 
   const $ = (id) => document.getElementById(id);
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
@@ -549,6 +623,60 @@ function renderSettings() {
     imf.addEventListener("change", () => { if (imf.files && imf.files[0]) importProgressFile(imf.files[0]); imf.value = ""; });
   }
   updateSyncChip();
+  renderReminderBox();
+}
+
+function hourOptions(sel) {
+  let o = "";
+  for (let h = 0; h < 24; h++) o += `<option value="${h}" ${h === sel ? "selected" : ""}>${String(h).padStart(2, "0")}:00 Uhr</option>`;
+  return o;
+}
+async function renderReminderBox() {
+  const box = document.getElementById("remindBox");
+  if (!box) return;
+  if (!pushSupported()) {
+    box.innerHTML = `<div class="install-tip">${iconTile("icloud", "#8e8e93")}<div>Benachrichtigungen sind hier nicht verfügbar. Auf dem iPhone: die App über Safari <b>„Zum Home-Bildschirm"</b> hinzufügen – danach sind Erinnerungen möglich.</div></div>`;
+    return;
+  }
+  if (!pushConfigured()) {
+    box.innerHTML = `<div class="install-tip">${iconTile("icloud", "#8e8e93")}<div>Erinnerungen sind serverseitig noch nicht eingerichtet. Anleitung: <b>README → „Lern-Erinnerungen"</b>.</div></div>`;
+    return;
+  }
+  const active = await remindersActive();
+  const hour = getReminderHour() != null ? getReminderHour() : 18;
+  if (active) {
+    box.innerHTML = `
+      <div class="q-card">
+        <div style="display:flex;align-items:center;gap:12px">
+          ${iconTile("flame", "#ff6b22")}<div style="flex:1"><b>Tägliche Erinnerung aktiv</b><p class="muted" style="margin:2px 0 0">jeden Tag um ${String(hour).padStart(2, "0")}:00 Uhr</p></div>
+        </div>
+        <label class="muted" style="display:block;margin-top:14px">Uhrzeit ändern</label>
+        <select id="remindHour" class="ios-select">${hourOptions(hour)}</select>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button class="btn-ghost" id="remindTest" style="width:auto;padding:11px 16px">${icon("sync")} Test senden</button>
+          <button class="btn-ghost" id="remindOff" style="width:auto;padding:11px 16px;color:var(--danger)">Ausschalten</button>
+        </div>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <div class="q-card">
+        <p class="muted" style="margin:0 0 4px">Lass dich täglich ans Üben erinnern.</p>
+        <label class="muted" style="display:block;margin-top:10px">Uhrzeit</label>
+        <select id="remindHour" class="ios-select">${hourOptions(hour)}</select>
+        <button class="btn-primary" id="remindOn" style="margin-top:14px">Erinnerung aktivieren</button>
+      </div>`;
+  }
+  const test = document.getElementById("remindTest"); if (test) test.addEventListener("click", sendTestNotification);
+  const off = document.getElementById("remindOff"); if (off) off.addEventListener("click", async () => { await disableReminders(); toast("Erinnerung ausgeschaltet"); renderReminderBox(); });
+  const on = document.getElementById("remindOn"); if (on) on.addEventListener("click", async () => {
+    const h = parseInt(document.getElementById("remindHour").value, 10);
+    toast("🔔 Aktiviere…");
+    if (await enableReminders(h)) { toast("✅ Erinnerung aktiv"); renderReminderBox(); }
+  });
+  const sel = document.getElementById("remindHour");
+  if (sel && active) sel.addEventListener("change", async () => {
+    if (await enableReminders(parseInt(sel.value, 10))) { toast("⏰ Uhrzeit aktualisiert"); renderReminderBox(); }
+  });
 }
 
 function updateSyncChip() {

@@ -1,6 +1,6 @@
 /* Service Worker – Offline-Cache für den ADT Trainer.
  * Cache-Version bei Änderungen erhöhen, damit Nutzer die neue Version erhalten. */
-const CACHE = "adt-trainer-v5";
+const CACHE = "adt-trainer-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,6 +24,34 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("message", (e) => {
   if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+// ---- Web Push: eingehende Benachrichtigung anzeigen ----
+self.addEventListener("push", (e) => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (_) { data = { body: e.data ? e.data.text() : "" }; }
+  const title = data.title || "ADT Trainer";
+  const options = {
+    body: data.body || "Zeit für ein paar Übungsfragen! 📚",
+    icon: "./icons/icon-192.png",
+    badge: "./icons/icon-192.png",
+    tag: data.tag || "adt-reminder",
+    data: { url: data.url || "./index.html" },
+    requireInteraction: false,
+  };
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// ---- Klick auf die Benachrichtigung: App fokussieren/öffnen ----
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = (e.notification.data && e.notification.data.url) || "./index.html";
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ("focus" in c) return c.focus(); }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
+  );
 });
 
 self.addEventListener("activate", (e) => {

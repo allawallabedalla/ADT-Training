@@ -352,3 +352,10 @@ h1, h2, h3 { line-height: 1.2; }
 .badge .icon-tile svg { width: 26px; height: 26px; }
 .badge:not(.earned) .icon-tile { filter: grayscale(1); opacity: .32; }
 .btn-ghost svg { width: 17px; height: 17px; vertical-align: -3px; margin-right: 5px; }
+
+/* ---------- Auswahlfeld (iOS) ---------- */
+.ios-select {
+  margin-top: 6px; width: 100%; padding: 13px 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg-elev-2); color: var(--text);
+  font-size: 16px; font-family: inherit; -webkit-appearance: none; appearance: none;
+}

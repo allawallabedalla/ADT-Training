@@ -132,6 +132,52 @@ end;
 $$;
 ```
 
+## Lern-Erinnerungen (Web Push, optional)
+
+Tägliche Push-Erinnerung ans Üben. Auf dem **iPhone** funktioniert Web Push nur,
+wenn die App **zum Home-Bildschirm hinzugefügt** ist (iOS 16.4+) und die Nutzerin
+Benachrichtigungen erlaubt. Der Versand läuft über eine **Supabase Edge Function**,
+die stündlich per Zeitplan prüft, wer zur eingestellten Uhrzeit dran ist.
+
+**Bausteine:** VAPID-Schlüssel · Tabelle + Funktionen · Edge Function · Zeitplan.
+
+1. **VAPID-Schlüssel** (Signatur für Web Push). Einmal erzeugen, z. B.:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+   Den **öffentlichen** Schlüssel in [`config.js`](config.js) bei `vapidPublicKey`
+   eintragen (darf öffentlich sein). Den **privaten** gut aufbewahren – der kommt
+   nur als Secret in die Edge Function, **nie** ins Repo.
+
+2. **Datenbank**: [`supabase/reminders-setup.sql`](supabase/reminders-setup.sql)
+   im **SQL Editor** ausführen (Tabelle `push_subscriptions` + Funktionen
+   `push_save` / `push_remove`).
+
+3. **Edge Function** deployen – Code liegt in
+   [`supabase/functions/send-reminders/index.ts`](supabase/functions/send-reminders/index.ts):
+   ```bash
+   supabase functions deploy send-reminders --no-verify-jwt
+   ```
+   (oder im Dashboard unter *Edge Functions* neu anlegen und den Code einfügen).
+   Dann **Secrets** setzen (Dashboard → Edge Functions → *Manage secrets*):
+   - `VAPID_PUBLIC` = öffentlicher Schlüssel
+   - `VAPID_PRIVATE` = privater Schlüssel
+   - `CRON_SECRET` = frei gewähltes Geheimnis
+   - `VAPID_SUBJECT` = optional, z. B. `mailto:du@example.com`
+
+4. **Zeitplan**: Extensions **pg_cron** und **pg_net** aktivieren
+   (Database → Extensions), dann den `cron.schedule`-Block am Ende der
+   `reminders-setup.sql` (URL + `CRON_SECRET` anpassen) ausführen.
+
+**Testen:** In der App → *Sync & Sicherung* → *Lern-Erinnerungen* → Uhrzeit wählen
+→ *Erinnerung aktivieren* (Benachrichtigung erlauben). Der Button **„Test senden"**
+zeigt sofort eine lokale Beispiel-Benachrichtigung. Den echten Serverversand kannst
+du prüfen, indem du die Edge Function einmal manuell mit dem `x-cron-secret`-Header
+aufrufst.
+
+> Solange `vapidPublicKey` in `config.js` leer ist oder die Server-Teile fehlen,
+> zeigt die App im Erinnerungs-Bereich einen Hinweis – der Rest funktioniert normal.
+
 ## Fragen ergänzen oder anpassen
 
 Alle Fragen stehen in **[`data/questions.js`](data/questions.js)**.

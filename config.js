@@ -16,4 +16,10 @@ window.ADT_CONFIG = {
   supabaseUrl: "https://ayozhjbfhreqauyimsjy.supabase.co",
   // öffentlicher Schlüssel (neues Supabase-Format "sb_publishable_…" = Ersatz für den anon-Key)
   supabaseAnonKey: "sb_publishable_ey4LlOV5CftCc_YnGJpfjg__aXt__jB",
+  // Öffentlicher VAPID-Schlüssel für Web-Push-Erinnerungen (darf öffentlich sein).
+  // Der PRIVATE Schlüssel gehört NUR in die Supabase Edge Function (Secret) – nie hierher!
+  // ERST eintragen, wenn der Server-Teil steht (Tabelle + Edge Function + Zeitplan),
+  // sonst wird der „Aktivieren"-Button angezeigt, obwohl der Versand noch nicht geht.
+  // Leer lassen = Erinnerungen deaktiviert. Einrichtung: README → „Lern-Erinnerungen".
+  vapidPublicKey: "",
 };

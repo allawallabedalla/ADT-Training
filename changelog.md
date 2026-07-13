@@ -11,6 +11,34 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.5.0] — 2026-07-13
+
+### Hinzugefügt – Lern-Erinnerungen (Web Push)
+- **Client + Service Worker**: Push-Abo (VAPID), `push`/`notificationclick`-Handler,
+  Einstellungs-Bereich „Lern-Erinnerungen" mit Uhrzeitwahl, Aktivieren/Ausschalten
+  und „Test senden" (lokale Beispiel-Benachrichtigung).
+- **Server (Code + Anleitung mitgeliefert)**: Supabase Edge Function
+  `supabase/functions/send-reminders` versendet stündlich fällige Erinnerungen;
+  `supabase/reminders-setup.sql` (Tabelle `push_subscriptions` + Funktionen
+  `push_save`/`push_remove` + pg_cron-Zeitplan). README-Abschnitt „Lern-Erinnerungen".
+- Zeitzonengerecht (lokale Stunde je Gerät), Schutz vor Mehrfachversand pro Tag,
+  automatische Bereinigung abgelaufener Abos (404/410).
+
+### Robustheit
+- Ohne gesetzten `vapidPublicKey`/Serverteil zeigt die App im Erinnerungs-Bereich
+  einen klaren Hinweis statt eines nicht funktionierenden Buttons – die Kern-App
+  bleibt davon vollständig unberührt.
+- Hinweis für iPhone: Web Push erfordert die zum Home-Bildschirm hinzugefügte PWA.
+
+### Service Worker v6
+- `push`- und `notificationclick`-Handler; Cache-Version erhöht (verteilt das Update).
+
+> Der Push-**Versand** wurde nicht end-to-end getestet (Sandbox ohne Zugriff auf
+> Supabase/Push-Dienste). Client-Seite und Einstellungs-UI sind im Browser geprüft
+> (rendert fehlerfrei, degradiert sauber). Verifikation auf dem Gerät durch den Nutzer.
+
+---
+
 ## [0.4.1] — 2026-07-13
 
 ### Hinzugefügt

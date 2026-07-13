@@ -91,6 +91,12 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 - ⬜ **P2** **Statistik & Tagesziel**: Trefferquote je Thema über Zeit, Prüfungs-Historie,
   tägliches Lernziel mit Fortschrittsring
 
+### Neu / offen
+- ⬜ **P2** **Info-/Anleitungs-Reiter**: eigener Bereich, der die App erklärt (Modi, Prüfungsformat,
+  Sync, Erinnerungen) – für neue Nutzer/innen. (Wunsch 2026-07-13)
+- 🟡 **P2** **Lern-Erinnerungen**: Client + Service Worker + Edge Function + Anleitung fertig (v0.5.0);
+  offen ist die **serverseitige Einrichtung** durch Nico (VAPID-Key in config.js, SQL, Edge Function, Cron).
+
 ### Feinschliff (aus Abstimmung 2026-07-13 — „machen wir später")
 - ⬜ **P2** **Tastatur-Steuerung** (Zahlen 1–4 wählen, Enter prüfen/weiter) — relevant, da echte Prüfung am Laptop
 - ⬜ **P3** **Sanfte Animationen** (Übergänge zwischen Fragen, Konfetti bei bestandener Prüfung)
