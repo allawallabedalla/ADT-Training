@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.6.0
+> Stand: 2026-07-13 · Version 0.7.0
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 
@@ -32,7 +32,7 @@ Eine **Progressive Web App (PWA)**:
 - Kein App Store, kein Entwickler-Account, kein Konto, kein Server
 - Fortschritt wird lokal auf dem Gerät gespeichert
 
-## Kernfunktionen (aktueller Stand 0.6.0)
+## Kernfunktionen (aktueller Stand 0.7.0)
 
 | Bereich | Was es kann |
 |---|---|

@@ -6,7 +6,7 @@
   --bg-elev-2: #e9e9ef;       /* Fills */
   --text: #1c1c1e;            /* label */
   --text-dim: #636366;        /* secondary label */
-  --text-faint: #a3a3ab;      /* tertiary label */
+  --text-faint: #6d6d72;      /* tertiary label (Kontrast ≥4,5:1 auf Weiß) */
   --border: #d6d6dc;
   --separator: rgba(60, 60, 67, 0.16);
   --primary: #007aff;         /* system blue */
@@ -32,7 +32,7 @@
     --bg-elev-2: #2c2c2e;
     --text: #ffffff;
     --text-dim: #98989f;
-    --text-faint: #6a6a70;
+    --text-faint: #9a9aa2;
     --border: #38383a;
     --separator: rgba(84, 84, 88, 0.55);
     --primary: #0a84ff;
@@ -210,6 +210,8 @@ h1, h2, h3 { line-height: 1.2; }
 .opt.wrong { border-color: var(--danger); background: var(--danger-bg); }
 .opt.wrong .box { background: var(--danger); border-color: var(--danger); color: #fff; }
 .opt.missed { border-color: var(--success); border-style: dashed; }
+.opt.missed .box { border-color: var(--success); color: var(--success); background: transparent; }
+.opt-note { display: block; font-size: 12px; font-weight: 600; color: var(--success); margin-top: 4px; }
 .opt[disabled] { cursor: default; }
 
 .explain { margin-top: 16px; border-radius: 14px; padding: 16px; font-size: 15px; line-height: 1.55; }
@@ -364,3 +366,25 @@ h1, h2, h3 { line-height: 1.2; }
 .mode-btn.info-row { cursor: default; }
 .mode-btn.info-row:active { transform: none; background: transparent; }
 .ios-group .mode-btn.info-row:active { background: transparent; }
+
+/* ---------- Barrierefreiheit: sichtbarer Fokus + Bewegungsreduktion ---------- */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Reset-Button (destruktiv, dezent) ---------- */
+.link-danger {
+  display: block; margin: 0 auto; padding: 12px 18px; min-height: 44px;
+  color: var(--danger); font-weight: 600; font-size: 15px; background: transparent;
+}
+.link-danger:active { opacity: .55; }

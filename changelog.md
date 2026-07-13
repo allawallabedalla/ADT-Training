@@ -9,6 +9,39 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 ### Geplant
 - Siehe [Backlog im Workbook](workbook.md#backlog).
 
+---
+
+## [0.7.0] — 2026-07-13  ·  Phase 1: Quick Wins
+
+Erstes Release der Workshop-Umsetzung – Usability, Barrierefreiheit, Robustheit.
+
+### Behoben – Fachinhalt
+- **the-004**: Strahlentherapie war fälschlich als „systemische" Therapie gewertet.
+  Frage fachlich korrigiert (Strahlentherapie ist lokal/lokoregionär, nicht systemisch),
+  Erklärung schärft die Unterscheidung.
+
+### Verbessert – Usability
+- **Verpasste richtige Antwort** ist jetzt klar erkennbar: grünes Häkchen + Label „Richtige Antwort".
+- **Level-Up-Moment**: beim Erreichen eines neuen Levels erscheint ein Feier-Hinweis mit neuem Titel.
+- **Pinch-Zoom entsperrt** (viewport `maximum-scale=1` entfernt) – lange Fachtexte vergrößerbar.
+- **Reset** ist jetzt ein deutlicher, roter Button (statt kleinem grauen Inline-Link).
+- Quiz-Abbruch nutzt den **iOS-Dialog** statt des System-`confirm()` (konsistente Designsprache).
+
+### Verbessert – Barrierefreiheit
+- Toast als **`aria-live`-Region** (Screenreader hören Verdikt/XP/Status); Antwort-Optionen mit
+  beschreibenden `aria-label` („richtig, ausgewählt" / „richtige Antwort, nicht gewählt").
+- Globaler **`:focus-visible`-Fokusring** und **`prefers-reduced-motion`**-Unterstützung.
+- **Kontrast** der Tertiärtexte (Hinweise/Badges) auf ≥ 4,5:1 angehoben.
+
+### Verbessert – Robustheit
+- **Service-Worker-Fetch-Timeout** (3,5 s): App startet bei „lie-fi" sofort aus dem Cache.
+- **NaN-Schutz** bei der XP-Vergabe (defensive `difficulty`-Absicherung).
+- `theme-color` an das App-Blau (#007aff) angeglichen.
+
+### Tests
+- E2E-Regressionstest für den „Richtige Antwort"-Hinweis ergänzt; Reset-Test an den neuen
+  Dialog angepasst. `bash tests/run.sh` vollständig grün. Service Worker v8.
+
 ### Entwicklung / Infrastruktur (2026-07-13)
 - **Test-Infrastruktur** im Repo (`tests/`): `validate-questions.mjs`, `unit-sync.mjs`,
   `e2e-smoke.mjs` (Playwright) und Runner `tests/run.sh`. Läuft künftig vor jeder

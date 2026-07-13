@@ -1,6 +1,6 @@
 /* Service Worker – Offline-Cache für den ADT Trainer.
  * Cache-Version bei Änderungen erhöhen, damit Nutzer die neue Version erhalten. */
-const CACHE = "adt-trainer-v7";
+const CACHE = "adt-trainer-v8";
 const ASSETS = [
   "./",
   "./index.html",
@@ -67,6 +67,18 @@ self.addEventListener("activate", (e) => {
 function putInCache(req, res) {
   if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
 }
+// Netzwerk mit Timeout: bei „lie-fi" (Netz da, aber lahm) nicht ewig hängen,
+// sondern nach kurzer Zeit auf den Cache zurückfallen.
+function fetchWithTimeout(request, ms) {
+  return new Promise((resolve, reject) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => { ctrl.abort(); reject(new Error("timeout")); }, ms);
+    fetch(request, { signal: ctrl.signal }).then(
+      (res) => { clearTimeout(t); resolve(res); },
+      (err) => { clearTimeout(t); reject(err); }
+    );
+  });
+}
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   const url = new URL(e.request.url);
@@ -76,7 +88,7 @@ self.addEventListener("fetch", (e) => {
 
   if (networkFirst) {
     e.respondWith(
-      fetch(e.request).then((res) => { putInCache(e.request, res); return res; })
+      fetchWithTimeout(e.request, 3500).then((res) => { putInCache(e.request, res); return res; })
         .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./index.html")))
     );
   } else {

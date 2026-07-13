@@ -607,15 +607,15 @@ const QUESTIONS = [
   },
   {
     id: "the-004", topic: "therapie", difficulty: 2, type: "multi",
-    question: "Welche der folgenden gehören zu den systemischen bzw. onkologischen Therapiemodalitäten?",
+    question: "Welche der folgenden zählen zu den systemischen (im ganzen Körper wirkenden) Tumortherapien?",
     options: [
       "Chemotherapie",
       "Strahlentherapie",
       "Hormon-(endokrine) Therapie",
       "Zielgerichtete Therapie / Immuntherapie",
     ],
-    correct: [0, 1, 2, 3],
-    explanation: "Zu den Säulen der Tumortherapie zählen Operation, Strahlentherapie und systemische Verfahren (Chemotherapie, endokrine Therapie, zielgerichtete Therapie, Immuntherapie). Alle genannten werden im Register als Therapiemeldung erfasst.",
+    correct: [0, 2, 3],
+    explanation: "Systemische Therapien wirken im ganzen Körper: Chemotherapie, endokrine (Hormon-)Therapie sowie zielgerichtete Therapie/Immuntherapie. Die Strahlentherapie ist dagegen – wie die Operation – ein lokales bzw. lokoregionäres Verfahren und zählt NICHT zu den systemischen Therapien. (Alle Verfahren werden im Register als Therapiemeldung erfasst.)",
   },
   {
     id: "the-005", topic: "therapie", difficulty: 2, type: "single",

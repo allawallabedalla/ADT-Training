@@ -86,7 +86,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 
 **Empfohlene Umsetzungsreihenfolge (vereinbart 2026-07-13):**
 0. ✅ **Sicherheitsnetz** (Test-Infrastruktur `tests/`, `bash tests/run.sh`) – erledigt 2026-07-13
-1. **Quick Wins** (Usability & Robustheit) → v0.7.0
+1. ✅ **Quick Wins** (Usability & Robustheit) → v0.7.0 – erledigt 2026-07-13
 2. **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die durch Cloud/Push neu entstandene Fläche)
 3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
 4. Danach große P1-Features: Fragetyp-Abstraktion → echter Prüfungsmodus → Spaced Repetition → Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
@@ -100,10 +100,10 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 - Server-Versand (Push/Reminder-Zeitlogik, Abo-Aufräumen) nie end-to-end getestet (Sandbox-Limit) → auf dem Gerät verifizieren.
 
 **P1 – als Nächstes:**
-- ⬜ **Quick Wins (Paket)**: Pinch-Zoom entsperren · verpasste richtige Antwort sichtbar (grünes Häkchen) ·
+- ✅ **Quick Wins (Paket)** (v0.7.0): Pinch-Zoom entsperrt · verpasste richtige Antwort sichtbar (grünes Häkchen + Label) ·
   Level-Up-Moment · SW-Fetch-Timeout (lie-fi) · Screenreader-Basics (aria-live, :focus-visible, reduced-motion) ·
-  Kontrast --text-faint ≥4,5:1 · Reset als rote Zeile + Quiz-confirm → iOS-Dialog
-- ⬜ **Fachkorrektur the-004** (Strahlentherapie ist lokal, nicht systemisch) – sofort
+  Kontrast --text-faint ≥4,5:1 · Reset als roter Button + Quiz-confirm → iOS-Dialog · NaN-XP-Schutz · theme-color angeglichen
+- ✅ **Fachkorrektur the-004** (Strahlentherapie ist lokal, nicht systemisch) – v0.7.0
 - ⬜ **Fachliche Gesamt-Review** aller Fragen gegen UICC 8. Aufl., ICD-O-3, ICD-10-GM, oBDS-Begriff (CUP-Kode, pM0 prüfen)
 - ⬜ **Fragetyp-Abstraktion** (Handler je Typ) – Enabler für neue Aufgabentypen
 - ⬜ **Echter Prüfungsmodus** (Timer, kein Sofort-Feedback, freie Navigation/Flaggen, Themen-Blueprint, Sammelauswertung) + **Session-Persistenz**

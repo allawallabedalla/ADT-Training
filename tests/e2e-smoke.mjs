@@ -41,13 +41,19 @@ async function page() {
 // 3) Reset OHNE Reload leert perQuestion (Regression zum Referenz-Bug)
 {
   const p = await page();
-  p.on('dialog', (d) => d.accept());
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
   for (let i = 0; i < 3; i++) { await p.waitForSelector('.q-card'); await p.click('.opt'); await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn'); }
-  await p.click('#backBtn'); await p.waitForSelector('[data-act="reset"]');
-  await p.click('[data-act="reset"]'); await p.waitForSelector('.modal-overlay .modal-btn');
-  await p.click('.modal-btn.btn-danger'); await p.waitForTimeout(300);
+  // Quiz verlassen: jetzt ein iOS-Modal statt confirm() -> „Beenden" klicken
+  await p.click('#backBtn');
+  await p.waitForSelector('.modal-overlay .modal-btn.btn-danger');
+  await p.click('.modal-overlay .modal-btn.btn-danger');
+  await p.waitForSelector('[data-act="reset"]');
+  // Reset auslösen -> Modal „Ja, löschen"
+  await p.click('[data-act="reset"]');
+  await p.waitForSelector('.modal-overlay .modal-btn.btn-danger');
+  await p.click('.modal-overlay .modal-btn.btn-danger');
+  await p.waitForTimeout(300);
   const st = await p.evaluate(() => JSON.parse(localStorage.getItem('adt_trainer_state_v1')));
   chk(st.totalAnswered === 0 && Object.keys(st.perQuestion).length === 0, 'Reset leert Zähler UND perQuestion');
 }
@@ -71,6 +77,24 @@ async function page() {
   await p.click('[data-act="topics"]'); await p.waitForSelector('.topic-row'); chk(true, 'Themen rendern');
   await p.goto(BASE, { waitUntil: 'networkidle' }); await p.click('[data-act="badges"]'); await p.waitForSelector('.badge-grid'); chk(true, 'Erfolge rendern');
   await p.goto(BASE, { waitUntil: 'networkidle' }); await p.click('[data-act="info"]'); await p.waitForSelector('.large-title'); chk(true, 'Info rendert');
+}
+
+// 6) Verpasste richtige Antwort zeigt „Richtige Antwort"-Hinweis (Quick-Win-Regression)
+{
+  const p = await page();
+  p.on('dialog', (d) => d.accept());
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
+  let missedSeen = false, allHaveNote = true;
+  for (let i = 0; i < 6; i++) {
+    await p.waitForSelector('.q-card');
+    await p.click('.opt'); await p.click('#checkBtn'); await p.waitForSelector('.explain');
+    const missed = await p.$$eval('.opt.missed', (els) => els.length);
+    const notes = await p.$$eval('.opt.missed .opt-note', (els) => els.length);
+    if (missed > 0) { missedSeen = true; if (notes !== missed) allHaveNote = false; }
+    await p.click('#nextBtn');
+  }
+  chk(missedSeen && allHaveNote, 'Verpasste richtige Antwort trägt "Richtige Antwort"-Hinweis');
 }
 
 chk(errors.length === 0, 'keine Laufzeitfehler');

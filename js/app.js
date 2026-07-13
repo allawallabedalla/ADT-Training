@@ -359,16 +359,25 @@ function checkCurrent() {
   S.totalAnswered += 1;
   if (ok) S.totalCorrect += 1;
 
-  // XP: richtig = 10 + Schwierigkeitsbonus; falsch = 2 (fürs Dranbleiben)
-  const gained = ok ? (10 + (q.difficulty - 1) * 5) : 2;
+  // XP: richtig = 10 + Schwierigkeitsbonus; falsch = 2 (fürs Dranbleiben).
+  // difficulty defensiv absichern, damit nie NaN-XP entstehen können.
+  const diff = (q.difficulty >= 1 && q.difficulty <= 3) ? q.difficulty : 1;
+  const gained = ok ? (10 + (diff - 1) * 5) : 2;
+  const lvlBefore = levelForXp(S.xp);
   S.xp += gained;
+  const lvlAfter = levelForXp(S.xp);
   touchStreak();
   saveState();
 
   const newBadges = checkBadges();
   renderQuiz();
   if (ok) toast(`✅ Richtig! +${gained} XP`); else toast(`+${gained} XP fürs Üben`);
-  newBadges.forEach((b, k) => setTimeout(() => toast(`${b.ic} Erfolg: ${b.name}`), 900 + k * 1400));
+  let delay = 900;
+  if (lvlAfter > lvlBefore) {
+    setTimeout(() => toast(`🎉 Level ${lvlAfter} – ${levelTitle(lvlAfter)}!`), delay);
+    delay += 1600;
+  }
+  newBadges.forEach((b) => { setTimeout(() => toast(`${b.ic} Erfolg: ${b.name}`), delay); delay += 1400; });
 }
 
 function nextQ() {
@@ -436,7 +445,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.6.0";
+const APP_VERSION = "0.7.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -522,8 +531,8 @@ function renderHome() {
       <button class="mode-btn" data-act="info">${iconTile("info", "#8e8e93")}<span class="txt"><b>So funktioniert's</b><p>Kurzanleitung & Erklärung</p></span><span class="chev">›</span></button>
     </div>
 
-    <p class="muted center" style="margin-top:24px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen<br>
-    <span class="link" data-act="reset">Fortschritt zurücksetzen</span></p>
+    <p class="muted center" style="margin-top:24px;margin-bottom:4px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen</p>
+    <button class="link-danger" data-act="reset">Fortschritt zurücksetzen</button>
   `;
 
   app.querySelectorAll("[data-act]").forEach(el => el.addEventListener("click", () => {
@@ -771,7 +780,7 @@ function renderQuiz() {
   const checked = SESSION.checked[i];
   const picks = SESSION.picks[i];
   const t = TOPICS[q.topic];
-  const diffTxt = ["", "leicht", "mittel", "schwer"][q.difficulty];
+  const diffTxt = ["", "leicht", "mittel", "schwer"][q.difficulty] || "mittel";
   const order = SESSION.optionOrders[i];
 
   const opts = order.map(origIdx => {
@@ -779,13 +788,16 @@ function renderQuiz() {
     const isCorrect = q.correct.includes(origIdx);
     let cls = "opt type-" + q.type;
     let mark = isPicked ? (q.type === "single" ? "●" : "✓") : "";
+    let note = "";
+    let aria = "";
     if (checked) {
-      if (isCorrect && isPicked) { cls += " correct"; mark = "✓"; }
-      else if (isCorrect && !isPicked) { cls += " missed"; mark = "✓"; }
-      else if (!isCorrect && isPicked) { cls += " wrong"; mark = "✕"; }
+      if (isCorrect && isPicked) { cls += " correct"; mark = "✓"; aria = "richtig, ausgewählt"; }
+      else if (isCorrect && !isPicked) { cls += " missed"; mark = "✓"; note = '<span class="opt-note">Richtige Antwort</span>'; aria = "richtige Antwort, nicht gewählt"; }
+      else if (!isCorrect && isPicked) { cls += " wrong"; mark = "✕"; aria = "falsch, ausgewählt"; }
     } else if (isPicked) cls += " selected";
-    return `<button class="${cls}" data-oi="${origIdx}" ${checked ? "disabled" : ""}>
-      <span class="box">${mark}</span><span class="otext">${esc(q.options[origIdx])}</span></button>`;
+    const ariaAttr = aria ? ` aria-label="${esc(q.options[origIdx] + " – " + aria)}"` : "";
+    return `<button class="${cls}" data-oi="${origIdx}" ${checked ? "disabled" : ""}${ariaAttr}>
+      <span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}${note}</span></button>`;
   }).join("");
 
   let explain = "";
@@ -978,11 +990,17 @@ function go(view) {
     } catch (_) { /* im Extremfall bleibt die letzte Ansicht stehen */ VIEW = prev; }
   }
 }
-function goBack() {
+async function goBack() {
   if (VIEW === "quiz") {
-    if (confirm("Training beenden? Der bisherige Fortschritt bleibt gespeichert.")) go("home");
-  } else if (VIEW === "topics" || VIEW === "badges" || VIEW === "result" || VIEW === "settings" || VIEW === "info") go("home");
-  else go("home");
+    const ok = await modalChoice(
+      "Training beenden?",
+      "Der bisherige Fortschritt bleibt gespeichert.",
+      [{ label: "Beenden", value: true, variant: "danger" }, { label: "Weiter üben", value: false, variant: "ghost" }]
+    );
+    if (ok) go("home");
+  } else {
+    go("home");
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -991,7 +1009,11 @@ function goBack() {
 let toastTimer = null;
 function toast(msg) {
   let el = document.getElementById("toast");
-  if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; document.body.appendChild(el); }
+  if (!el) {
+    el = document.createElement("div"); el.id = "toast"; el.className = "toast";
+    el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite");
+    document.body.appendChild(el);
+  }
   el.textContent = msg; el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 1900);
