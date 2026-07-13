@@ -123,7 +123,7 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 
 **P2 – danach:**
 - ⬜ Onboarding-Flow + Tagesziel (an Streak gekoppelt)
-- ⬜ Faire Streak (Gnadentag/Schutz + Rekord-Anerkennung)
+- ✅ Faire Streak (v0.14.0): Gnadentag (ein verpasster Tag erlaubt) + Rekord-Serie (bestStreak)
 - ⬜ Native Zurück-Navigation (pushState/popstate, Quiz mit Bestätigung)
 - ⬜ **app.js in Module aufteilen + Node-Test-Harness + Fragen-CI-Check** (stützt „makellose Funktion")
 - ⬜ Cache-Robustheit: stale-while-revalidate + reg.update (kein manuelles Cache-Bumpen mehr)

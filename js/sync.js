@@ -65,6 +65,7 @@
     out.schemaVersion = maxNum(a.schemaVersion || 1, b.schemaVersion || 1);
     out.xp = maxNum(a.xp, b.xp);
     out.streak = maxNum(a.streak, b.streak);
+    out.bestStreak = Math.max(maxNum(a.bestStreak, b.bestStreak), out.streak);
     out.examsPassed = maxNum(a.examsPassed, b.examsPassed);
     out.bestExamPct = maxNum(a.bestExamPct, b.bestExamPct);
 

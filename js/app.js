@@ -41,6 +41,7 @@ const DEFAULT_STATE = {
   schemaVersion: SCHEMA_VERSION,
   xp: 0,
   streak: 0,
+  bestStreak: 0,                // längste je erreichte Tages-Serie (Rekord)
   lastActiveDay: null,          // "YYYY-MM-DD"
   totalAnswered: 0,
   totalCorrect: 0,
@@ -103,6 +104,8 @@ function sanitizeState(raw) {
   const s = freshState();
   s.xp = clampInt(src.xp, 0);
   s.streak = clampInt(src.streak, 0);
+  // Rekord-Serie nie kleiner als die aktuelle Serie (heilt auch Altstände ohne das Feld).
+  s.bestStreak = Math.max(clampInt(src.bestStreak, 0), s.streak);
   s.totalAnswered = clampInt(src.totalAnswered, 0);
   s.totalCorrect = clampInt(src.totalCorrect, 0);
   s.examsPassed = clampInt(src.examsPassed, 0);
@@ -290,9 +293,13 @@ function levelTitle(lvl) {
 function touchStreak() {
   const t = todayStr();
   if (S.lastActiveDay === t) return;
-  if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) === 1) S.streak += 1;
+  // Faire Serie: ein einzelner verpasster Tag ist erlaubt (Gnadentag) – die Serie läuft
+  // weiter. Erst ab zwei verpassten Tagen (Lücke > 2) beginnt sie neu.
+  const gap = S.lastActiveDay ? daysBetween(S.lastActiveDay, t) : null;
+  if (gap === 1 || gap === 2) S.streak += 1;
   else S.streak = 1;
   S.lastActiveDay = t;
+  if (S.streak > S.bestStreak) S.bestStreak = S.streak;
   saveState();
 }
 
@@ -602,7 +609,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.13.0";
+const APP_VERSION = "0.14.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -1424,11 +1431,16 @@ function renderBadges() {
     <h1 class="large-title">Erfolge</h1>
     <div class="section-title">${n}/${BADGES.length} freigeschaltet</div>
     <div class="badge-grid">${cards}</div>
-    <div class="section-title" style="margin-top:26px">Prüfungs-Rekord</div>
-    <div class="stat-grid">
+    <div class="section-title" style="margin-top:26px">Serie</div>
+    <div class="stat-grid two">
+      <div class="stat"><div class="num">${S.streak}</div><div class="lbl">aktuelle Serie</div></div>
+      <div class="stat"><div class="num">${S.bestStreak}</div><div class="lbl">Rekord-Serie</div></div>
+    </div>
+    <p class="muted center" style="margin-top:10px;font-size:13px">Ein verpasster Tag ist erlaubt – die Serie bleibt am Leben (Gnadentag).</p>
+    <div class="section-title" style="margin-top:22px">Prüfungs-Rekord</div>
+    <div class="stat-grid two">
       <div class="stat"><div class="num">${S.bestExamPct}%</div><div class="lbl">beste Simulation</div></div>
       <div class="stat"><div class="num">${S.examsPassed}</div><div class="lbl">bestanden</div></div>
-      <div class="stat"><div class="num">${S.streak}</div><div class="lbl">Tage-Serie</div></div>
     </div>`;
 }
 
@@ -1466,7 +1478,7 @@ function renderInfo() {
     <div class="section-title">Belohnungen</div>
     <div class="ios-group">
       ${infoRow("star", "#ff2d55", "XP & Level", "Punkte fürs Üben – schwerere Fragen geben mehr")}
-      ${infoRow("flame", "#ff6b22", "Tages-Serie", "Jeden Tag üben hält die Serie am Leben")}
+      ${infoRow("flame", "#ff6b22", "Tages-Serie", "Jeden Tag üben hält die Serie am Leben – ein Ausrutscher-Tag ist erlaubt (Gnadentag)")}
       ${infoRow("trophy", "#ffb300", "Erfolge", "14 Abzeichen zum Freischalten – bis 1000 Fragen")}
     </div>
 
@@ -1706,9 +1718,10 @@ if (!DATA_OK) {
   app.innerHTML = `<div class="empty"><div class="ic">⚠️</div><h2>Daten-Fehler</h2>
     <p class="muted">Die Fragen-Datenbank enthält einen Formatfehler. Details in der Konsole.</p></div>`;
 } else {
-  // Serie ggf. zurücksetzen, wenn ein Tag ausgelassen wurde (nur Anzeige-Konsistenz)
+  // Serie ggf. zurücksetzen, wenn mehr als ein Tag ausgelassen wurde (Gnadentag erlaubt
+  // genau einen verpassten Tag). Nur Anzeige-Konsistenz beim Start.
   const t = todayStr();
-  if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) > 1) { S.streak = 0; saveState(); }
+  if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) > 2) { S.streak = 0; saveState(); }
   go("home");
 
   // Cloud-Sync: Statusanzeige aktualisieren + bei passenden Ereignissen abgleichen

@@ -145,6 +145,7 @@ h1, h2, h3 { line-height: 1.2; }
 
 /* ---------- Stat-Kacheln ---------- */
 .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.stat-grid.two { grid-template-columns: repeat(2, 1fr); }
 .stat {
   background: var(--bg-elev); border-radius: var(--radius-sm);
   padding: 14px 10px; text-align: center; box-shadow: var(--shadow);

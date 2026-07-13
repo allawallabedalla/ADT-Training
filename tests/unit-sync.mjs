@@ -41,6 +41,7 @@ const B = { xp: 90, streak: 5, examsPassed: 0, bestExamPct: 60, lastActiveDay: '
 const m = S.mergeStates(A, B);
 ok(m.xp === 120, 'merge xp = max');
 ok(m.streak === 5, 'merge streak = max');
+ok(m.bestStreak >= 5, 'merge bestStreak >= gemergte Serie (nie kleiner)');
 ok(m.lastActiveDay === '2026-07-13', 'merge lastActiveDay = spätestes');
 ok(m.perQuestion.q2.correct === 2, 'merge perQuestion.correct = max');
 ok(m.perQuestion.q3 && m.totalAnswered === 6 && m.totalCorrect === 5, 'merge Zähler aus perQuestion abgeleitet');

@@ -11,6 +11,25 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.14.0] — 2026-07-13  ·  Faire Tages-Serie & Rekord
+
+Die Tages-Serie ist jetzt motivierender statt bestrafend.
+
+### Hinzugefügt
+- **Gnadentag**: Ein einzelner verpasster Tag beendet die Serie nicht mehr – sie läuft
+  weiter. Erst ab **zwei** verpassten Tagen beginnt sie neu. (Kein demotivierender Reset
+  nach einem einzigen Aussetzer.)
+- **Rekord-Serie**: Die längste je erreichte Serie wird gespeichert und unter **Erfolge**
+  angezeigt (neben der aktuellen Serie).
+
+### Geändert / Technik
+- Neues Feld `bestStreak` (additiv, ohne Schema-Bruch): heilt Altstände, indem der Rekord
+  nie kleiner als die aktuelle Serie ist. Im Geräte-Sync verlustarm als Maximum geführt.
+- 3 neue Tests (Gnadentag hält Serie, zwei verpasste Tage → Reset, Rekord bleibt) + Merge-Test.
+  `tests/run.sh` grün. Service Worker v15.
+
+---
+
 ## [0.13.0] — 2026-07-13  ·  Prüfungs-Barrierefreiheit & Desktop-Darstellung
 
 ### Geändert

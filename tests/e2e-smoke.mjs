@@ -288,6 +288,26 @@ async function page() {
   chk(ov.includes('1/'), 'Prüfung: „beantwortet"-Zähler aktualisiert sich in-place');
 }
 
+// 14) Faire Serie: Gnadentag hält die Serie, zwei verpasste Tage setzen zurück, Rekord bleibt
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const res = await p.evaluate(() => {
+    // genau ein Tag verpasst (Lücke 2) -> Serie läuft weiter
+    S.streak = 5; S.bestStreak = 5; S.lastActiveDay = addDaysStr(-2);
+    touchStreak();
+    const graceKept = S.streak;
+    // zwei Tage verpasst (Lücke 3) -> Neustart bei 1
+    S.streak = 5; S.lastActiveDay = addDaysStr(-3);
+    touchStreak();
+    const reset = S.streak;
+    return { graceKept, reset, best: S.bestStreak };
+  });
+  chk(res.graceKept === 6, 'Serie: ein Gnadentag hält die Serie (5 -> 6)');
+  chk(res.reset === 1, 'Serie: zwei verpasste Tage setzen zurück (-> 1)');
+  chk(res.best >= 6, 'Serie: Rekord-Serie bleibt erhalten');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

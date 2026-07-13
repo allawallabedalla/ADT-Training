@@ -1,6 +1,6 @@
 # ADT Trainer — Pitch & Produktüberblick
 
-> Stand: 2026-07-13 · Version 0.13.0
+> Stand: 2026-07-13 · Version 0.14.0
 > Dieses Dokument erklärt die App im **aktuellen Stand**. Es wird bei jeder
 > größeren Änderung mit aktualisiert.
 
@@ -32,7 +32,7 @@ Eine **Progressive Web App (PWA)**:
 - Kein App Store, kein Entwickler-Account, kein Konto, kein Server
 - Fortschritt wird lokal auf dem Gerät gespeichert
 
-## Kernfunktionen (aktueller Stand 0.13.0)
+## Kernfunktionen (aktueller Stand 0.14.0)
 
 | Bereich | Was es kann |
 |---|---|
@@ -42,7 +42,7 @@ Eine **Progressive Web App (PWA)**:
 | **Mastery** | Mehrstufig: „neu" → „am Lernen" → „sicher" (mehrfach richtig, Box 3+) — der Themenfortschritt zeigt ehrlich, was wirklich sitzt |
 | **Prüfungsformat** | Multiple-Choice mit *mehreren* richtigen Antworten; nur *vollständig* richtig zählt (kein Teilpunkt — wie § 5 der Prüfungsordnung) |
 | **Lerneffekt** | Zu **jeder** Frage eine Erklärung — Inhalte werden vermittelt, nicht nur abgefragt |
-| **Gamification** | XP, Level (mit Titeln), Tages-Serie (Streak 🔥), Erfolge/Badges |
+| **Gamification** | XP, Level (mit Titeln), faire Tages-Serie (Streak 🔥 mit Gnadentag + Rekord), Erfolge/Badges |
 | **Fortschritt** | Trefferquote, gemeisterte Fragen je Thema, Prüfungs-Rekorde |
 | **Geräte-Sync** | Optionaler Cloud-Abgleich (Supabase) per **Sync-Code** — auf jedem Gerät weiterlernen, offline-first, verlustarmer Merge, Retry bei Störungen |
 | **Erinnerungen** | Optionale tägliche Web-Push-Erinnerung ans Üben (Uhrzeit wählbar; auf iPhone als installierte PWA) |
