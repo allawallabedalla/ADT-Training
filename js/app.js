@@ -469,8 +469,9 @@ function setRovingActive(buttons, activeEl) {
 }
 // Tastaturbedienung im Optionsfeld (WAI-ARIA radiogroup/checkbox-Muster):
 // Pfeile/Home/End bewegen den Fokus; bei Einfachauswahl wählen die Pfeile zugleich aus.
-// Leertaste/Enter lösen als native Button-Aktivierung den Klick (applyPick) aus.
-function onOptionKeydown(e, buttons, q) {
+// Leertaste/Enter lösen als native Button-Aktivierung den Klick aus.
+// pickFn(buttonEl, buttons) übernimmt die Auswahl – so teilen Übung UND Prüfung diese Logik.
+function onOptionKeydown(e, buttons, type, pickFn) {
   if (!buttons.length) return;
   const cur = buttons.indexOf(document.activeElement);
   let idx = cur < 0 ? 0 : cur;
@@ -483,7 +484,7 @@ function onOptionKeydown(e, buttons, q) {
   const target = buttons[idx];
   setRovingActive(buttons, target);
   target.focus();
-  if (q.type === "single") applyPick(parseInt(target.dataset.oi, 10), buttons);
+  if (type === "single") pickFn(target, buttons);
 }
 
 // Freie Eingabe (numeric): Wert speichern OHNE Re-Render (sonst verliert das Feld den Fokus).
@@ -601,7 +602,7 @@ const ICONS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
 };
-const APP_VERSION = "0.12.0";
+const APP_VERSION = "0.13.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -1016,7 +1017,7 @@ function renderQuiz() {
     const optsEl = app.querySelector(".options");
     const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-oi]")) : [];
     buttons.forEach(el => el.addEventListener("click", () => { applyPick(parseInt(el.dataset.oi, 10), buttons); setRovingActive(buttons, el); }));
-    if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, q));
+    if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, q.type, (el, btns) => applyPick(parseInt(el.dataset.oi, 10), btns)));
   }
   if (numeric && !checked) {
     const nf = document.getElementById("numField");
@@ -1174,12 +1175,25 @@ function startExamTimer() {
   }, 1000);
 }
 
-function examTogglePick(origIdx) {
+// In-place-Auswahl in der Prüfung (kein Full-Re-Render → Fokus/VoiceOver stabil,
+// kein Flackern während der Simulation). Aktualisiert Optionen + „beantwortet"-Zähler.
+function examApplyPick(origIdx, buttons) {
   const q = examQuestions()[EXAM.idx];
   const arr = EXAM.picks[EXAM.idx];
   if (q.type === "single") EXAM.picks[EXAM.idx] = [origIdx];
   else { const k = arr.indexOf(origIdx); if (k >= 0) arr.splice(k, 1); else arr.push(origIdx); }
-  saveExam(); renderExam();
+  const set = new Set(EXAM.picks[EXAM.idx]);
+  for (const el of buttons) {
+    const oi = parseInt(el.dataset.eoi, 10);
+    const on = set.has(oi);
+    el.classList.toggle("selected", on);
+    el.setAttribute("aria-checked", on ? "true" : "false");
+    const box = el.querySelector(".box");
+    if (box) box.textContent = on ? (q.type === "single" ? "●" : "✓") : "";
+  }
+  saveExam();
+  const ov = document.getElementById("examOverview");
+  if (ov) { const answered = EXAM.picks.filter(p => p.length).length; ov.textContent = `Übersicht · ${answered}/${EXAM.qids.length} beantwortet`; }
 }
 // Numerische Prüfungsantwort: speichern OHNE Re-Render (Eingabefeld behält den Fokus).
 function examSetNumeric(raw) {
@@ -1202,11 +1216,15 @@ function renderExam() {
   const answered = EXAM.picks.filter(p => p.length).length;
 
   const numeric = q.type === "numeric";
+  const optRole = q.type === "single" ? "radio" : "checkbox";
+  let activeIdx = order.find(oi => picks.has(oi));
+  if (activeIdx === undefined) activeIdx = order.length ? order[0] : -1;
   const opts = order.map(origIdx => {
     const isPicked = picks.has(origIdx);
     const cls = "opt type-" + q.type + (isPicked ? " selected" : "");
     const mark = isPicked ? (q.type === "single" ? "●" : "✓") : "";
-    return `<button class="${cls}" data-eoi="${origIdx}"><span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}</span></button>`;
+    const tabindex = origIdx === activeIdx ? "0" : "-1";
+    return `<button class="${cls}" data-eoi="${origIdx}" role="${optRole}" aria-checked="${isPicked ? "true" : "false"}" tabindex="${tabindex}"><span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}</span></button>`;
   }).join("");
 
   let answerArea;
@@ -1218,7 +1236,8 @@ function renderExam() {
       ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
     </div>`;
   } else {
-    answerArea = `<div class="options">${opts}</div>`;
+    const groupRole = q.type === "single" ? "radiogroup" : "group";
+    answerArea = `<div class="options" role="${groupRole}" aria-label="Antwortmöglichkeiten">${opts}</div>`;
   }
   const typeChip = numeric ? '<span class="chip">Rechenaufgabe</span>'
     : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
@@ -1240,8 +1259,12 @@ function renderExam() {
     <button class="btn-ghost" id="examOverview" style="margin-top:4px">Übersicht · ${answered}/${N} beantwortet</button>
     <div class="spacer-lg"></div>
   `;
-  app.querySelectorAll("[data-eoi]").forEach(el => el.addEventListener("click", () => examTogglePick(parseInt(el.dataset.eoi, 10))));
-  if (numeric) {
+  if (!numeric) {
+    const optsEl = app.querySelector(".options");
+    const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-eoi]")) : [];
+    buttons.forEach(el => el.addEventListener("click", () => { examApplyPick(parseInt(el.dataset.eoi, 10), buttons); setRovingActive(buttons, el); }));
+    if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, q.type, (bel, btns) => examApplyPick(parseInt(bel.dataset.eoi, 10), btns)));
+  } else {
     const nf = document.getElementById("examNum");
     if (nf) nf.addEventListener("input", () => examSetNumeric(nf.value));
   }

@@ -115,7 +115,11 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
   + mehr Rechenaufgaben, sobald Material da ist
 - ✅ **Quiz barrierefrei & robuster** (v0.12.0): In-place-Toggle statt Full-Re-Render, ARIA-Rollen
   (radiogroup/checkbox + aria-checked), Tastatur (Pfeile/Home/End/Leertaste, Roving-Tabindex),
-  Ergebnis-Fokus. Offen (später, gleiches Muster): Prüfungsansicht auf In-place-Toggle umstellen
+  Ergebnis-Fokus.
+- ✅ **Prüfungsansicht barrierefrei & in-place** (v0.13.0): gleiches Muster wie Übung (geteilte
+  Tastatur-/Auswahllogik), „beantwortet"-Zähler aktualisiert in-place.
+- ✅ **Desktop-Darstellung** (v0.13.0): App ab 700 px als zentrierte Spalte auf abgesetztem
+  Hintergrund (Kopf-/Aktionsleiste ausgerichtet); iPhone-Vollbild unverändert.
 
 **P2 – danach:**
 - ⬜ Onboarding-Flow + Tagesziel (an Streak gekoppelt)

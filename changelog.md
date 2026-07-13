@@ -11,6 +11,27 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.13.0] — 2026-07-13  ·  Prüfungs-Barrierefreiheit & Desktop-Darstellung
+
+### Geändert
+- **Prüfungsansicht barrierefrei & in-place**: Dieselbe robuste Antwortauswahl wie im
+  Übungsquiz jetzt auch in der Prüfungssimulation – In-place-Toggle (kein Full-Re-Render,
+  VoiceOver-Fokus bleibt während der Simulation stabil), ARIA-Rollen (radiogroup/checkbox +
+  aria-checked), Tastaturbedienung (Pfeile/Home/End/Leertaste, Roving-Tabindex). Der
+  „beantwortet"-Zähler aktualisiert sich in-place. Tastatur-/Auswahllogik ist mit dem
+  Übungsquiz geteilt (kein Doppel-Code).
+- **Desktop/breite Fenster**: Im Browser wird die App ab 700 px als **zentrierte App-Spalte**
+  auf abgesetztem Hintergrund dargestellt (statt frei stehender Inhalt im leeren Feld) –
+  Kopf- und Aktionsleiste an der Spalte ausgerichtet. Die iPhone-Darstellung (schmales
+  Vollbild) bleibt komplett unverändert.
+
+### Technik
+- 1 neuer E2E-Test-Block für die Prüfungs-Antwortauswahl (Rollen, In-place, aria-checked,
+  Zähler). Flaky-Fix in einem SRS-Test (Rechenaufgaben im Zufallspool). `tests/run.sh` grün.
+  Service Worker v14.
+
+---
+
 ## [0.12.0] — 2026-07-13  ·  Barrierefreie & robuste Antwortauswahl
 
 Die Antwortauswahl im Übungsquiz ist jetzt barrierefrei und leichter – ein wichtiger

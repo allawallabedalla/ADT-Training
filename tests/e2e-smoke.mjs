@@ -169,10 +169,14 @@ async function page() {
 {
   const p = await page();
   await p.goto(BASE, { waitUntil: 'networkidle' });
-  await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
-  // Eine Frage vollständig korrekt beantworten
-  const qid = await p.evaluate(() => SESSION.questions[SESSION.idx].id);
-  await p.evaluate(() => { const q = SESSION.questions[SESSION.idx]; SESSION.picks[SESSION.idx] = new Set(q.correct); renderQuiz(); });
+  // Deterministisch eine Options-Frage (nicht numeric) korrekt vorbelegen
+  const qid = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set(q.correct)], checked: [false], correctFlags: [null] };
+    go('quiz');
+    return q.id;
+  });
+  await p.waitForSelector('.q-card');
   await p.click('#checkBtn'); await p.waitForSelector('.explain.ok');
   const rec = await p.evaluate((id) => S.perQuestion[id], qid);
   const today = await p.evaluate(() => todayStr());
@@ -256,6 +260,32 @@ async function page() {
   await p.$$eval('.opt', els => els[0].click());
   const off = await p.$$eval('.opt', els => els[0].getAttribute('aria-checked'));
   chk(on === 'true' && off === 'false', 'A11y: Mehrfachauswahl toggelt an und wieder aus');
+}
+
+// 13) Prüfung: barrierefreie & in-place Antwortauswahl (gleiches Muster wie Übung)
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="exam"]'); await p.waitForSelector('.exam-bar');
+  // zu einer Options-Frage navigieren (nicht numeric)
+  let found = false;
+  for (let i = 0; i < 40; i++) {
+    if (await p.$('.options[role]')) { found = true; break; }
+    const nd = await p.getAttribute('#examNext', 'disabled');
+    if (nd !== null) break;
+    await p.click('#examNext');
+  }
+  chk(found, 'Prüfung: Options-Frage erreichbar');
+  const role = await p.getAttribute('.options', 'role');
+  chk(role === 'radiogroup' || role === 'group', 'Prüfung A11y: Optionsfeld hat radiogroup/group');
+  await p.evaluate(() => { document.querySelector('.options').dataset.probe = 'keep'; });
+  await p.$$eval('.opt', els => els[0].click());
+  const inPlace = await p.evaluate(() => document.querySelector('.options').dataset.probe === 'keep');
+  chk(inPlace, 'Prüfung A11y: Auswahl aktualisiert in-place (kein Full-Re-Render)');
+  const checkedAttr = await p.$$eval('.opt', els => els[0].getAttribute('aria-checked'));
+  chk(checkedAttr === 'true', 'Prüfung A11y: aria-checked gesetzt');
+  const ov = await p.textContent('#examOverview');
+  chk(ov.includes('1/'), 'Prüfung: „beantwortet"-Zähler aktualisiert sich in-place');
 }
 
 chk(errors.length === 0, 'keine Laufzeitfehler');

@@ -20,6 +20,7 @@
   --hero-a: #0a84ff;
   --hero-b: #5e5ce6;          /* indigo */
   --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 22px rgba(20,30,55,.06);
+  --backdrop: #e2e2e8;         /* Feld hinter der App-Spalte (nur Desktop/breite Fenster) */
   --radius: 16px;
   --radius-sm: 12px;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -44,6 +45,7 @@
     --hero-a: #0a84ff;
     --hero-b: #6a5cff;
     --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+    --backdrop: #2c2c2e;
   }
 }
 
@@ -447,3 +449,19 @@ h1, h2, h3 { line-height: 1.2; }
 .review-item .ri-line { margin: 2px 0; font-size: 14px; }
 .review-item .ri-lab { color: var(--text-dim); }
 .review-item .ri-exp { margin: 8px 0 0; font-size: 14px; color: var(--text-dim); line-height: 1.5; }
+
+/* ---------- Breite Fenster / Desktop: App als zentrierte Spalte darstellen ----------
+   Nur ab 700px aktiv – die iPhone-Darstellung (schmales Vollbild) bleibt unangetastet.
+   Sticky-Appbar und fixe Aktionsleiste werden auf die Spaltenbreite ausgerichtet. */
+@media (min-width: 700px) {
+  html { background: var(--backdrop); }
+  body {
+    max-width: 430px;
+    min-height: 100vh;
+    box-shadow: 0 0 0 0.5px var(--separator), 0 24px 60px rgba(0, 0, 0, 0.18);
+  }
+  .actionbar {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: 430px; max-width: 430px;
+  }
+}
