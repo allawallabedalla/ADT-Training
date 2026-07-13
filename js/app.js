@@ -181,6 +181,18 @@ function bumpToday(n) { try { const c = getToday() + (n || 0); localStorage.setI
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch { return true; } }
 function setOnboarded() { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) {} }
 
+/* ---- Prüfungs-Historie (geräte-lokal, für die Statistik) ---- */
+const EXAMHIST_KEY = "adt_exam_history";
+function getExamHistory() { try { const a = JSON.parse(localStorage.getItem(EXAMHIST_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } }
+function pushExamHistory(pct) {
+  try {
+    const a = getExamHistory();
+    a.push({ d: new Date().toISOString(), pct: Math.max(0, Math.min(100, Math.round(pct))) });
+    while (a.length > 30) a.shift();               // nur die letzten 30 behalten
+    localStorage.setItem(EXAMHIST_KEY, JSON.stringify(a));
+  } catch (e) {}
+}
+
 /* ---- App-Einstellungen (geräte-lokal) ---- */
 const SIZE_KEY = "adt_session_size";   // Fragen pro Übungsrunde (0 = alle)
 const THEME_KEY = "adt_theme";          // "auto" | "light" | "dark"
@@ -678,7 +690,7 @@ const ICONS = {
   sliders: '<path d="M4 7h9M17 7h3"/><path d="M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
 };
-const APP_VERSION = "0.23.0";
+const APP_VERSION = "0.24.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -697,7 +709,7 @@ const BADGE_ICON = {
   secure25: { i: "shield", c: "#34c759" }, streak14: { i: "bolt", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
 };
 
-const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
+const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", stats: "Statistik", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
 function setStreak() {
   if (streakEl) streakEl.innerHTML = '<span class="streak-flame">' + icon("flame") + "</span>" + S.streak;
 }
@@ -795,6 +807,7 @@ function renderHome() {
     <div class="section-title">Fortschritt</div>
     <div class="ios-group">
       <button class="mode-btn" data-act="badges">${iconTile("trophy", "#ffb300")}<span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="stats">${iconTile("chart", "#5e5ce6")}<span class="txt"><b>Statistik</b><p>Trefferquote je Thema & Prüfungs-Historie</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="settings">${iconTile("sliders", "#30b0c7")}<span class="txt"><b>Einstellungen</b><p>Design, Sync, Sicherung, Erinnerungen</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="info">${iconTile("info", "#8e8e93")}<span class="txt"><b>So funktioniert's</b><p>Kurzanleitung & Erklärung</p></span><span class="chev">›</span></button>
     </div>
@@ -813,6 +826,7 @@ function renderHome() {
     else if (a === "due") { buildSession("due"); go("quiz"); }
     else if (a === "exam") examStart();
     else if (a === "badges") go("badges");
+    else if (a === "stats") go("stats");
     else if (a === "settings") go("settings");
     else if (a === "info") go("info");
     else if (a === "reset") confirmReset();
@@ -1463,6 +1477,7 @@ function submitExam(auto) {
   S.totalAnswered += total; S.totalCorrect += right;
   if (pct >= 50) S.examsPassed += 1;
   if (pct > S.bestExamPct) S.bestExamPct = pct;
+  pushExamHistory(pct);                   // für die Prüfungs-Historie (lokal)
   touchStreak(); bumpToday(total); saveState(); checkBadges();
 
   EXAM_RESULT = { results, right, total, pct, auto };
@@ -1568,6 +1583,48 @@ function renderBadges() {
     </div>`;
 }
 
+/* ---- Statistik: Trefferquote je Thema + Prüfungs-Historie ---- */
+function renderStats() {
+  updateAppbar("stats");
+  actionbar.classList.add("hidden");
+  const acc = overallAccuracy();
+  const secure = masteredCount();
+
+  const topicRows = Object.entries(TOPICS).map(([key, t]) => {
+    const qs = QUESTIONS.filter(q => q.topic === key);
+    let seen = 0, correct = 0;
+    for (const q of qs) { const p = S.perQuestion[q.id]; if (p) { seen += p.seen; correct += p.correct; } }
+    const a = seen ? Math.round(correct / seen * 100) : 0;
+    const st = topicStats(key);
+    return `<div class="theme-row">
+      <span class="tn">${esc(t.name)}<br><span class="muted" style="font-size:12px">${st.mastered}/${st.total} sicher</span></span>
+      <span class="tbar"><span style="width:${a}%;background:${t.color}"></span></span>
+      <span class="tp">${seen ? a + "%" : "–"}</span></div>`;
+  }).join("");
+
+  const hist = getExamHistory().slice().reverse();   // neueste zuerst
+  const histRows = hist.length
+    ? hist.slice(0, 15).map(h => {
+        const dt = new Date(h.d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+        const col = h.pct >= 50 ? "var(--success)" : "var(--danger)";
+        return `<div class="theme-row"><span class="tn">${dt}</span><span class="tbar"><span style="width:${h.pct}%;background:${col}"></span></span><span class="tp">${h.pct}%</span></div>`;
+      }).join("")
+    : `<p class="muted" style="margin:0">Noch keine Prüfungssimulation abgeschlossen.</p>`;
+
+  app.innerHTML = `
+    <h1 class="large-title">Statistik</h1>
+    <div class="stat-grid">
+      <div class="stat"><div class="num">${S.totalAnswered}</div><div class="lbl">beantwortet</div></div>
+      <div class="stat"><div class="num">${acc}%</div><div class="lbl">Trefferquote</div></div>
+      <div class="stat"><div class="num">${secure}</div><div class="lbl">sichere Fragen</div></div>
+    </div>
+    <div class="section-title">Trefferquote je Thema</div>
+    <div class="q-card">${topicRows}</div>
+    <div class="section-title">Prüfungs-Historie</div>
+    <div class="q-card">${histRows}</div>
+    <p class="muted center" style="margin-top:14px;font-size:12px">Die Prüfungs-Historie wird lokal auf diesem Gerät geführt.</p>`;
+}
+
 /* ---- Info / Anleitung ---- */
 function infoRow(name, tint, title, text) {
   return `<div class="mode-btn info-row">${iconTile(name, tint)}<span class="txt"><b>${title}</b><p>${text}</p></span></div>`;
@@ -1651,6 +1708,7 @@ function renderView(view) {
     else if (view === "exam") renderExam();
     else if (view === "examresult") renderExamResult();
     else if (view === "badges") renderBadges();
+    else if (view === "stats") renderStats();
     else if (view === "settings") renderSettings();
     else if (view === "info") renderInfo();
     return true;

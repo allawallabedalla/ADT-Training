@@ -485,6 +485,20 @@ async function page(opts = {}) {
   await p.evaluate(() => { if (window.ADTSync) ADTSync.setCode(null); });
 }
 
+// 23) Statistik: Seite rendert + Prüfungs-Historie wird geführt
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  await p.click('[data-act="stats"]');
+  await p.waitForSelector('.large-title');
+  const txt = await p.textContent('#app');
+  chk(/Trefferquote je Thema/.test(txt) && /Prüfungs-Historie/.test(txt), 'Statistik: Themen + Historie rendern');
+  await p.evaluate(() => pushExamHistory(72));
+  await p.evaluate(() => go('stats'));
+  chk(/72%/.test(await p.textContent('#app')), 'Statistik: Prüfungs-Historie zeigt Eintrag');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

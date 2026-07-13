@@ -171,7 +171,7 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
 - 🟡 **P2** **Einstellungen**: ✅ Fragenanzahl wählbar + Hell/Dunkel-Umschalter (v0.20.0), Backup (v0.3.0);
   offen: Sofort-Feedback an/aus (bewusst zurückgestellt – der Prüfungsmodus bietet bereits das Ohne-Feedback-Erlebnis)
 - 🟡 **P2** **Statistik & Tagesziel**: ✅ tägliches Lernziel mit Fortschrittsring (v0.15.0);
-  offen: Trefferquote je Thema über Zeit, Prüfungs-Historie
+  ✅ Trefferquote je Thema + Prüfungs-Historie (v0.24.0)
 
 ### Neu / offen
 - ✅ **Info-/Anleitungs-Reiter** „So funktioniert's" (v0.6.0, 2026-07-13): erklärt Modi,

@@ -11,6 +11,19 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.24.0] — 2026-07-13  ·  Statistik & Prüfungs-Historie
+
+### Hinzugefügt
+- **Neue Statistik-Seite**: Trefferquote je Thema (mit „sicher"-Zähler pro Thema),
+  Gesamtwerte (beantwortet, Trefferquote, sichere Fragen) und eine **Prüfungs-Historie**
+  (Datum + Ergebnis der letzten Simulationen, bestanden/durchgefallen farbig).
+- Startseiten-Eintrag „Statistik".
+
+### Technik
+- Prüfungs-Historie geräte-lokal (letzte 30). 2 neue Tests. `tests/run.sh` grün.
+
+---
+
 ## [0.23.0] — 2026-07-13  ·  Cloud-Daten löschen
 
 ### Hinzugefügt
