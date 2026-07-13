@@ -26,9 +26,33 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
+/* Dunkle Farbwerte. Zwei Auslöser mit identischem Satz:
+   1) feste Umschaltung  :root[data-theme="dark"]
+   2) „Auto" folgt dem System  – aber nur, wenn KEINE feste Wahl gesetzt ist
+      (:root:not([data-theme])), damit eine Nutzerwahl das System überstimmt. */
+:root[data-theme="dark"] {
+  --bg: #000000;            /* OLED-Schwarz, iOS dark grouped */
+  --bg-elev: #1c1c1e;
+  --bg-elev-2: #2c2c2e;
+  --text: #ffffff;
+  --text-dim: #98989f;
+  --text-faint: #9a9aa2;
+  --border: #38383a;
+  --separator: rgba(84, 84, 88, 0.55);
+  --primary: #0a84ff;
+  --success: #30d158;
+  --success-bg: #0f3320;
+  --danger: #ff453a;
+  --danger-bg: #3a1512;
+  --warn: #ff9f0a;
+  --hero-a: #0a84ff;
+  --hero-b: #6a5cff;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+  --backdrop: #2c2c2e;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #000000;            /* OLED-Schwarz, iOS dark grouped */
+  :root:not([data-theme]) {
+    --bg: #000000;
     --bg-elev: #1c1c1e;
     --bg-elev-2: #2c2c2e;
     --text: #ffffff;
@@ -406,6 +430,11 @@ h1, h2, h3 { line-height: 1.2; }
   border: 1px solid var(--border); background: var(--bg-elev-2); color: var(--text);
   font-size: 16px; font-family: inherit; -webkit-appearance: none; appearance: none;
 }
+/* Einstellungs-Zeile: Label links, kompaktes Auswahlfeld rechts */
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; margin: 0; }
+.set-row + .set-row { border-top: 0.5px solid var(--separator); }
+.set-row > span { font-size: 16px; }
+.set-row .ios-select { margin-top: 0; width: auto; min-width: 172px; }
 
 /* ---------- Info-Zeilen (nicht interaktiv) ---------- */
 .mode-btn.info-row { cursor: default; }

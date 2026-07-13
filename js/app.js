@@ -179,6 +179,23 @@ function bumpToday(n) { try { const c = getToday() + (n || 0); localStorage.setI
 function isOnboarded() { try { return localStorage.getItem(ONBOARD_KEY) === "1"; } catch { return true; } }
 function setOnboarded() { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch (e) {} }
 
+/* ---- App-Einstellungen (geräte-lokal) ---- */
+const SIZE_KEY = "adt_session_size";   // Fragen pro Übungsrunde (0 = alle)
+const THEME_KEY = "adt_theme";          // "auto" | "light" | "dark"
+const SIZE_CHOICES = [10, 15, 20, 30, 0];
+function getSessionSize() { try { const v = parseInt(localStorage.getItem(SIZE_KEY), 10); return SIZE_CHOICES.includes(v) ? v : 15; } catch { return 15; } }
+function setSessionSize(n) { try { localStorage.setItem(SIZE_KEY, String(n)); } catch (e) {} }
+function getTheme() { try { const v = localStorage.getItem(THEME_KEY); return (v === "light" || v === "dark") ? v : "auto"; } catch { return "auto"; } }
+function setTheme(t) { try { t === "auto" ? localStorage.removeItem(THEME_KEY) : localStorage.setItem(THEME_KEY, t); } catch (e) {} applyTheme(); }
+// „auto" folgt dem System (kein data-theme → CSS-Media-Query greift); sonst fest überschreiben.
+function applyTheme() {
+  const t = getTheme();
+  const root = document.documentElement;
+  if (t === "light" || t === "dark") root.setAttribute("data-theme", t);
+  else root.removeAttribute("data-theme");
+}
+applyTheme();   // so früh wie möglich anwenden (vermeidet Farb-Flackern)
+
 /* ---- Cloud-Sync-Anbindung (optional, siehe js/sync.js) ---- */
 let syncTimer = null;
 function syncEnabled() { return !!(window.ADTSync && ADTSync.isConfigured() && ADTSync.getCode()); }
@@ -459,7 +476,11 @@ function buildSession(mode, opts = {}) {
   } else {
     questions = shuffle(pool);
   }
-  const limit = opts.limit || (mode === "exam" ? Math.min(30, questions.length) : Math.min(15, questions.length));
+  // Übungsrunden folgen der Einstellung „Fragen pro Runde" (0 = alle); Prüfung bleibt fix.
+  let limit;
+  if (opts.limit) limit = opts.limit;
+  else if (mode === "exam") limit = Math.min(30, questions.length);
+  else { const sz = getSessionSize(); limit = sz > 0 ? Math.min(sz, questions.length) : questions.length; }
   questions = questions.slice(0, limit);
 
   // Antwort-Optionen pro Frage mischen (Reihenfolge merken, um correct-Indizes umzurechnen)
@@ -637,8 +658,9 @@ const ICONS = {
   mountain: '<path d="M3 19h18L14 6l-3.2 5.6L8.5 9z"/><path d="M11.4 11.3l1.1 1.3 1.4-1.1"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="7.9" r="0.9" fill="currentColor" stroke="none"/>',
   bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  sliders: '<path d="M4 7h9M17 7h3"/><path d="M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>',
 };
-const APP_VERSION = "0.19.0";
+const APP_VERSION = "0.20.0";
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -656,7 +678,7 @@ const BADGE_ICON = {
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
 };
 
-const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Sync & Sicherung", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
+const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
 function setStreak() {
   if (streakEl) streakEl.innerHTML = '<span class="streak-flame">' + icon("flame") + "</span>" + S.streak;
 }
@@ -749,7 +771,7 @@ function renderHome() {
     <div class="section-title">Fortschritt</div>
     <div class="ios-group">
       <button class="mode-btn" data-act="badges">${iconTile("trophy", "#ffb300")}<span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
-      <button class="mode-btn" data-act="settings">${iconTile("icloud", "#30b0c7")}<span class="txt"><b>Geräte-Sync</b><p>${syncSubtitle()}</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="settings">${iconTile("sliders", "#30b0c7")}<span class="txt"><b>Einstellungen</b><p>Design, Sync, Sicherung, Erinnerungen</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="info">${iconTile("info", "#8e8e93")}<span class="txt"><b>So funktioniert's</b><p>Kurzanleitung & Erklärung</p></span><span class="chev">›</span></button>
     </div>
 
@@ -835,10 +857,26 @@ function renderSettings() {
     <div class="section-title">Lern-Erinnerungen</div>
     <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
 
-  app.innerHTML = `<h1 class="large-title">Sync &amp; Sicherung</h1>
+  const theme = getTheme(), size = getSessionSize();
+  const tOpt = (v, l) => `<option value="${v}" ${theme === v ? "selected" : ""}>${l}</option>`;
+  const sOpt = (v, l) => `<option value="${v}" ${size === v ? "selected" : ""}>${l}</option>`;
+  const prefs = `
+    <div class="section-title">Anzeige & Übung</div>
+    <div class="q-card">
+      <label class="set-row" for="setTheme"><span>Design</span>
+        <select id="setTheme" class="ios-select">${tOpt("auto", "Automatisch (System)")}${tOpt("light", "Hell")}${tOpt("dark", "Dunkel")}</select>
+      </label>
+      <label class="set-row" for="setSize"><span>Fragen pro Runde</span>
+        <select id="setSize" class="ios-select">${sOpt(10, "10")}${sOpt(15, "15")}${sOpt(20, "20")}${sOpt(30, "30")}${sOpt(0, "Alle")}</select>
+      </label>
+    </div>`;
+
+  app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
     <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${remind}`;
 
   const $ = (id) => document.getElementById(id);
+  const stTheme = $("setTheme"); if (stTheme) stTheme.addEventListener("change", () => { setTheme(stTheme.value); toast("🎨 Design übernommen"); });
+  const stSize = $("setSize"); if (stSize) stSize.addEventListener("change", () => { const n = parseInt(stSize.value, 10); setSessionSize(n); toast("✅ Fragen pro Runde: " + (n > 0 ? n : "alle")); });
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
   const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
   const bCopy = $("btnCopy"); if (bCopy) bCopy.addEventListener("click", () => copyCode(code));
@@ -1544,10 +1582,10 @@ function renderInfo() {
     </div>
 
     <div class="section-title">Auf allen Geräten</div>
-    <div class="q-card"><p style="margin:0;line-height:1.55">Unter <b>Sync &amp; Sicherung</b> einen <b>Sync-Code</b> erstellen und auf weiteren Geräten eingeben – dein Fortschritt ist überall gleich. Jeder eigene Code steht für einen eigenen, unabhängigen Fortschritt.</p></div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Unter <b>Einstellungen</b> einen <b>Sync-Code</b> erstellen und auf weiteren Geräten eingeben – dein Fortschritt ist überall gleich. Jeder eigene Code steht für einen eigenen, unabhängigen Fortschritt.</p></div>
 
     <div class="section-title">Lern-Erinnerungen</div>
-    <div class="q-card"><p style="margin:0;line-height:1.55">Optionale <b>tägliche Erinnerung</b> ans Üben zur Wunsch-Uhrzeit (unter Sync &amp; Sicherung). Auf dem iPhone nur, wenn die App zum Home-Bildschirm hinzugefügt ist.</p></div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Optionale <b>tägliche Erinnerung</b> ans Üben zur Wunsch-Uhrzeit (unter Einstellungen). Auf dem iPhone nur, wenn die App zum Home-Bildschirm hinzugefügt ist.</p></div>
 
     <div class="section-title">Als App installieren</div>
     <div class="q-card"><p style="margin:0;line-height:1.55">In <b>Safari</b> unten auf <b>Teilen</b> → <b>„Zum Home-Bildschirm"</b>. Danach startet die App im Vollbild und läuft komplett offline.</p></div>

@@ -168,8 +168,8 @@ _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-
   Fragen-Navigation + Markieren/Flaggen, „Abgeben" → volle Auswertung mit Erklärungen
 - ✅ **P1** **Spaced Repetition (Leitner-System)** (v0.10.0): fällige Wiederholungen mit optimalen
   Abständen; Startseite zeigt „heute fällig"
-- 🟡 **P2** **Einstellungen**: Fragenanzahl wählbar, Hell/Dunkel-Umschalter, Sofort-Feedback an/aus
-  (Backup **exportieren/importieren** ist bereits erledigt, v0.3.0)
+- 🟡 **P2** **Einstellungen**: ✅ Fragenanzahl wählbar + Hell/Dunkel-Umschalter (v0.20.0), Backup (v0.3.0);
+  offen: Sofort-Feedback an/aus (bewusst zurückgestellt – der Prüfungsmodus bietet bereits das Ohne-Feedback-Erlebnis)
 - 🟡 **P2** **Statistik & Tagesziel**: ✅ tägliches Lernziel mit Fortschrittsring (v0.15.0);
   offen: Trefferquote je Thema über Zeit, Prüfungs-Historie
 

@@ -394,6 +394,30 @@ async function page(opts = {}) {
   chk(!!(await p.$('.q-card')), 'Zurück aus Quiz: „Weiter üben" bleibt im Quiz');
 }
 
+// 19) Einstellungen: Fragen pro Runde + Design-Umschalter
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('.level-card');
+  // Einstellungsseite rendert die neuen Steuerelemente
+  await p.click('[data-act="settings"]');
+  await p.waitForSelector('#setSize');
+  await p.waitForSelector('#setTheme');
+  chk(true, 'Einstellungen: Seite mit Design + Fragen-pro-Runde rendert');
+  // Fragen pro Runde begrenzt die Session
+  const len10 = await p.evaluate(() => { setSessionSize(10); buildSession('mixed'); return SESSION.questions.length; });
+  chk(len10 === 10, 'Einstellung: 10 Fragen pro Runde greift');
+  const lenAll = await p.evaluate(() => { setSessionSize(0); buildSession('mixed'); return SESSION.questions.length; });
+  chk(lenAll === (await p.evaluate(() => QUESTIONS.length)), 'Einstellung: „Alle" nutzt alle Fragen');
+  // Design-Umschalter setzt/entfernt data-theme
+  await p.evaluate(() => setTheme('dark'));
+  chk(await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'dark', 'Design: Dunkel setzt data-theme=dark');
+  await p.evaluate(() => setTheme('light'));
+  chk(await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === 'light', 'Design: Hell setzt data-theme=light');
+  await p.evaluate(() => setTheme('auto'));
+  chk(await p.evaluate(() => document.documentElement.getAttribute('data-theme')) === null, 'Design: Automatisch folgt System (kein data-theme)');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

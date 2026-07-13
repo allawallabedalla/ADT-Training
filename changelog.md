@@ -11,6 +11,27 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.20.0] — 2026-07-13  ·  Einstellungen (Design & Rundengröße)
+
+Der bisherige „Sync & Sicherung"-Bereich wird zur zentralen **Einstellungen**-Seite.
+
+### Hinzugefügt
+- **Design-Umschalter**: Automatisch (folgt dem System) · Hell · Dunkel – die feste Wahl
+  überstimmt die Systemeinstellung.
+- **Fragen pro Runde** wählbar (10/15/20/30/Alle) – gilt für alle Übungsmodi; die
+  Prüfungssimulation bleibt fix.
+
+### Geändert
+- Startseiten-Eintrag „Geräte-Sync" → **„Einstellungen"** (mit Design, Sync, Sicherung,
+  Erinnerungen an einem Ort).
+- Einstellungen sind geräte-lokal (kein Eingriff in den gesyncten Lernstand).
+
+### Technik
+- Dunkle Farbwerte für „Auto" (Media-Query) und feste Umschaltung (`data-theme`) mit
+  demselben Satz; eine feste Wahl überstimmt das System. 6 neue Tests. `tests/run.sh` grün.
+
+---
+
 ## [0.19.0] — 2026-07-13  ·  Native Zurück-Navigation
 
 ### Hinzugefügt
