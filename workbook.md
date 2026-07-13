@@ -78,6 +78,20 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 Vollständiger Bericht: `docs/experten-workshop-2026-07-13.md`. Kuratiert unter den
 Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig**.
 
+**Empfohlene Umsetzungsreihenfolge (vereinbart 2026-07-13):**
+1. **Quick Wins** (Usability & Robustheit) → v0.7.0
+2. **RPC-Härtung + leichter Datenschutz-Hinweis** (schließt die durch Cloud/Push neu entstandene Fläche)
+3. **Modul-Split + Test-Harness (Sicherheitsnetz)** – vor den großen Features
+4. Danach große P1-Features: Fragetyp-Abstraktion → echter Prüfungsmodus → Spaced Repetition → Anwendungs-/Rechenaufgaben → Quiz-Barrierefreiheit
+5. Parallel/laufend: fachliche Gesamt-Review der Fragen + Content-Ausbau (sobald Material da ist)
+
+**Bekannte Risiken durch bisherige Umsetzung (ehrlich dokumentiert, alle im Backlog adressiert):**
+- Cloud/Push = neue Datenverarbeitung + offene anon-Endpunkte (Capability-Schutz per geheimem Code) → RPC-Härtung + Datenschutz-Hinweis (Schritt 2).
+- Manuelles SW-Cache-Versionieren ist fehleranfällig (einmal vergessen) → stale-while-revalidate (Schritt 3-Umfeld).
+- network-first ohne Timeout → „lie-fi"-Start-Hänger → Fetch-Timeout (Quick Wins).
+- Kein automatisches Test-Netz im Repo; app.js wächst als Monolith → Modul-Split + Test-Harness (Schritt 3).
+- Server-Versand (Push/Reminder-Zeitlogik, Abo-Aufräumen) nie end-to-end getestet (Sandbox-Limit) → auf dem Gerät verifizieren.
+
 **P1 – als Nächstes:**
 - ⬜ **Quick Wins (Paket)**: Pinch-Zoom entsperren · verpasste richtige Antwort sichtbar (grünes Häkchen) ·
   Level-Up-Moment · SW-Fetch-Timeout (lie-fi) · Screenreader-Basics (aria-live, :focus-visible, reduced-motion) ·
