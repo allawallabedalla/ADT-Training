@@ -27,5 +27,5 @@ window.ADT_CONFIG = {
   //  true  = Inhalte sind geschützt: die App verlangt einen Zugangscode und lädt die
   //          Fragen serverseitig geprüft aus Supabase (get_content). Erst umstellen,
   //          wenn das echte Material in Supabase liegt (siehe supabase/content-gate.sql).
-  contentGated: false,
+  contentGated: true,
 };

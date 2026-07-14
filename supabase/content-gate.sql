@@ -27,19 +27,18 @@ alter table public.content_gate  enable row level security;
 -- 4) Einzige Ausgabe: diese Funktion liefert die Inhalte NUR bei korrektem Code.
 --    security definer = läuft mit Rechten des Eigentümers und umgeht damit RLS,
 --    gibt aber ausschließlich nach bestandener Code-Prüfung etwas zurück.
---    SHA256 funktioniert in allen Supabase-Projekten (kein pgcrypto nötig).
 create or replace function public.get_content(p_code text)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
-  stored_hash text;
+  stored_code text;
 begin
   if p_code is null or length(p_code) < 4 then
     raise exception 'unauthorized';
   end if;
 
-  select code_hash into stored_hash from public.content_gate where id = 1;
+  select code_hash into stored_code from public.content_gate where id = 1;
 
-  if stored_hash is null or encode(digest(p_code, 'sha256'), 'hex') != stored_hash then
+  if stored_code is null or p_code != stored_code then
     raise exception 'unauthorized';
   end if;
 
@@ -51,13 +50,13 @@ revoke all on function public.get_content(text) from public;
 grant execute on function public.get_content(text) to anon, authenticated;
 
 -- =====================================================================
---  EINMALIG: Zugangscode setzen  (wird als SHA256 gehasht)
+--  EINMALIG: Zugangscode setzen
 --  Nimm einen LANGEN, zufälligen Code (z. B. 12+ Zeichen). Bei Verlust/
 --  Weitergabe einfach erneut ausführen – alte Geräte müssen dann neu
 --  freischalten.
 -- =====================================================================
 -- update public.content_gate
--- set code_hash = encode(digest('HIER-DEINEN-LANGEN-GEHEIMEN-CODE', 'sha256'), 'hex')
+-- set code_hash = 'HIER-DEINEN-LANGEN-GEHEIMEN-CODE'
 -- where id = 1;
 
 -- =====================================================================
