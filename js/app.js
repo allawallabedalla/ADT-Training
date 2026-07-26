@@ -198,6 +198,26 @@ function contentUnlocked() {
    in localStorage bleibt nur eine kleine Markierung, damit der Startcheck synchron bleibt.
    localStorage wird weiter als Fallback für kleine Kataloge unterstützt (Altstände). */
 const CONTENT_IDB_FLAG = "adt_content_idb";   // "1" = Inhalte liegen in IndexedDB
+const CONTENT_FP_KEY = "adt_content_fp";      // Fingerabdruck des gespeicherten Katalogs
+
+/* Fingerabdruck über Anzahl, IDs und Inhalt jeder Frage. Erkennt auch Korrekturen, die
+   die Fragenzahl nicht ändern (umformulierter Fragetext, korrigierte Option/Erklärung).
+   Läuft ohne den 4-MB-String zu bauen – 32-Bit-Rollhash je Feld. */
+function contentFingerprint(content) {
+  try {
+    const Q = content.QUESTIONS;
+    if (!Array.isArray(Q)) return "";
+    let h = 2166136261;
+    const mix = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } };
+    for (const q of Q) {
+      mix(q.id || ""); mix(q.question || ""); mix(q.explanation || "");
+      if (Array.isArray(q.options)) for (const o of q.options) mix(String(o));
+      if (Array.isArray(q.correct)) mix(q.correct.join(","));
+      if (q.answer != null) mix(String(q.answer));
+    }
+    return `${Q.length}.${Object.keys(content.TOPICS || {}).length}.${h.toString(36)}`;
+  } catch (e) { return ""; }
+}
 const IDB_NAME = "adt_content";
 const IDB_STORE = "kv";
 const IDB_KEY = "content_v1";
@@ -281,11 +301,13 @@ async function refreshContentInBackground() {
     const content = await ADTSync.getContent(code);
     if (!content || !content.TOPICS || !Array.isArray(content.QUESTIONS) || !content.QUESTIONS.length) return;
     // Nur schreiben, wenn sich wirklich etwas geändert hat (spart Schreibzugriffe).
-    const gleich = Array.isArray(window.QUESTIONS)
-      && window.QUESTIONS.length === content.QUESTIONS.length
-      && Object.keys(window.TOPICS || {}).length === Object.keys(content.TOPICS).length;
-    if (gleich) return;
-    await storeUnlockedContent(content, code);
+    // Der Vergleich darf NICHT nur die Anzahl prüfen: Korrekturen an Fragetexten,
+    // Optionen oder Erklärungen ändern die Anzahl nicht und würden sonst nie ankommen.
+    const fp = contentFingerprint(content);
+    if (fp && fp === localStorage.getItem(CONTENT_FP_KEY)) return;
+    if (await storeUnlockedContent(content, code) === "ok") {
+      try { localStorage.setItem(CONTENT_FP_KEY, fp); } catch (e) {}
+    }
   } catch (e) {}
 }
 
@@ -2077,7 +2099,10 @@ function showContentGate(msg) {
     // Code war richtig – ab hier kann nur noch das Speichern scheitern. Das muss
     // unterscheidbar sein, sonst sucht man den Fehler beim Code (siehe iOS-Speichergrenze).
     const res = await storeUnlockedContent(content, code);
-    if (res === "ok") { location.reload(); return; }
+    if (res === "ok") {
+      try { localStorage.setItem(CONTENT_FP_KEY, contentFingerprint(content)); } catch (e) {}
+      location.reload(); return;
+    }
     err.style.color = "var(--danger)";
     err.textContent = res === "quota"
       ? "Code ist richtig, aber der Speicher dieses Geräts ist voll. Bitte Speicher freigeben und erneut versuchen."
@@ -2150,6 +2175,7 @@ async function relockContent() {
     localStorage.removeItem(CONTENT_KEY);
     localStorage.removeItem(CONTENT_CODE_KEY);
     localStorage.removeItem(CONTENT_IDB_FLAG);
+    localStorage.removeItem(CONTENT_FP_KEY);
   } catch (e) {}
   await idbDelete();
   location.reload();
