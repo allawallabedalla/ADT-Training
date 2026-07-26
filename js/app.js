@@ -956,6 +956,17 @@ function renderSettings() {
     <div class="section-title">Lern-Erinnerungen</div>
     <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
 
+  // Lerninhalte: erlaubt das erneute Freischalten mit einem neuen Zugangscode.
+  // Ohne diesen Weg bleibt ein Gerät für immer auf dem Katalog hängen, mit dem es
+  // einmal freigeschaltet wurde – der Freischalt-Bildschirm erscheint nur, wenn noch
+  // keine Inhalte gespeichert sind, und die stille Hintergrund-Aktualisierung nutzt
+  // den alten, nach einem Katalog-Wechsel ungültigen Code.
+  const content = contentGateActive() ? `
+    <div class="section-title">Lerninhalte</div>
+    <div class="ios-group">
+      <button class="mode-btn" id="btnRelock">${iconTile("import", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
+    </div>` : "";
+
   const theme = getTheme(), size = getSessionSize(), haptics = getHaptics(), font = getFontSize();
   const tOpt = (v, l) => `<option value="${v}" ${theme === v ? "selected" : ""}>${l}</option>`;
   const sOpt = (v, l) => `<option value="${v}" ${size === v ? "selected" : ""}>${l}</option>`;
@@ -979,7 +990,7 @@ function renderSettings() {
     </div>`;
 
   app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
-    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${remind}`;
+    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${content}${remind}`;
 
   const $ = (id) => document.getElementById(id);
   const stTheme = $("setTheme"); if (stTheme) stTheme.addEventListener("change", () => { setTheme(stTheme.value); toast("🎨 Design übernommen"); });
@@ -1003,6 +1014,7 @@ function renderSettings() {
     if (ok) { ADTSync.setCode(null); toast("Verbindung getrennt"); renderSettings(); }
   });
   const bDel = $("btnDeleteCloud"); if (bDel) bDel.addEventListener("click", deleteCloudData);
+  const bRe = $("btnRelock"); if (bRe) bRe.addEventListener("click", relockContent);
   const bEx = $("btnExport"); if (bEx) bEx.addEventListener("click", exportProgress);
   const bIm = $("btnImport"); const imf = $("importFile");
   if (bIm && imf) {
@@ -2027,6 +2039,23 @@ async function deleteCloudData() {
   else if (r && r.reason === "offline") { toast("🔌 Offline – bitte später erneut versuchen"); }
   else { toast("⚠️ Löschen fehlgeschlagen"); }
   renderSettings();
+}
+
+/* Gecachte Lerninhalte verwerfen, damit der Freischalt-Bildschirm wieder erscheint.
+   Der Lernfortschritt bleibt unangetastet – er hängt an den Frage-IDs, nicht am Katalog.
+   Zum erneuten Freischalten muss das Gerät einmal online sein. */
+async function relockContent() {
+  const ok = await modalChoice("Inhalte neu freischalten",
+    "Die gespeicherten Fragen werden von diesem Gerät entfernt. Danach brauchst du den " +
+    "Zugangscode und einmalig eine Internetverbindung. Dein Lernfortschritt bleibt erhalten.",
+    [{ label: "Neu freischalten", value: true, variant: "danger" },
+     { label: "Abbrechen", value: false, variant: "ghost" }]);
+  if (!ok) return;
+  try {
+    localStorage.removeItem(CONTENT_KEY);
+    localStorage.removeItem(CONTENT_CODE_KEY);
+  } catch (e) {}
+  location.reload();
 }
 
 async function confirmReset() {
