@@ -4,7 +4,7 @@
 /* ------------------------------------------------------------------ *
  * 0) Datenvalidierung – schützt vor fehlerhaften Fragen-Einträgen
  * ------------------------------------------------------------------ */
-const DATA_OK = (() => {
+function checkData() {
   if (typeof QUESTIONS === "undefined" || !Array.isArray(QUESTIONS)) return false;
   const ids = new Set();
   for (const q of QUESTIONS) {
@@ -24,7 +24,9 @@ const DATA_OK = (() => {
     }
   }
   return true;
-})();
+}
+// Wird nach dem Nachladen der freigeschalteten Inhalte erneut ausgewertet (siehe boot()).
+let DATA_OK = checkData();
 
 /* ------------------------------------------------------------------ *
  * 1) Persistenter Zustand (localStorage, robust gegen Defekte)
@@ -185,13 +187,90 @@ function setOnboarded() { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch 
 const CONTENT_KEY = "adt_content_v1";        // lokal gecachte, freigeschaltete Inhalte
 const CONTENT_CODE_KEY = "adt_content_code"; // Code (für stille Hintergrund-Aktualisierung)
 function contentGateActive() { return !!(window.ADT_CONFIG && window.ADT_CONFIG.contentGated); }
-function contentUnlocked() { try { return !!localStorage.getItem(CONTENT_KEY); } catch { return false; } }
-function storeUnlockedContent(content, code) {
+function contentUnlocked() {
+  try { return !!localStorage.getItem(CONTENT_KEY) || localStorage.getItem(CONTENT_IDB_FLAG) === "1"; }
+  catch { return false; }
+}
+/* Ablage der freigeschalteten Inhalte.
+   localStorage allein reicht nicht: Der Katalog hat ~3,9 Mio. Zeichen, und localStorage
+   speichert UTF-16 → ~7,4 MB effektiv. iOS Safari erlaubt dort nur ~5 MB, `setItem` wirft
+   dann QuotaExceededError. Deshalb liegen die Inhalte in IndexedDB (viel größeres Kontingent);
+   in localStorage bleibt nur eine kleine Markierung, damit der Startcheck synchron bleibt.
+   localStorage wird weiter als Fallback für kleine Kataloge unterstützt (Altstände). */
+const CONTENT_IDB_FLAG = "adt_content_idb";   // "1" = Inhalte liegen in IndexedDB
+const IDB_NAME = "adt_content";
+const IDB_STORE = "kv";
+const IDB_KEY = "content_v1";
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) return reject(new Error("IndexedDB nicht verfügbar"));
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("IndexedDB-Fehler"));
+  });
+}
+function idbPut(value) {
+  return idbOpen().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put(value, IDB_KEY);
+    tx.oncomplete = () => { db.close(); resolve(true); };
+    tx.onabort = tx.onerror = () => { db.close(); reject(tx.error || new Error("Schreiben fehlgeschlagen")); };
+  }));
+}
+function idbGet() {
+  return idbOpen().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, "readonly");
+    const rq = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    rq.onsuccess = () => { const v = rq.result; db.close(); resolve(v || null); };
+    rq.onerror = () => { db.close(); reject(rq.error || new Error("Lesen fehlgeschlagen")); };
+  }));
+}
+function idbDelete() {
+  return idbOpen().then((db) => new Promise((resolve) => {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).delete(IDB_KEY);
+    tx.oncomplete = tx.onabort = tx.onerror = () => { db.close(); resolve(true); };
+  })).catch(() => true);
+}
+
+/* Speichert die Inhalte. Rückgabe: "ok" | "quota" | "fehler" — damit der
+   Freischalt-Bildschirm einen Speicherfehler nicht als „falscher Code" ausgibt. */
+async function storeUnlockedContent(content, code) {
+  const payload = { TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS };
   try {
-    localStorage.setItem(CONTENT_KEY, JSON.stringify({ TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS }));
+    await idbPut(payload);
+    try {
+      localStorage.setItem(CONTENT_IDB_FLAG, "1");
+      localStorage.removeItem(CONTENT_KEY);      // Altstand aus localStorage räumen
+      if (code) localStorage.setItem(CONTENT_CODE_KEY, code);
+    } catch (e) { /* Markierung ist klein; scheitert praktisch nie */ }
+    return "ok";
+  } catch (e) {
+    console.warn("IndexedDB nicht nutzbar, versuche localStorage", e && e.message);
+  }
+  try {
+    localStorage.setItem(CONTENT_KEY, JSON.stringify(payload));
     if (code) localStorage.setItem(CONTENT_CODE_KEY, code);
+    return "ok";
+  } catch (e) {
+    const quota = e && (e.name === "QuotaExceededError" || e.code === 22 || /quota/i.test(e.message || ""));
+    return quota ? "quota" : "fehler";
+  }
+}
+
+/* Inhalte aus IndexedDB in die App holen. Muss VOR loadState() laufen: sanitizeState()
+   verwirft Fortschritt zu unbekannten Frage-IDs, und „unbekannt" wäre sonst alles, was
+   nicht im Beispielkatalog steht. */
+async function hydrateContent() {
+  try {
+    if (localStorage.getItem(CONTENT_IDB_FLAG) !== "1") return false;
+    const c = await idbGet();
+    if (!c || !c.TOPICS || !Array.isArray(c.QUESTIONS) || !c.QUESTIONS.length) return false;
+    window.TOPICS = c.TOPICS; window.QUESTIONS = c.QUESTIONS;
     return true;
-  } catch (e) { return false; }
+  } catch (e) { console.warn("Inhalte konnten nicht geladen werden", e && e.message); return false; }
 }
 // Stille Aktualisierung: neue Inhalte greifen beim nächsten Start.
 async function refreshContentInBackground() {
@@ -200,9 +279,13 @@ async function refreshContentInBackground() {
     const code = localStorage.getItem(CONTENT_CODE_KEY);
     if (!code) return;
     const content = await ADTSync.getContent(code);
-    if (!content) return;
-    const next = JSON.stringify({ TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS });
-    if (next !== localStorage.getItem(CONTENT_KEY)) localStorage.setItem(CONTENT_KEY, next);
+    if (!content || !content.TOPICS || !Array.isArray(content.QUESTIONS) || !content.QUESTIONS.length) return;
+    // Nur schreiben, wenn sich wirklich etwas geändert hat (spart Schreibzugriffe).
+    const gleich = Array.isArray(window.QUESTIONS)
+      && window.QUESTIONS.length === content.QUESTIONS.length
+      && Object.keys(window.TOPICS || {}).length === Object.keys(content.TOPICS).length;
+    if (gleich) return;
+    await storeUnlockedContent(content, code);
   } catch (e) {}
 }
 
@@ -1986,8 +2069,20 @@ function showContentGate(msg) {
     btn.disabled = true; err.style.color = "var(--text-dim)"; err.textContent = "Prüfe…";
     if (!navigator.onLine) { err.style.color = "var(--danger)"; err.textContent = "Zum Freischalten einmalig online sein."; btn.disabled = false; return; }
     const content = window.ADTSync ? await ADTSync.getContent(code) : null;
-    if (content && storeUnlockedContent(content, code)) { location.reload(); }
-    else { err.style.color = "var(--danger)"; err.textContent = "Code ungültig oder Inhalte nicht erreichbar."; btn.disabled = false; }
+    if (!content) {
+      err.style.color = "var(--danger)";
+      err.textContent = "Code ungültig oder Inhalte nicht erreichbar.";
+      btn.disabled = false; return;
+    }
+    // Code war richtig – ab hier kann nur noch das Speichern scheitern. Das muss
+    // unterscheidbar sein, sonst sucht man den Fehler beim Code (siehe iOS-Speichergrenze).
+    const res = await storeUnlockedContent(content, code);
+    if (res === "ok") { location.reload(); return; }
+    err.style.color = "var(--danger)";
+    err.textContent = res === "quota"
+      ? "Code ist richtig, aber der Speicher dieses Geräts ist voll. Bitte Speicher freigeben und erneut versuchen."
+      : "Code ist richtig, das Speichern auf diesem Gerät ist fehlgeschlagen.";
+    btn.disabled = false;
   };
   if (btn) btn.addEventListener("click", submit);
   if (inp) { inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); }); inp.focus(); }
@@ -2054,7 +2149,9 @@ async function relockContent() {
   try {
     localStorage.removeItem(CONTENT_KEY);
     localStorage.removeItem(CONTENT_CODE_KEY);
+    localStorage.removeItem(CONTENT_IDB_FLAG);
   } catch (e) {}
+  await idbDelete();
   location.reload();
 }
 
@@ -2156,6 +2253,17 @@ window.addEventListener("scroll", () => {
 
 document.getElementById("backBtn").addEventListener("click", goBack);
 
+async function boot() {
+
+// Freigeschaltete Inhalte liegen (bei großen Katalogen) in IndexedDB und müssen erst
+// asynchron geholt werden. Danach Validierung UND Zustand neu auswerten: sanitizeState()
+// verwirft Fortschritt zu Frage-IDs, die es im geladenen Katalog nicht gibt — lief es
+// gegen den Beispielkatalog, wäre der ganze Fortschritt weg.
+if (await hydrateContent()) {
+  DATA_OK = checkData();
+  S = loadState();
+}
+
 if (contentGateActive() && !contentUnlocked()) {
   // Inhalte sind geschützt und dieses Gerät ist noch nicht freigeschaltet → Zugangscode verlangen.
   showContentGate();
@@ -2183,6 +2291,15 @@ if (contentGateActive() && !contentUnlocked()) {
     document.addEventListener("visibilitychange", () => { if (!document.hidden && syncEnabled()) runSync({}); });
   }
 }
+
+}  // ---- Ende boot()
+
+// Start. Schlägt das Laden der Inhalte unerwartet fehl, darf die App nicht weiß bleiben.
+boot().catch((e) => {
+  console.error("Start fehlgeschlagen", e);
+  app.innerHTML = `<div class="empty"><div class="ic">⚠️</div><h2>Start fehlgeschlagen</h2>
+    <p class="muted">Die Lerninhalte konnten nicht geladen werden. App schließen und neu öffnen.</p></div>`;
+});
 
 // Service Worker registrieren (offline) + Update-Erkennung mit In-App-Banner
 if ("serviceWorker" in navigator) {
