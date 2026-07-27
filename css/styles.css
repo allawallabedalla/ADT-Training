@@ -279,6 +279,16 @@ h1, h2, h3 { line-height: 1.2; }
 .num-input.correct input { border-color: var(--success); background: var(--success-bg); }
 .num-input.wrong input { border-color: var(--danger); background: var(--danger-bg); }
 .num-input .num-unit { font-size: 16px; font-weight: 600; color: var(--text-faint); flex-shrink: 0; }
+.q-hint.err { color: var(--danger); font-weight: 600; }
+
+/* ---------- Textfeld (Themensuche u. a.) ---------- */
+.input {
+  font-size: 16px; padding: 12px 14px; border-radius: 12px; min-height: 44px;
+  border: 1.5px solid var(--border); background: var(--bg-elev); color: var(--text);
+  -webkit-appearance: none; appearance: none; transition: border-color .12s;
+}
+.input:focus { outline: none; border-color: var(--primary); }
+.input::placeholder { color: var(--text-faint); }
 .explain .solved { margin: 2px 0 8px; font-size: 15px; }
 
 .explain { margin-top: 16px; border-radius: 14px; padding: 16px; font-size: 15px; line-height: 1.55; }

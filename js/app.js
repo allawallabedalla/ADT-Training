@@ -4,25 +4,34 @@
 /* ------------------------------------------------------------------ *
  * 0) Datenvalidierung – schützt vor fehlerhaften Fragen-Einträgen
  * ------------------------------------------------------------------ */
-function checkData() {
-  if (typeof QUESTIONS === "undefined" || !Array.isArray(QUESTIONS)) return false;
-  const ids = new Set();
-  for (const q of QUESTIONS) {
-    if (!q.id || ids.has(q.id)) { console.error("Frage-Fehler (ID fehlt/doppelt):", q); return false; }
-    ids.add(q.id);
-    if (!TOPICS[q.topic]) { console.error("Frage-Fehler (unbekanntes Thema):", q.id, q.topic); return false; }
-    if (!["single", "multi", "numeric"].includes(q.type)) { console.error("Frage-Fehler (unbekannter Typ):", q.id, q.type); return false; }
-    if (q.type === "numeric") {
-      // Rechen-/Anwendungsaufgabe: erwartete Zahl + optionale Toleranz statt Optionen.
-      if (typeof q.answer !== "number" || !isFinite(q.answer)) { console.error("Frage-Fehler (numeric ohne gültige answer):", q.id); return false; }
-      if (q.tolerance != null && (typeof q.tolerance !== "number" || !isFinite(q.tolerance) || q.tolerance < 0)) { console.error("Frage-Fehler (numeric tolerance ungültig):", q.id); return false; }
-    } else {
-      if (!Array.isArray(q.options) || q.options.length < 2) { console.error("Frage-Fehler (Optionen):", q.id); return false; }
-      if (!Array.isArray(q.correct) || q.correct.length < 1) { console.error("Frage-Fehler (keine richtige Antwort):", q.id); return false; }
-      for (const c of q.correct) if (c < 0 || c >= q.options.length) { console.error("Frage-Fehler (correct-Index außerhalb):", q.id); return false; }
-      if (q.type === "single" && q.correct.length !== 1) { console.error("Frage-Fehler (single mit !=1 richtig):", q.id); return false; }
-    }
+/* Prüft jede Frage einzeln. Eine fehlerhafte Frage darf NICHT den ganzen Katalog
+   unbrauchbar machen — sie wird aussortiert, gezählt und protokolliert. Abgebrochen wird
+   nur, wenn am Ende keine gültige Frage übrig bleibt. */
+function questionValid(q, ids) {
+  if (!q || !q.id || ids.has(q.id)) { console.error("Frage-Fehler (ID fehlt/doppelt):", q && q.id); return false; }
+  if (!TOPICS[q.topic]) { console.error("Frage-Fehler (unbekanntes Thema):", q.id, q.topic); return false; }
+  if (!["single", "multi", "numeric"].includes(q.type)) { console.error("Frage-Fehler (unbekannter Typ):", q.id, q.type); return false; }
+  if (typeof q.question !== "string" || !q.question.trim()) { console.error("Frage-Fehler (leerer Fragetext):", q.id); return false; }
+  if (q.type === "numeric") {
+    // Rechen-/Anwendungsaufgabe: erwartete Zahl + optionale Toleranz statt Optionen.
+    if (typeof q.answer !== "number" || !isFinite(q.answer)) { console.error("Frage-Fehler (numeric ohne gültige answer):", q.id); return false; }
+    if (q.tolerance != null && (typeof q.tolerance !== "number" || !isFinite(q.tolerance) || q.tolerance < 0)) { console.error("Frage-Fehler (numeric tolerance ungültig):", q.id); return false; }
+  } else {
+    if (!Array.isArray(q.options) || q.options.length < 2) { console.error("Frage-Fehler (Optionen):", q.id); return false; }
+    if (!Array.isArray(q.correct) || q.correct.length < 1) { console.error("Frage-Fehler (keine richtige Antwort):", q.id); return false; }
+    for (const c of q.correct) if (c < 0 || c >= q.options.length) { console.error("Frage-Fehler (correct-Index außerhalb):", q.id); return false; }
+    if (q.type === "single" && q.correct.length !== 1) { console.error("Frage-Fehler (single mit !=1 richtig):", q.id); return false; }
   }
+  return true;
+}
+let DATA_SKIPPED = 0;   // Anzahl der beim letzten Check aussortierten Fragen
+function checkData() {
+  if (typeof QUESTIONS === "undefined" || !Array.isArray(QUESTIONS) || !QUESTIONS.length) return false;
+  const ids = new Set(), gut = [];
+  for (const q of QUESTIONS) { if (questionValid(q, ids)) { ids.add(q.id); gut.push(q); } }
+  DATA_SKIPPED = QUESTIONS.length - gut.length;
+  if (!gut.length) return false;                  // nichts Brauchbares übrig → harter Fehler
+  if (DATA_SKIPPED) { console.warn(`${DATA_SKIPPED} fehlerhafte Frage(n) übersprungen.`); window.QUESTIONS = gut; }
   return true;
 }
 // Wird nach dem Nachladen der freigeschalteten Inhalte erneut ausgewertet (siehe boot()).
@@ -48,6 +57,7 @@ const DEFAULT_STATE = {
   totalAnswered: 0,
   totalCorrect: 0,
   perQuestion: {},              // id -> { seen, correct, wrong, lastResult, box, due }
+  orphanQuestions: {},          // Fortschritt zu IDs, die der aktuelle Katalog nicht kennt
   badges: {},                   // badgeId -> ISO-Datum
   examsPassed: 0,
   bestExamPct: 0,
@@ -116,11 +126,23 @@ function sanitizeState(raw) {
   // Nur bekannte Frage-IDs übernehmen (Defense-in-Depth gegen fremde/aufgeblähte Keys aus
   // Import/Remote). Guard: nur filtern, wenn die Fragen wirklich geladen sind – sonst würde
   // ein Ladefehler den Fortschritt löschen („Speicherstände sind heilig").
-  const knownQ = (typeof QUESTIONS !== "undefined" && Array.isArray(QUESTIONS) && QUESTIONS.length)
+  // Nur filtern, wenn der ECHTE Katalog geladen ist. Läuft die App noch mit dem
+  // Beispielkatalog (Inhalte nicht hydratisiert), würde sonst der gesamte Fortschritt
+  // verworfen — „Speicherstände sind heilig".
+  const knownQ = (CONTENT_READY && typeof QUESTIONS !== "undefined" && Array.isArray(QUESTIONS) && QUESTIONS.length)
     ? new Set(QUESTIONS.map(q => q.id)) : null;
   const rawPq = (src.perQuestion && typeof src.perQuestion === "object") ? src.perQuestion : {};
+  // Fortschritt zu unbekannten IDs wird nicht gelöscht, sondern geparkt: Wird eine Frage-ID
+  // in einem späteren Katalog wieder gültig (Umbenennung, versehentlich entfallene Frage),
+  // kommt der Lernstand zurück.
+  const rawOrph = (src.orphanQuestions && typeof src.orphanQuestions === "object") ? src.orphanQuestions : {};
+  s.orphanQuestions = {};
+  for (const id of Object.keys(rawOrph)) {
+    if (knownQ && knownQ.has(id)) rawPq[id] = rawPq[id] || rawOrph[id];   // wieder gültig → zurückholen
+    else s.orphanQuestions[id] = rawOrph[id];
+  }
   for (const id of Object.keys(rawPq)) {
-    if (knownQ && !knownQ.has(id)) continue;
+    if (knownQ && !knownQ.has(id)) { s.orphanQuestions[id] = rawPq[id]; continue; }
     const p = rawPq[id] || {};
     s.perQuestion[id] = {
       seen: clampInt(p.seen, 0),
@@ -138,20 +160,41 @@ function sanitizeState(raw) {
   return s;
 }
 
+/* Beschädigten Stand nie kommentarlos wegwerfen: Rohwert aufheben, Schattenkopie
+   versuchen, Nutzer informieren. */
+const STATE_BAK_KEY = STORE_KEY + ".bak";
+let stateRecovered = null;      // "bak" | "verloren" — für einen Hinweis nach dem Start
 function loadState() {
+  let raw = null;
+  try { raw = localStorage.getItem(STORE_KEY); } catch (e) {}
+  if (!raw) {
+    try { const b = localStorage.getItem(STATE_BAK_KEY); if (b) { stateRecovered = "bak"; return sanitizeState(migrate(JSON.parse(b))); } } catch (e) {}
+    return freshState();
+  }
   try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return freshState();
-    return sanitizeState(migrate(JSON.parse(raw)));
+    const s = sanitizeState(migrate(JSON.parse(raw)));
+    try { localStorage.setItem(STATE_BAK_KEY, raw); } catch (e) {}   // Schattenkopie des letzten guten Stands
+    return s;
   } catch (e) {
-    console.warn("State beschädigt, setze zurück.", e);
+    console.warn("State beschädigt.", e);
+    try { localStorage.setItem(STORE_KEY + ".corrupt." + Date.now(), raw.slice(0, 200000)); } catch (_) {}
+    try {
+      const b = localStorage.getItem(STATE_BAK_KEY);
+      if (b) { stateRecovered = "bak"; return sanitizeState(migrate(JSON.parse(b))); }
+    } catch (_) {}
+    stateRecovered = "verloren";
     return freshState();
   }
 }
-let S = loadState();
+/* Wird erst in boot() nach hydrateContent() belegt — vorher steht der echte Katalog
+   noch nicht bereit und sanitizeState() dürfte nicht filtern (siehe knownQ). */
+let CONTENT_READY = false;
+let S = freshState();
+let WRITE_LOCK = false;         // bei hartem Ladefehler: nichts überschreiben
 let saveTimer = null;
 let quotaWarned = false;
 function persistLocal() {
+  if (WRITE_LOCK) return false;      // Katalog nicht geladen → Stand nicht überschreiben
   try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); return true; }
   catch (e) {
     console.warn("Speichern fehlgeschlagen (localStorage voll?)", e);
@@ -209,12 +252,18 @@ function contentFingerprint(content) {
     if (!Array.isArray(Q)) return "";
     let h = 2166136261;
     const mix = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } };
-    for (const q of Q) {
-      mix(q.id || ""); mix(q.question || ""); mix(q.explanation || "");
-      if (Array.isArray(q.options)) for (const o of q.options) mix(String(o));
+    const S1 = "";                       // Feldtrenner: verhindert, dass sich
+    for (const q of Q) {                       // Verschiebungen zwischen Feldern ausgleichen
+      mix(q.id || ""); mix(S1); mix(q.topic || ""); mix(S1); mix(q.type || ""); mix(S1);
+      mix(String(q.difficulty == null ? "" : q.difficulty)); mix(S1);
+      mix(q.question || ""); mix(S1); mix(q.explanation || ""); mix(S1);
+      mix(q.unit || ""); mix(S1); mix(String(q.tolerance == null ? "" : q.tolerance)); mix(S1);
+      if (Array.isArray(q.options)) for (const o of q.options) { mix(String(o)); mix(S1); }
       if (Array.isArray(q.correct)) mix(q.correct.join(","));
       if (q.answer != null) mix(String(q.answer));
+      mix(S1);
     }
+    mix(JSON.stringify(content.TOPICS || {}));  // Themennamen, Farben, Zuordnungen
     return `${Q.length}.${Object.keys(content.TOPICS || {}).length}.${h.toString(36)}`;
   } catch (e) { return ""; }
 }
@@ -229,7 +278,14 @@ function idbOpen() {
     req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE); };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error || new Error("IndexedDB-Fehler"));
+    // WebKit-Eigenheit: ein blockierter Request feuert sonst gar kein Ereignis mehr.
+    req.onblocked = () => reject(new Error("IndexedDB blockiert"));
   });
+}
+/* IndexedDB kann in Safari nach dem Wiederherstellen einer PWA hängen bleiben, ohne je
+   ein Ereignis zu feuern. Ohne Zeitgrenze bliebe boot() für immer stehen → weiße Seite. */
+function withTimeout(p, ms, label) {
+  return Promise.race([p, new Promise((_, rj) => setTimeout(() => rj(new Error(label || "timeout")), ms))]);
 }
 function idbPut(value) {
   return idbOpen().then((db) => new Promise((resolve, reject) => {
@@ -272,6 +328,10 @@ async function storeUnlockedContent(content, code) {
   }
   try {
     localStorage.setItem(CONTENT_KEY, JSON.stringify(payload));
+    // Markierung MUSS weg, sonst liest hydrateContent() beim nächsten Start weiter den
+    // alten IndexedDB-Datensatz und überschreibt den soeben gespeicherten neuen Katalog.
+    try { localStorage.removeItem(CONTENT_IDB_FLAG); } catch (e) {}
+    idbDelete();
     if (code) localStorage.setItem(CONTENT_CODE_KEY, code);
     return "ok";
   } catch (e) {
@@ -282,15 +342,19 @@ async function storeUnlockedContent(content, code) {
 
 /* Inhalte aus IndexedDB in die App holen. Muss VOR loadState() laufen: sanitizeState()
    verwirft Fortschritt zu unbekannten Frage-IDs, und „unbekannt" wäre sonst alles, was
-   nicht im Beispielkatalog steht. */
+   nicht im Beispielkatalog steht.
+   Rückgabe: "ok" (geladen) | "leer" (keine IDB-Inhalte erwartet) | "fehler" (erwartet,
+   aber nicht lesbar — dann darf NICHT stillschweigend der Beispielkatalog gelten). */
 async function hydrateContent() {
+  let erwartet = false;
+  try { erwartet = localStorage.getItem(CONTENT_IDB_FLAG) === "1"; } catch (e) {}
+  if (!erwartet) return "leer";
   try {
-    if (localStorage.getItem(CONTENT_IDB_FLAG) !== "1") return false;
-    const c = await idbGet();
-    if (!c || !c.TOPICS || !Array.isArray(c.QUESTIONS) || !c.QUESTIONS.length) return false;
+    const c = await withTimeout(idbGet(), 8000, "idb-timeout");
+    if (!c || !c.TOPICS || !Array.isArray(c.QUESTIONS) || !c.QUESTIONS.length) return "fehler";
     window.TOPICS = c.TOPICS; window.QUESTIONS = c.QUESTIONS;
-    return true;
-  } catch (e) { console.warn("Inhalte konnten nicht geladen werden", e && e.message); return false; }
+    return "ok";
+  } catch (e) { console.warn("Inhalte konnten nicht geladen werden", e && e.message); return "fehler"; }
 }
 // Stille Aktualisierung: neue Inhalte greifen beim nächsten Start.
 async function refreshContentInBackground() {
@@ -608,10 +672,22 @@ function shuffle(arr) {
  * Code) lassen sich später ergänzen, ohne Quiz- und Prüfungs-Flow anzufassen.        */
 function respList(resp) { return resp == null ? [] : (Array.isArray(resp) ? resp : Array.from(resp)); }
 function isInputType(q) { return q.type === "numeric"; }         // freie Eingabe statt Optionen
-function parseNum(v) { const n = Number(String(v).trim().replace(",", ".")); return isFinite(n) ? n : NaN; }
+/* Zahl aus einer Nutzereingabe lesen. Wichtig:
+   - Leeres Feld ist KEINE Antwort (Number("") wäre 0 und würde als Antwort „0" gewertet).
+   - Deutsche Schreibweise: "1.234,5" → 1234.5, "1.000" → 1000. Ein reines
+     replace(",", ".") würde daraus 1 bzw. NaN machen. */
+function parseNum(v) {
+  const s = String(v).trim();
+  if (!s) return NaN;                                                  // leer = keine Antwort
+  let t = s.replace(/[\s  ']/g, "");
+  if (t.indexOf(",") >= 0) t = t.replace(/\./g, "").replace(",", ".");  // Komma = Dezimaltrenner
+  else if (/^[+-]?\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, ""); // reine Tausenderpunkte
+  const n = Number(t);
+  return Number.isFinite(n) ? n : NaN;
+}
 function hasResponse(q, resp) {
   const a = respList(resp);
-  if (q.type === "numeric") return a.length >= 1 && isFinite(Number(a[0]));
+  if (q.type === "numeric") return a.length >= 1 && Number.isFinite(Number(a[0]));
   return a.length >= 1;
 }
 function gradeQuestion(q, resp) {
@@ -731,9 +807,16 @@ function setNumericResponse(raw) {
   const set = SESSION.picks[SESSION.idx];
   set.clear();
   const n = parseNum(raw);
-  if (isFinite(n)) set.add(n);
+  if (Number.isFinite(n)) set.add(n);
   const cb = document.getElementById("checkBtn");
   if (cb) cb.disabled = !hasResponse(currentQ(), set);
+  // Unlesbare Eingabe sichtbar machen, statt den Knopf kommentarlos zu sperren.
+  const hint = document.getElementById("numHint");
+  if (hint) {
+    const unlesbar = String(raw).trim() !== "" && !Number.isFinite(n);
+    hint.textContent = unlesbar ? "Bitte nur eine Zahl eingeben (Komma oder Punkt als Dezimaltrenner)." : "";
+    hint.style.display = unlesbar ? "" : "none";
+  }
 }
 
 function checkCurrent() {
@@ -904,6 +987,7 @@ function renderHome() {
   const pctBar = Math.round(into / span * 100);
   const acc = overallAccuracy();
   const due = dueQuestions().length;
+  const weak = weakQuestions().length;
 
   // Tagesziel-Ring (lokal)
   const goal = getDailyGoal();
@@ -962,6 +1046,7 @@ function renderHome() {
       <button class="mode-btn" data-act="mixed">${iconTile("shuffle", "#007aff")}<span class="txt"><b>Gemischtes Training</b><p>Zufällige Fragen aus allen Themen</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="topics">${iconTile("grid", "#5e5ce6")}<span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="due" ${due ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Fällige Wiederholungen</b><p>${due ? due + " Frage" + (due === 1 ? "" : "n") + " heute fällig" : "Super – heute nichts fällig"}</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}>${iconTile("target", "#ff3b30")}<span class="txt"><b>Schwachstellen üben</b><p>${weak ? weak + " Frage" + (weak === 1 ? "" : "n") + " noch nicht sicher" : "Alles sitzt – keine Schwachstellen"}</p></span><span class="chev">›</span></button>
     </div>
 
     <div class="section-title">Prüfung</div>
@@ -989,6 +1074,7 @@ function renderHome() {
     else if (a === "goal") changeDailyGoal();
     else if (a === "topics") go("topics");
     else if (a === "due") { buildSession("due"); go("quiz"); }
+    else if (a === "weak") { buildSession("weak"); go("quiz"); }
     else if (a === "exam") examStart();
     else if (a === "badges") go("badges");
     else if (a === "stats") go("stats");
@@ -1238,10 +1324,18 @@ function copyCode(code) {
 }
 
 /* ---- Themenauswahl ---- */
+let topicFilter = "";
 function renderTopics() {
   updateAppbar("topics");
   actionbar.classList.add("hidden");
-  const rows = Object.entries(TOPICS).map(([key, t]) => {
+  // Nach Anzeigenamen sortieren — nach internem Schlüssel stünde „Kolorektales Karzinom"
+  // unter D (darm_…). Bei 111 Themen ist das nicht auffindbar.
+  const alle = Object.entries(TOPICS).sort((a, b) => (a[1].name || "").localeCompare(b[1].name || "", "de"));
+  const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9äöüß ]+/gi, " ");
+  const f = norm(topicFilter).trim();
+  const treffer = f ? alle.filter(([, t]) => norm(t.name).indexOf(f) >= 0) : alle;
+
+  const rows = treffer.map(([key, t]) => {
     const st = topicStats(key);
     return `<button class="topic-row" data-topic="${key}">
       ${iconTile(TOPIC_ICON[key] || "hexagon", t.color)}
@@ -1250,11 +1344,27 @@ function renderTopics() {
       </span>
       <span class="pct">${st.mastered}/${st.total}</span>
     </button>`;
-  }).join("");
+  }).join("") || `<p class="muted center" style="padding:24px">Kein Thema gefunden.</p>`;
+
   app.innerHTML = `<h1 class="large-title">Themen</h1>
-    <div class="section-title">Wähle ein Thema</div>
+    <div class="row" style="gap:8px;margin:8px 0">
+      <input id="topicSearch" type="search" class="input" style="flex:1" placeholder="Thema suchen…"
+             aria-label="Themen durchsuchen" value="${esc(topicFilter)}" autocomplete="off">
+    </div>
+    <div class="section-title" id="topicCount" aria-live="polite">${treffer.length} von ${alle.length} Themen</div>
     <div class="ios-group">${rows}</div>
     <p class="muted center" style="margin-top:16px">„Sicher" = Frage mehrfach richtig beantwortet (Box ${SRS_MASTER_BOX}+). Die App plant Wiederholungen automatisch.</p>`;
+
+  const box = document.getElementById("topicSearch");
+  if (box) {
+    box.addEventListener("input", () => {
+      const pos = box.selectionStart;
+      topicFilter = box.value;
+      renderTopics();
+      const nb = document.getElementById("topicSearch");
+      if (nb) { nb.focus(); try { nb.setSelectionRange(pos, pos); } catch (e) {} }
+    });
+  }
   app.querySelectorAll("[data-topic]").forEach(el => el.addEventListener("click", () => {
     const key = el.dataset.topic;
     if (!QUESTIONS.some(q => q.topic === key)) { toast("Noch keine Fragen in diesem Thema"); return; }
@@ -1323,7 +1433,7 @@ function renderQuiz() {
     ? '<span class="chip">Rechenaufgabe</span>'
     : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
   const hint = numeric
-    ? '<p class="q-hint">Ergebnis als Zahl eingeben (Komma oder Punkt).</p>'
+    ? '<p class="q-hint">Ergebnis als Zahl eingeben (Komma oder Punkt).</p><p class="q-hint err" id="numHint" role="alert" style="display:none"></p>'
     : (q.type === "multi" ? '<p class="q-hint">Es können mehrere Antworten richtig sein. Nur vollständig richtig zählt (Prüfungsregel).</p>' : '');
 
   app.innerHTML = `
@@ -1530,8 +1640,10 @@ function examApplyPick(origIdx, buttons) {
 // Numerische Prüfungsantwort: speichern OHNE Re-Render (Eingabefeld behält den Fokus).
 function examSetNumeric(raw) {
   const n = parseNum(raw);
-  EXAM.picks[EXAM.idx] = isFinite(n) ? [n] : [];
+  EXAM.picks[EXAM.idx] = Number.isFinite(n) ? [n] : [];
   saveExam();
+  const ov = document.getElementById("examOverview");
+  if (ov) { const a = EXAM.picks.filter(p => p.length).length; ov.textContent = `Übersicht · ${a}/${EXAM.qids.length} beantwortet`; }
 }
 function examGoto(i) {
   const N = EXAM.qids.length;
@@ -2285,17 +2397,42 @@ async function boot() {
 // asynchron geholt werden. Danach Validierung UND Zustand neu auswerten: sanitizeState()
 // verwirft Fortschritt zu Frage-IDs, die es im geladenen Katalog nicht gibt — lief es
 // gegen den Beispielkatalog, wäre der ganze Fortschritt weg.
-if (await hydrateContent()) {
-  DATA_OK = checkData();
-  S = loadState();
+const hyd = await hydrateContent();
+
+if (hyd === "fehler") {
+  // Die Inhalte SOLLTEN da sein, sind aber nicht lesbar. Jetzt auf den Beispielkatalog
+  // zurückzufallen würde beim ersten Speichern den gesamten Lernfortschritt beschneiden.
+  // Deshalb: Schreibsperre, klarer Fehlerbildschirm, Auswege anbieten.
+  WRITE_LOCK = true;
+  app.innerHTML = `<div class="empty"><div class="ic">⚠️</div><h2>Inhalte nicht ladbar</h2>
+    <p class="muted">Die freigeschalteten Lerninhalte konnten nicht gelesen werden.
+    Dein Lernfortschritt ist gesichert und wird nicht verändert.</p>
+    <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="errReload">Erneut versuchen</button>
+      <button class="btn" id="errRelock">Inhalte neu freischalten</button>
+    </div></div>`;
+  const r1 = document.getElementById("errReload"); if (r1) r1.addEventListener("click", () => location.reload());
+  const r2 = document.getElementById("errRelock"); if (r2) r2.addEventListener("click", () => relockContent());
+  return;
 }
+
+// Erst jetzt steht der richtige Katalog fest — vorher darf sanitizeState() nicht filtern.
+CONTENT_READY = (hyd === "ok") || !contentGateActive();
+DATA_OK = checkData();
+S = loadState();
 
 if (contentGateActive() && !contentUnlocked()) {
   // Inhalte sind geschützt und dieses Gerät ist noch nicht freigeschaltet → Zugangscode verlangen.
   showContentGate();
 } else if (!DATA_OK) {
   app.innerHTML = `<div class="empty"><div class="ic">⚠️</div><h2>Daten-Fehler</h2>
-    <p class="muted">Die Fragen-Datenbank enthält einen Formatfehler. Details in der Konsole.</p></div>`;
+    <p class="muted">Die Fragen-Datenbank enthält einen Formatfehler. Details in der Konsole.</p>
+    <div class="row" style="justify-content:center;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="derrReload">Neu laden</button>
+      <button class="btn" id="derrRelock">Inhalte neu freischalten</button>
+    </div></div>`;
+  const d1 = document.getElementById("derrReload"); if (d1) d1.addEventListener("click", () => location.reload());
+  const d2 = document.getElementById("derrRelock"); if (d2) d2.addEventListener("click", () => relockContent());
 } else {
   refreshContentInBackground();   // freigeschaltete Inhalte still aktuell halten (greift nächsten Start)
   // Serie ggf. zurücksetzen, wenn mehr als ein Tag ausgelassen wurde (Gnadentag erlaubt
@@ -2308,6 +2445,11 @@ if (contentGateActive() && !contentUnlocked()) {
   // Erststart-Begrüßung nur für wirklich neue Nutzer (kein Fortschritt, nie gesehen).
   try { if (!isOnboarded() && S.totalAnswered === 0) showOnboarding(); }
   catch (e) { console.warn("Onboarding übersprungen", e); }
+
+  // Beschädigter Speicherstand: nicht kommentarlos bei Null anfangen.
+  if (stateRecovered === "bak") setTimeout(() => toast("Fortschritt aus Sicherungskopie wiederhergestellt"), 800);
+  else if (stateRecovered === "verloren") setTimeout(() => toast("⚠️ Gespeicherter Fortschritt war beschädigt"), 800);
+  if (DATA_SKIPPED) setTimeout(() => toast(`${DATA_SKIPPED} fehlerhafte Frage(n) übersprungen`), 1400);
 
   // Cloud-Sync: Statusanzeige aktualisieren + bei passenden Ereignissen abgleichen
   if (window.ADTSync) {
