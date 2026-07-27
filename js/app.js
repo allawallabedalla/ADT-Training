@@ -22,6 +22,11 @@ function questionValid(q, ids) {
     for (const c of q.correct) if (c < 0 || c >= q.options.length) { console.error("Frage-Fehler (correct-Index außerhalb):", q.id); return false; }
     if (q.type === "single" && q.correct.length !== 1) { console.error("Frage-Fehler (single mit !=1 richtig):", q.id); return false; }
   }
+  // image ist optional; wenn gesetzt, nur warnen (kein harter Fehler), da es die
+  // Frage selbst nicht unbrauchbar macht — es fehlt dann nur die Abbildung.
+  if (q.image != null && (typeof q.image !== "string" || !q.image.startsWith("data:image/"))) {
+    console.warn("Frage-Warnung (image kein gültiger data:image/-URI):", q.id);
+  }
   return true;
 }
 let DATA_SKIPPED = 0;   // Anzahl der beim letzten Check aussortierten Fragen
@@ -898,6 +903,49 @@ const streakEl = document.getElementById("streakVal");
 
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+/* Manche Fragen brauchen eine echte Abbildung (Diagrammwerte, die nur im Bild
+   ablesbar sind) — q.image ist dann ein Base64-Data-URI, reist mit dem Katalog
+   und funktioniert damit auch offline. Klick öffnet eine vergrößerte Ansicht
+   (Diagrammtext ist inline oft zu klein). */
+function qImageHtml(q) {
+  if (!q.image) return "";
+  return `<button type="button" class="q-image-btn" data-q-image aria-label="Abbildung zur Frage vergrößern">
+    <img src="${esc(q.image)}" alt="Abbildung zur Frage" loading="lazy">
+    <span class="q-image-zoom" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg></span>
+  </button>`;
+}
+function wireImageZoom(container) {
+  (container || document).querySelectorAll("[data-q-image]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const img = btn.querySelector("img");
+      if (img) openImageLightbox(img.src, img.alt);
+    });
+  });
+}
+// Vergrößerte Bildansicht als eigenes Overlay (gleiches Verhalten wie modalChoice:
+// Escape/Backdrop-Klick schließt, Fokus kehrt zurück).
+function openImageLightbox(src, alt) {
+  const prevFocus = document.activeElement;
+  const ov = document.createElement("div");
+  ov.className = "modal-overlay img-lightbox";
+  ov.innerHTML = `<div class="lightbox-card" role="dialog" aria-modal="true" aria-label="${esc(alt || "Abbildung")}">
+    <button class="lightbox-close" aria-label="Schließen">✕</button>
+    <img src="${esc(src)}" alt="${esc(alt || "Abbildung")}">
+  </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(() => ov.classList.add("show"));
+  const close = () => {
+    ov.removeEventListener("keydown", onKey);
+    ov.classList.remove("show"); setTimeout(() => ov.remove(), 200);
+    try { if (prevFocus && prevFocus.focus) prevFocus.focus(); } catch (_) {}
+  };
+  function onKey(e) { if (e.key === "Escape") { e.preventDefault(); close(); } }
+  ov.querySelector(".lightbox-close").addEventListener("click", close);
+  ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+  ov.addEventListener("keydown", onKey);
+  ov.querySelector(".lightbox-close").focus();
+}
+
 /* ---- SVG-Icon-System (SF-Symbols-Stil, monochром, via currentColor) ---- */
 const ICONS = {
   shuffle: '<path d="M4 7h3c1.2 0 2 .6 2.7 1.6l4.6 6.8c.7 1 1.5 1.6 2.7 1.6h3"/><path d="M4 17h3c1.2 0 2-.6 2.7-1.6l.6-.9"/><path d="M14.4 9.5l.6-.9C15.7 7.6 16.5 7 17.7 7H20"/><path d="M17.5 4.5L20 7l-2.5 2.5"/><path d="M17.5 14.5L20 17l-2.5 2.5"/>',
@@ -1462,12 +1510,14 @@ function renderQuiz() {
         ${typeChip}
       </div>
       <p class="q-text">${esc(q.question)}</p>
+      ${qImageHtml(q)}
       ${hint}
       ${answerArea}
       ${explain}
     </div>
     <div class="spacer-lg"></div>
   `;
+  wireImageZoom(app);
 
   if (!numeric && !checked) {
     const optsEl = app.querySelector(".options");
@@ -1719,12 +1769,14 @@ function renderExam() {
     <div class="q-card">
       <div class="q-meta"><span class="chip" style="background:${t.color}22;color:${t.color}"><span class="cdot" style="background:${t.color}"></span>${esc(t.name)}</span>${typeChip}</div>
       <p class="q-text">${esc(q.question)}</p>
+      ${qImageHtml(q)}
       ${hint}
       ${answerArea}
     </div>
     <button class="btn-ghost" id="examOverview" style="margin-top:4px">Übersicht · ${answered}/${N} beantwortet</button>
     <div class="spacer-lg"></div>
   `;
+  wireImageZoom(app);
   if (!numeric) {
     const optsEl = app.querySelector(".options");
     const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-eoi]")) : [];

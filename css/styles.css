@@ -245,6 +245,20 @@ h1, h2, h3 { line-height: 1.2; }
 .q-text { font-size: 21px; font-weight: 700; letter-spacing: -.3px; margin: 0 0 4px; line-height: 1.3; }
 .q-hint { font-size: 13px; color: var(--text-faint); margin: 8px 0 0; }
 
+/* ---------- Abbildung zur Frage (Diagramm-Werte, nur im Bild ablesbar) ---------- */
+.q-image-btn {
+  position: relative; display: block; width: 100%; margin: 12px 0 0;
+  border-radius: 14px; overflow: hidden; border: 1.5px solid var(--border); padding: 0;
+  background: var(--bg-elev-2); cursor: zoom-in;
+}
+.q-image-btn img { display: block; width: 100%; height: auto; }
+.q-image-zoom {
+  position: absolute; right: 10px; bottom: 10px; width: 32px; height: 32px;
+  border-radius: 50%; background: rgba(0,0,0,.55); color: #fff;
+  display: grid; place-items: center; pointer-events: none;
+}
+.q-image-zoom svg { width: 17px; height: 17px; }
+
 .options { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
 .opt {
   display: flex; align-items: flex-start; gap: 12px; width: 100%;
@@ -420,6 +434,23 @@ h1, h2, h3 { line-height: 1.2; }
   transition: transform .1s, opacity .2s;
 }
 .btn-danger:active { transform: scale(.98); opacity: .9; }
+
+/* ---------- Bild-Lightbox (vergrößerte Ansicht der Frage-Abbildung) ---------- */
+.img-lightbox { padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom)); cursor: zoom-out; }
+.img-lightbox .lightbox-card {
+  position: relative; width: 100%; max-width: 720px; background: transparent;
+  padding: 0; box-shadow: none; transform: scale(.96); transition: transform .22s cubic-bezier(.2,.9,.3,1.1);
+}
+.img-lightbox.show .lightbox-card { transform: scale(1); }
+.img-lightbox .lightbox-card img {
+  display: block; width: 100%; height: auto; border-radius: 14px;
+  background: #fff; box-shadow: 0 24px 64px rgba(0,0,0,.4);
+}
+.lightbox-close {
+  position: absolute; top: -14px; right: -14px; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-elev); color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,.3);
+  display: grid; place-items: center; font-size: 16px; border: 1.5px solid var(--border);
+}
 
 /* ============================================================
    Update-Banner „neue Version verfügbar"

@@ -48,6 +48,11 @@ for (const q of QUESTIONS || []) {
     if (q.type === 'single' && (q.correct || []).length !== 1) fail(q.id + ': single mit != 1 richtig');
     if (q.type === 'multi' && (q.correct || []).length < 1) fail(q.id + ': multi ohne richtige Antwort');
   }
+  // image ist optional (nur bei Fragen mit echt bildabhängigem Inhalt); wenn gesetzt,
+  // nur ein Hinweis – ein defekter Data-URI macht die Frage nicht unbrauchbar.
+  if (q.image != null && (typeof q.image !== 'string' || !q.image.startsWith('data:image/'))) {
+    warn(q.id + ': image ist kein gültiger data:image/-URI');
+  }
 }
 
 const byTopic = {};
