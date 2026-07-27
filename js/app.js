@@ -314,7 +314,7 @@ function idbDelete() {
 /* Speichert die Inhalte. Rückgabe: "ok" | "quota" | "fehler" — damit der
    Freischalt-Bildschirm einen Speicherfehler nicht als „falscher Code" ausgibt. */
 async function storeUnlockedContent(content, code) {
-  const payload = { TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS };
+  const payload = { TOPICS: content.TOPICS, QUESTIONS: content.QUESTIONS, VERSION: content.VERSION || "" };
   try {
     await idbPut(payload);
     try {
@@ -352,7 +352,7 @@ async function hydrateContent() {
   try {
     const c = await withTimeout(idbGet(), 8000, "idb-timeout");
     if (!c || !c.TOPICS || !Array.isArray(c.QUESTIONS) || !c.QUESTIONS.length) return "fehler";
-    window.TOPICS = c.TOPICS; window.QUESTIONS = c.QUESTIONS;
+    window.TOPICS = c.TOPICS; window.QUESTIONS = c.QUESTIONS; window.CONTENT_VERSION = c.VERSION || "";
     return "ok";
   } catch (e) { console.warn("Inhalte konnten nicht geladen werden", e && e.message); return "fehler"; }
 }
@@ -939,6 +939,17 @@ const ICONS = {
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
 const APP_VERSION = "0.29.0";
+// Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
+// pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
+// Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
+// verschiedenen Tagen gebaut. Damit lässt sich ein Update eindeutig erkennen,
+// ohne den ganzen Katalog zu vergleichen.
+function contentVersionLabel() {
+  const v = (typeof CONTENT_VERSION !== "undefined" && CONTENT_VERSION) ? String(CONTENT_VERSION) : "";
+  if (!v) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})-([0-9a-f]{6,})$/.exec(v);
+  return m ? `Stand ${m[3]}.${m[2]}.${m[1]} · ${m[4].slice(0, 6)}` : `Stand ${v}`;
+}
 function icon(name) {
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
 }
@@ -1062,7 +1073,7 @@ function renderHome() {
       <button class="mode-btn" data-act="info">${iconTile("info", "#8e8e93")}<span class="txt"><b>So funktioniert's</b><p>Kurzanleitung & Erklärung</p></span><span class="chev">›</span></button>
     </div>
 
-    <p class="muted center" style="margin-top:24px;margin-bottom:4px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen</p>
+    <p class="muted center" style="margin-top:24px;margin-bottom:4px">${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen${contentVersionLabel() ? " · " + esc(contentVersionLabel()) : ""}</p>
     <button class="link-danger" data-act="reset">Fortschritt zurücksetzen</button>
     <p class="muted center" style="margin-top:16px;font-size:12px;opacity:.8">Inoffiziell · kein Produkt der ADT e. V. · <span class="link" data-act="info">Datenschutz</span></p>
   `;
@@ -1155,7 +1166,7 @@ function renderSettings() {
   const content = contentGateActive() ? `
     <div class="section-title">Lerninhalte</div>
     <div class="ios-group">
-      <button class="mode-btn" id="btnRelock">${iconTile("import", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" id="btnRelock">${iconTile("import", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen${contentVersionLabel() ? " · " + esc(contentVersionLabel()) : ""}. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
     </div>` : "";
 
   const theme = getTheme(), size = getSessionSize(), haptics = getHaptics(), font = getFontSize();
@@ -1998,7 +2009,7 @@ function renderInfo() {
       Die Fragen dienen dem Üben und sind <b>nicht</b> die offiziellen ADT-Prüfungsfragen.
     </p></div>
 
-    <p class="muted center" style="margin:22px 2px 0">Version ${APP_VERSION}</p>
+    <p class="muted center" style="margin:22px 2px 0">App-Version ${APP_VERSION}${contentVersionLabel() ? " · Fragen-" + esc(contentVersionLabel()) : ""}</p>
   `;
 }
 

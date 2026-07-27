@@ -716,4 +716,5 @@ if (typeof window !== "undefined") {
   } catch (e) {}
   window.TOPICS = __active.TOPICS;
   window.QUESTIONS = __active.QUESTIONS;
+  window.CONTENT_VERSION = __active.VERSION || "";
 }
