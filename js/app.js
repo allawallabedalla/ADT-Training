@@ -1331,7 +1331,10 @@ function renderTopics() {
   // Nach Anzeigenamen sortieren — nach internem Schlüssel stünde „Kolorektales Karzinom"
   // unter D (darm_…). Bei 111 Themen ist das nicht auffindbar.
   const alle = Object.entries(TOPICS).sort((a, b) => (a[1].name || "").localeCompare(b[1].name || "", "de"));
-  const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9äöüß ]+/gi, " ");
+  // Umlaute falten, damit „qualitat" auch „Qualität" findet.
+  const norm = (s) => String(s).toLowerCase()
+    .replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss")
+    .replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ");
   const f = norm(topicFilter).trim();
   const treffer = f ? alle.filter(([, t]) => norm(t.name).indexOf(f) >= 0) : alle;
 
@@ -1644,6 +1647,14 @@ function examSetNumeric(raw) {
   saveExam();
   const ov = document.getElementById("examOverview");
   if (ov) { const a = EXAM.picks.filter(p => p.length).length; ov.textContent = `Übersicht · ${a}/${EXAM.qids.length} beantwortet`; }
+  // In der Prüfung gibt es kein Zwischen-Feedback und keinen Prüf-Knopf: Ohne diesen
+  // Hinweis fiele eine unlesbare Eingabe kommentarlos aus der Wertung.
+  const hint = document.getElementById("examNumHint");
+  if (hint) {
+    const unlesbar = String(raw).trim() !== "" && !Number.isFinite(n);
+    hint.textContent = unlesbar ? "Diese Eingabe wird nicht als Antwort gewertet – bitte nur eine Zahl eingeben." : "";
+    hint.style.display = unlesbar ? "" : "none";
+  }
 }
 function examGoto(i) {
   const N = EXAM.qids.length;
@@ -1685,7 +1696,7 @@ function renderExam() {
   }
   const typeChip = numeric ? '<span class="chip">Rechenaufgabe</span>'
     : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
-  const hint = numeric ? '<p class="q-hint">Ergebnis als Zahl eingeben. Auswertung erst nach Abgabe.</p>'
+  const hint = numeric ? '<p class="q-hint">Ergebnis als Zahl eingeben. Auswertung erst nach Abgabe.</p><p class="q-hint err" id="examNumHint" role="alert" style="display:none"></p>'
     : (q.type === "multi" ? '<p class="q-hint">Mehrere Antworten möglich. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>' : '');
 
   app.innerHTML = `
