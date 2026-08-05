@@ -69,7 +69,8 @@ Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
 - ✅ **Fragen als „fragwürdig" melden** (v0.30.0, 2026-08-05): Melde-Knopf unter jeder Frage
-  (Übung + Prüfungs-Auswertung), Sammelansicht in den Einstellungen mit Notiz je Frage,
+  (Übung + Prüfungs-Auswertung) mit kleinem Dialog für einen optionalen Kommentar – ohne die
+  Frage zu verlassen; Sammelansicht in den Einstellungen mit Notiz je Frage,
   Kopieren/Export als Markdown, Sync über Geräte (jüngerer Zeitstempel gewinnt, Grabstein beim
   Aufheben). Nebenbei behoben: Sanitisierung bei `localStorage`-Katalog und der seit
   `contentGated: true` blockierte Testlauf (`tests/seed-content.mjs`).

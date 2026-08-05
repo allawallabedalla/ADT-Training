@@ -580,12 +580,35 @@ async function page(opts = {}) {
   await p.waitForSelector('.q-card [data-report]');
   chk(await p.getAttribute('[data-report]', 'aria-pressed') === 'false', 'Melden: Knopf startet ungedrückt');
 
-  // Melden: in place markiert (kein Re-Render) und im Speicherstand hinterlegt
+  // Abbrechen im Dialog ändert nichts
   await p.click('[data-report]');
+  await p.waitForSelector('.modal-input');
+  chk(await p.$eval('.modal-input', el => el === document.activeElement), 'Melden: Dialog setzt den Fokus ins Notizfeld');
+  await p.keyboard.press('Escape');
+  await p.waitForTimeout(300);
+  chk(!(await p.$('.report-btn.on')) && !(await p.evaluate((id) => !!S.reports[id], qid)), 'Melden: Abbruch im Dialog meldet nichts');
+
+  // Melden MIT Kommentar: Dialog über der Frage, danach in place markiert (kein Re-Render)
+  await p.click('[data-report]');
+  await p.waitForSelector('.modal-input');
+  chk(await p.$('.q-card .opt') !== null, 'Melden: Frage bleibt unter dem Dialog stehen (kein Ansichtswechsel)');
+  await p.fill('.modal-input', 'Antwort B ist auch richtig');
+  await p.click('.modal-actions .modal-btn');   // erster Knopf = „Melden"
   await p.waitForSelector('.report-btn.on');
   chk(await p.getAttribute('[data-report]', 'aria-pressed') === 'true', 'Melden: Knopf gedrückt (aria-pressed)');
   const rep = await p.evaluate((id) => S.reports[id], qid);
-  chk(rep && rep.on === true && !!rep.at, 'Melden: Meldung mit Zeitstempel im Zustand');
+  chk(rep && rep.on === true && !!rep.at && rep.note === 'Antwort B ist auch richtig',
+    'Melden: Meldung mit Zeitstempel UND Kommentar aus dem Dialog gespeichert');
+
+  // Erneuter Tipp öffnet den Dialog mit vorhandener Notiz (Bearbeiten statt blindem Umschalten)
+  await p.click('[data-report]');
+  await p.waitForSelector('.modal-input');
+  chk(await p.inputValue('.modal-input') === 'Antwort B ist auch richtig', 'Melden: Dialog zeigt die bisherige Notiz');
+  await p.fill('.modal-input', 'Formulierung unklar');
+  await p.keyboard.press('Enter');              // Enter = erste Aktion („Notiz speichern")
+  await p.waitForTimeout(300);
+  chk(await p.evaluate((id) => S.reports[id].note, qid) === 'Formulierung unklar', 'Melden: Notiz im Dialog änderbar (Enter bestätigt)');
+  chk(await p.$('.report-btn.on') !== null, 'Melden: Frage bleibt nach dem Bearbeiten gemeldet');
   // Antwortmöglichkeiten bleiben bedienbar (Melden darf den Lernfluss nicht stören)
   await p.click('.opt');
   await p.click('#checkBtn'); await p.waitForSelector('.explain');
@@ -599,14 +622,15 @@ async function page(opts = {}) {
   await p.waitForSelector('.report-item');
   chk((await p.$$('.report-item')).length === 1, 'Melden: Sammelansicht listet die Frage');
 
-  // Notiz ergänzen (wird gespeichert und im Export-Text ausgegeben)
-  await p.fill('.report-note', 'Antwort B ist auch richtig');
+  // Notiz auch in der Liste änderbar (wird gespeichert und im Export-Text ausgegeben)
+  chk(await p.inputValue('.report-note') === 'Formulierung unklar', 'Melden: Liste zeigt die Notiz aus dem Dialog');
+  await p.fill('.report-note', 'Quelle fehlt');
   await p.evaluate(() => document.querySelector('.report-note').blur());
   await p.waitForTimeout(250);
   const note = await p.evaluate((id) => S.reports[id].note, qid);
-  chk(note === 'Antwort B ist auch richtig', 'Melden: Notiz wird gespeichert');
+  chk(note === 'Quelle fehlt', 'Melden: Notiz in der Liste änderbar');
   const txt = await p.evaluate(() => reportsAsText());
-  chk(txt.includes(qid) && txt.includes('Antwort B ist auch richtig'), 'Melden: Export-Text enthält Frage-ID und Notiz');
+  chk(txt.includes(qid) && txt.includes('Quelle fehlt'), 'Melden: Export-Text enthält Frage-ID und Notiz');
 
   // Zurücksetzen des Fortschritts darf Meldungen NICHT löschen (Feedback ≠ Lernfortschritt)
   await p.evaluate(() => { S = freshStateKeepingReports(); persistLocal(); });
@@ -621,6 +645,21 @@ async function page(opts = {}) {
   const after = await p.evaluate((id) => S.reports[id], qid);
   chk(after && after.on === false && !!after.at, 'Melden: Aufheben speichert Grabstein (kommt beim Sync nicht zurück)');
   chk(/Noch nichts gemeldet/.test(await p.textContent('#app')), 'Melden: leere Sammelansicht erklärt den Knopf');
+
+  // „Meldung aufheben" geht auch direkt aus dem Dialog – ohne Umweg über die Sammelansicht
+  await p.evaluate((id) => {
+    setReported(id, true, 'kurz');
+    const q = QUESTIONS.find(x => x.id === id);
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+  }, qid);
+  await p.waitForSelector('.report-btn.on');
+  await p.click('[data-report]');
+  await p.waitForSelector('.modal-actions .modal-btn.btn-danger');
+  await p.click('.modal-actions .modal-btn.btn-danger');
+  await p.waitForTimeout(300);
+  chk(!(await p.$('.report-btn.on')) && await p.evaluate((id) => S.reports[id].on === false, qid),
+    'Melden: „Meldung aufheben" im Dialog wirkt sofort auf den Knopf');
 }
 
 // 27) Melden: Grenze greift und der Speicherstand wird nicht aufgebläht

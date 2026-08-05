@@ -789,14 +789,38 @@ function setReported(id, on, note) {
   saveState();
   return true;
 }
-// Umschalten; gibt den neuen Zustand zurück (unverändert, wenn die Grenze erreicht ist).
-function toggleReport(id) {
-  const next = !isReported(id);
-  if (!setReported(id, next)) {
+/* Melde-Dialog: kleiner Alert mit Notizfeld – die Frage bleibt darunter stehen, es wird
+   nichts verlassen und nichts neu gerendert. Die Notiz ist optional: „Melden" genügt.
+   Gibt den neuen Melde-Zustand zurück (unverändert bei Abbruch). */
+async function openReportDialog(id) {
+  const on = isReported(id);
+  const cur = reportsMap()[id] || {};
+  const buttons = on
+    ? [{ label: "Notiz speichern", value: "save" },
+       { label: "Meldung aufheben", value: "remove", variant: "danger" },
+       { label: "Abbrechen", value: null, variant: "ghost" }]
+    : [{ label: "Melden", value: "save" },
+       { label: "Abbrechen", value: null, variant: "ghost" }];
+  const res = await modalPrompt(
+    on ? "Meldung bearbeiten" : "Frage melden",
+    on ? "Diese Frage ist als fragwürdig markiert. Notiz ändern oder die Meldung aufheben."
+       : "Was wirkt fragwürdig? Die Notiz ist optional – „Melden“ genügt.",
+    {
+      value: cur.note || "",
+      placeholder: "z. B. Antwort B ist auch richtig",
+      label: "Notiz zur Meldung (optional)",
+      maxLength: REPORT_NOTE_MAX,
+      buttons: buttons,
+    });
+  if (!res || !res.action) return on;                       // Abbruch/Escape: alles bleibt
+  if (res.action === "remove") { setReported(id, false); toast("Meldung aufgehoben"); return false; }
+  if (!setReported(id, true, res.value)) {
     toast("⚠️ Zu viele Meldungen – bitte erst welche abarbeiten");
-    return isReported(id);
+    return on;
   }
-  return next;
+  hapticFeedback(true);
+  toast(on ? "📝 Notiz gespeichert" : "🚩 Frage gemeldet – danke!");
+  return true;
 }
 function setReportNote(id, note) {
   const r = reportsMap()[id];
@@ -814,20 +838,18 @@ const REPORT_LABEL_OFF = "Frage melden";
 function reportButtonHtml(id) {
   const on = isReported(id);
   return `<button class="report-btn${on ? " on" : ""}" data-report="${esc(id)}" aria-pressed="${on ? "true" : "false"}"
-    title="Frage als fragwürdig markieren – sammelt Feedback unter Einstellungen">${icon("flag")}<span class="rb-txt">${on ? REPORT_LABEL_ON : REPORT_LABEL_OFF}</span></button>`;
+    title="Frage als fragwürdig melden – mit optionaler Notiz">${icon("flag")}<span class="rb-txt">${on ? REPORT_LABEL_ON : REPORT_LABEL_OFF}</span></button>`;
 }
-// Knöpfe in `root` verdrahten. Aktualisiert in place – kein Re-Render, damit der
-// Lernfluss (Auswahl, Scrollposition, Fokus) unangetastet bleibt.
+// Knöpfe in `root` verdrahten. Der Dialog legt sich über die aktuelle Ansicht, danach
+// wird der Knopf in place aktualisiert – kein Re-Render, damit der Lernfluss
+// (Auswahl, Scrollposition, Fokus) unangetastet bleibt.
 function wireReportButtons(root) {
-  root.querySelectorAll("[data-report]").forEach(el => el.addEventListener("click", () => {
-    const id = el.dataset.report;
-    const on = toggleReport(id);
+  root.querySelectorAll("[data-report]").forEach(el => el.addEventListener("click", async () => {
+    const on = await openReportDialog(el.dataset.report);
     el.classList.toggle("on", on);
     el.setAttribute("aria-pressed", on ? "true" : "false");
     const lbl = el.querySelector(".rb-txt");
     if (lbl) lbl.textContent = on ? REPORT_LABEL_ON : REPORT_LABEL_OFF;
-    hapticFeedback(true);
-    toast(on ? "🚩 Frage gemeldet – danke!" : "Meldung aufgehoben");
   }));
 }
 
@@ -2289,10 +2311,11 @@ function renderInfo() {
     </div>
 
     <div class="section-title">Fragwürdige Fragen melden</div>
-    <div class="q-card"><p style="margin:0;line-height:1.55">Unter jeder Frage sitzt <b>„${REPORT_LABEL_OFF}"</b> 🚩 – ein Tipp genügt, wenn eine Frage
-    falsch, unklar oder fehlerhaft wirkt (am Laptop: Taste <b>M</b>). Das unterbricht das Üben nicht; gesammelt wird alles unter
-    <b>Einstellungen → Gemeldete Fragen</b>. Dort lässt sich je Frage eine Notiz ergänzen und die Liste kopieren oder
-    als Datei exportieren, um die Fragen später gebündelt zu überarbeiten.</p></div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Unter jeder Frage sitzt <b>„${REPORT_LABEL_OFF}"</b> 🚩 – für alles, was falsch,
+    unklar oder fehlerhaft wirkt (am Laptop: Taste <b>M</b>). Es öffnet sich ein kleiner Dialog über der Frage: mit oder ohne
+    <b>Notiz</b> melden, danach geht es genau dort weiter, wo du warst. Gesammelt wird alles unter
+    <b>Einstellungen → Gemeldete Fragen</b>; dort lässt sich die Liste kopieren oder als Datei exportieren, um die
+    Fragen später gebündelt zu überarbeiten.</p></div>
 
     <div class="section-title">Auf allen Geräten</div>
     <div class="q-card"><p style="margin:0;line-height:1.55">Unter <b>Einstellungen</b> einen <b>Sync-Code</b> erstellen und auf weiteren Geräten eingeben – dein Fortschritt ist überall gleich. Jeder eigene Code steht für einen eigenen, unabhängigen Fortschritt.</p></div>
@@ -2502,6 +2525,56 @@ function modalChoice(title, message, buttons) {
     ov.addEventListener("keydown", onKey);
     ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
     if (btns[0]) btns[0].focus();   // Fokus in den Dialog setzen
+  });
+}
+
+/* Wie modalChoice, aber mit einem Textfeld – für kurze Eingaben, ohne die Ansicht
+   zu verlassen (z. B. Notiz beim Melden einer Frage).
+   Liefert { action, value } bzw. { action: null } bei Abbruch/Escape. */
+function modalPrompt(title, message, opts = {}) {
+  return new Promise((resolve) => {
+    const prevFocus = document.activeElement;
+    const tid = "modalTitle" + (++modalTitleSeq);
+    const iid = "modalInput" + modalTitleSeq;
+    const buttons = opts.buttons || [{ label: "OK", value: "ok" }, { label: "Abbrechen", value: null, variant: "ghost" }];
+    const ov = document.createElement("div");
+    ov.className = "modal-overlay";
+    const btnHtml = buttons.map((b, i) => {
+      const cls = b.variant === "danger" ? "btn-danger" : b.variant === "ghost" ? "btn-ghost" : "btn-primary";
+      return `<button class="${cls} modal-btn" data-i="${i}">${esc(b.label)}</button>`;
+    }).join("");
+    ov.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="${tid}">
+      <h3 class="modal-title" id="${tid}">${esc(title)}</h3>
+      ${message ? `<p class="modal-msg">${esc(message)}</p>` : ""}
+      <input class="input modal-input" type="text" id="${iid}" value="${esc(opts.value || "")}"
+        placeholder="${esc(opts.placeholder || "")}" maxlength="${Math.max(1, parseInt(opts.maxLength, 10) || 300)}"
+        aria-label="${esc(opts.label || title)}" autocomplete="off">
+      <div class="modal-actions">${btnHtml}</div></div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add("show"));
+    const field = ov.querySelector("#" + iid);
+    const btns = Array.from(ov.querySelectorAll(".modal-btn"));
+    const focusables = [field].concat(btns);
+    const close = (action) => {
+      ov.removeEventListener("keydown", onKey);
+      ov.classList.remove("show"); setTimeout(() => ov.remove(), 200);
+      try { if (prevFocus && prevFocus.focus) prevFocus.focus(); } catch (_) {}
+      resolve({ action: action, value: (field.value || "").trim() });
+    };
+    function onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); close(null); return; }
+      // Enter im Textfeld = erste (bestätigende) Aktion – wie im iOS-Alert.
+      if (e.key === "Enter" && e.target === field) { e.preventDefault(); close(buttons[0].value); return; }
+      if (e.key === "Tab") {   // Fokusfalle: Tab bleibt im Dialog
+        const first = focusables[0], last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    btns.forEach((el) => el.addEventListener("click", () => close(buttons[+el.dataset.i].value)));
+    ov.addEventListener("keydown", onKey);
+    ov.addEventListener("click", (e) => { if (e.target === ov) close(null); });
+    field.focus();
   });
 }
 

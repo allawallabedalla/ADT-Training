@@ -18,12 +18,13 @@ genau dort sitzt jetzt der Knopf dafür. Das Feedback sammelt sich zentral, dami
 Fragen später gebündelt überarbeitet werden können.
 
 ### Hinzugefügt
-- **„Frage melden" unter jeder Frage** (Übung und Prüfungs-Auswertung): ein Tipp markiert
-  sie als fragwürdig, ein weiterer hebt das wieder auf. Kein Dialog, kein Ansichtswechsel –
-  der Knopf schaltet in place um, der Lernfluss bleibt unangetastet. Am Laptop: Taste **M**.
+- **„Frage melden" unter jeder Frage** (Übung und Prüfungs-Auswertung): Ein Tipp öffnet einen
+  kleinen Dialog **über** der Frage – melden mit oder ohne **Kommentar**, danach geht es genau
+  dort weiter, wo man war (kein Ansichtswechsel, kein Re-Render). Bei einer bereits gemeldeten
+  Frage zeigt derselbe Dialog die vorhandene Notiz zum Ändern und bietet „Meldung aufheben".
+  Am Laptop: Taste **M**, Enter bestätigt, Escape bricht ab.
 - **Sammelansicht „Gemeldete Fragen"** (Einstellungen → Fragen-Feedback): alle Meldungen mit
-  Fragetext, Thema, ID und Datum. Je Meldung lässt sich eine **Notiz** ergänzen
-  („Antwort B ist auch richtig").
+  Fragetext, Thema, ID und Datum. Die **Notiz** ist auch dort direkt editierbar.
 - **Weitergeben**: alles als Text **kopieren** oder als **Markdown-Datei exportieren** –
   inklusive Antwortmöglichkeiten, richtiger Lösung und Erklärung, direkt verwertbar für
   die Fragenpflege.
@@ -35,6 +36,8 @@ Fragen später gebündelt überarbeitet werden können.
 - **Merge-Regel**: pro Frage gewinnt der *jüngere Zeitstempel* (statt Vereinigung wie sonst).
   Nur so wirkt das Aufheben einer Meldung auf allen Geräten; eine vorhandene Notiz geht dabei
   nie verloren. Aufheben speichert deshalb bewusst einen „Grabstein" (`on:false` mit Zeit).
+- Neuer Dialog-Baustein `modalPrompt()` (wie `modalChoice`, zusätzlich mit Textfeld):
+  Fokus im Feld, Fokusfalle, Enter = bestätigen, Escape/Tap daneben = abbrechen.
 - Grenzen gegen Aufblähen: 300 aktive Meldungen, 300 Zeichen je Notiz, 600 Einträge in der Ablage.
 - „Fortschritt zurücksetzen" löscht Meldungen **nicht** – Feedback ist kein Lernfortschritt.
 - Meldungen zu Frage-IDs, die der aktuelle Katalog nicht (mehr) kennt, bleiben erhalten:
@@ -52,8 +55,9 @@ Fragen später gebündelt überarbeitet werden können.
 
 ### Tests
 - 6 neue Unit-Tests (Merge der Meldungen: jüngerer Zeitstempel, Grabstein, Notiz-Erhalt, kommutativ).
-- 15 neue E2E-Checks (Knopf im Quiz, Sammelansicht, Notiz, Export-Text, Grenze, Sanitisierung,
-  Überleben des Zurücksetzens, Migration v2→v3). `tests/run.sh` grün.
+- 21 neue E2E-Checks (Melde-Dialog inkl. Abbruch/Fokus/Enter, Kommentar speichern und ändern,
+  Aufheben aus dem Dialog, Sammelansicht, Export-Text, Grenze, Sanitisierung, Überleben des
+  Zurücksetzens, Migration v2→v3). `tests/run.sh` grün.
 
 ---
 
