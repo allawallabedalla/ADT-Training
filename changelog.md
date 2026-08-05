@@ -11,6 +11,52 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.30.0] — 2026-08-05  ·  Fragen als „fragwürdig" melden (Feedback sammeln)
+
+Beim Üben fällt am ehesten auf, wenn eine Frage falsch, unklar oder fehlerhaft ist –
+genau dort sitzt jetzt der Knopf dafür. Das Feedback sammelt sich zentral, damit die
+Fragen später gebündelt überarbeitet werden können.
+
+### Hinzugefügt
+- **„Frage melden" unter jeder Frage** (Übung und Prüfungs-Auswertung): ein Tipp markiert
+  sie als fragwürdig, ein weiterer hebt das wieder auf. Kein Dialog, kein Ansichtswechsel –
+  der Knopf schaltet in place um, der Lernfluss bleibt unangetastet. Am Laptop: Taste **M**.
+- **Sammelansicht „Gemeldete Fragen"** (Einstellungen → Fragen-Feedback): alle Meldungen mit
+  Fragetext, Thema, ID und Datum. Je Meldung lässt sich eine **Notiz** ergänzen
+  („Antwort B ist auch richtig").
+- **Weitergeben**: alles als Text **kopieren** oder als **Markdown-Datei exportieren** –
+  inklusive Antwortmöglichkeiten, richtiger Lösung und Erklärung, direkt verwertbar für
+  die Fragenpflege.
+- Meldungen werden **mitsynchronisiert** (Cloud-Sync) und stecken im lokalen Backup.
+
+### Technik
+- Datenmodell **Schema v3**: `S.reports[id] = { on, at, note }`; additive Migration v2→v3,
+  bestehende Lernstände bleiben unberührt.
+- **Merge-Regel**: pro Frage gewinnt der *jüngere Zeitstempel* (statt Vereinigung wie sonst).
+  Nur so wirkt das Aufheben einer Meldung auf allen Geräten; eine vorhandene Notiz geht dabei
+  nie verloren. Aufheben speichert deshalb bewusst einen „Grabstein" (`on:false` mit Zeit).
+- Grenzen gegen Aufblähen: 300 aktive Meldungen, 300 Zeichen je Notiz, 600 Einträge in der Ablage.
+- „Fortschritt zurücksetzen" löscht Meldungen **nicht** – Feedback ist kein Lernfortschritt.
+- Meldungen zu Frage-IDs, die der aktuelle Katalog nicht (mehr) kennt, bleiben erhalten:
+  Gerade zu geänderten Fragen ist die Rückmeldung interessant.
+
+### Behoben
+- **Sanitisierung war bei geschützten Inhalten wirkungslos**: Liegt der freigeschaltete Katalog
+  in `localStorage` (kleine Kataloge), meldete `hydrateContent()` „leer" und `CONTENT_READY` blieb
+  `false` – fremde/veraltete Frage-IDs wurden dann nie aussortiert bzw. geparkt. Jetzt zählt auch
+  ein per `localStorage` freigeschalteter Katalog als geladen.
+- **Testlauf war seit `contentGated: true` blockiert**: Alle Browser-Tests hingen am
+  Freischalt-Bildschirm. Neue Testhilfe `tests/seed-content.mjs` hinterlegt den Beispielkatalog
+  als freigeschaltet; der Zugangsschutz selbst wird weiterhin geprüft (inkl. neuem Test
+  „ohne Freischaltung bleibt die App gesperrt").
+
+### Tests
+- 6 neue Unit-Tests (Merge der Meldungen: jüngerer Zeitstempel, Grabstein, Notiz-Erhalt, kommutativ).
+- 15 neue E2E-Checks (Knopf im Quiz, Sammelansicht, Notiz, Export-Text, Grenze, Sanitisierung,
+  Überleben des Zurücksetzens, Migration v2→v3). `tests/run.sh` grün.
+
+---
+
 ## [0.29.0] — 2026-07-13  ·  Zugangsschutz für Inhalte (Fundament)
 
 Vorbereitung, um vertrauliche Lerninhalte NICHT öffentlich auszuliefern.

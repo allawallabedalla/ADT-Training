@@ -3,6 +3,7 @@
 // BASE-URL via Umgebungsvariable BASE (Default: http://localhost:8399/index.html).
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import { seedContent } from './seed-content.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('/opt/node22/lib/node_modules/playwright/index.js');
 
@@ -18,6 +19,9 @@ async function page(opts = {}) {
   const p = await ctx.newPage();
   // Onboarding-Overlay standardmäßig überspringen, damit es die übrigen Tests nicht blockiert.
   if (opts.onboarded !== false) await p.addInitScript(() => localStorage.setItem('adt_onboarded', '1'));
+  // Zugangsschutz standardmäßig neutralisieren (Beispielkatalog als „freigeschaltet"),
+  // sonst hinge jeder Test am Freischalt-Bildschirm. Mit { seeded: false } bleibt er scharf.
+  if (opts.seeded !== false) await seedContent(p);
   // Reine Netzwerk-Status-Meldungen des Browsers (z. B. bewusst getestete 400/404-Antworten)
   // sind KEINE App-Fehler – nur echte JS-Fehler zählen.
   p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/i.test(m.text())) errors.push('CONSOLE: ' + m.text()); });
@@ -144,7 +148,7 @@ async function page(opts = {}) {
   chk(!!saved, 'Prüfung: laufende Session bleibt nach Reload erhalten');
 }
 
-// 9) Schema-Migration v1 -> v2: SRS-Felder werden aus altem Fortschritt warmgestartet
+// 9) Schema-Migration v1 -> v3: SRS-Felder werden aus altem Fortschritt warmgestartet
 {
   const p = await page();
   await p.addInitScript(() => localStorage.setItem('adt_trainer_state_v1', JSON.stringify({
@@ -160,10 +164,12 @@ async function page(opts = {}) {
   // nächsten Speichern neu geschrieben – die Migration selbst wirkt sofort auf S).
   const st = await p.evaluate(() => S);
   const today = await p.evaluate(() => todayStr());
-  const okMig = st.schemaVersion === 2
+  const okMig = st.schemaVersion === 3
     && st.perQuestion['tnm-001'].box === 3 && st.perQuestion['tnm-001'].due > today
     && st.perQuestion['gr-001'].box === 0 && st.perQuestion['gr-001'].due === today;
-  chk(okMig, 'Migration v1->v2: Box/Fälligkeit aus altem Fortschritt warmgestartet');
+  chk(okMig, 'Migration v1->v3: Box/Fälligkeit aus altem Fortschritt warmgestartet');
+  chk(st.reports && typeof st.reports === 'object' && !Object.keys(st.reports).length,
+    'Migration v2->v3: Meldungen-Feld ergänzt, alter Fortschritt unangetastet');
   // Home zeigt die heute fällige Wiederholung an (mind. 1)
   const dueEnabled = await p.evaluate(() => { const b = document.querySelector('[data-act="due"]'); return b && !b.disabled; });
   chk(dueEnabled, 'Migration: fällige Frage erscheint als aktive Wiederholung auf der Startseite');
@@ -549,7 +555,92 @@ async function page(opts = {}) {
   await q.fill('#gateCode', 'falsch');
   await q.click('#gateBtn');
   await q.waitForFunction(() => /ungültig|erreichbar/i.test((document.getElementById('gateErr') || {}).textContent || ''));
-  chk(!(await q.evaluate(() => localStorage.getItem('adt_content_v1'))), 'Gate: falscher Code speichert keine Inhalte');
+  // Der Testkatalog ist vorab hinterlegt (siehe seed-content.mjs) – entscheidend ist, dass ein
+  // falscher Code NICHTS Neues speichert (die Demo-Inhalte tauchen also nicht auf).
+  chk(!/\bx1\b/.test(await q.evaluate(() => localStorage.getItem('adt_content_v1') || '')), 'Gate: falscher Code speichert keine Inhalte');
+
+  // Ohne freigeschaltete Inhalte blockiert der Schutz die App wirklich (kein Durchkommen).
+  const g = await page({ seeded: false });
+  await g.goto(BASE, { waitUntil: 'networkidle' });
+  await g.waitForSelector('#gateCode');
+  chk(!(await g.$('.level-card')), 'Gate: ohne freigeschaltete Inhalte bleibt die App gesperrt');
+}
+
+// 26) Frage melden („fragwürdig"): Knopf im Quiz, Sammelansicht, Notiz, Aufheben
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  // Deterministisch eine Options-Frage als Ein-Fragen-Session
+  const qid = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+    return q.id;
+  });
+  await p.waitForSelector('.q-card [data-report]');
+  chk(await p.getAttribute('[data-report]', 'aria-pressed') === 'false', 'Melden: Knopf startet ungedrückt');
+
+  // Melden: in place markiert (kein Re-Render) und im Speicherstand hinterlegt
+  await p.click('[data-report]');
+  await p.waitForSelector('.report-btn.on');
+  chk(await p.getAttribute('[data-report]', 'aria-pressed') === 'true', 'Melden: Knopf gedrückt (aria-pressed)');
+  const rep = await p.evaluate((id) => S.reports[id], qid);
+  chk(rep && rep.on === true && !!rep.at, 'Melden: Meldung mit Zeitstempel im Zustand');
+  // Antwortmöglichkeiten bleiben bedienbar (Melden darf den Lernfluss nicht stören)
+  await p.click('.opt');
+  await p.click('#checkBtn'); await p.waitForSelector('.explain');
+  chk(await p.$('.report-btn.on') !== null, 'Melden: Markierung überlebt das Prüfen der Antwort');
+
+  // Sammelansicht über die Einstellungen
+  await p.evaluate(() => go('settings'));
+  await p.waitForSelector('#btnReports');
+  chk(/Gemeldete Fragen \(1\)/.test(await p.textContent('#btnReports')), 'Melden: Einstellungen zeigen die Anzahl');
+  await p.click('#btnReports');
+  await p.waitForSelector('.report-item');
+  chk((await p.$$('.report-item')).length === 1, 'Melden: Sammelansicht listet die Frage');
+
+  // Notiz ergänzen (wird gespeichert und im Export-Text ausgegeben)
+  await p.fill('.report-note', 'Antwort B ist auch richtig');
+  await p.evaluate(() => document.querySelector('.report-note').blur());
+  await p.waitForTimeout(250);
+  const note = await p.evaluate((id) => S.reports[id].note, qid);
+  chk(note === 'Antwort B ist auch richtig', 'Melden: Notiz wird gespeichert');
+  const txt = await p.evaluate(() => reportsAsText());
+  chk(txt.includes(qid) && txt.includes('Antwort B ist auch richtig'), 'Melden: Export-Text enthält Frage-ID und Notiz');
+
+  // Zurücksetzen des Fortschritts darf Meldungen NICHT löschen (Feedback ≠ Lernfortschritt)
+  await p.evaluate(() => { S = freshStateKeepingReports(); persistLocal(); });
+  const survived = await p.evaluate((id) => !!(S.reports[id] && S.reports[id].on), qid);
+  chk(survived, 'Melden: Meldungen überleben „Fortschritt zurücksetzen"');
+
+  // Aufheben hinterlässt einen Grabstein (on:false MIT Zeitstempel) für den Cloud-Merge
+  await p.evaluate(() => go('reports'));
+  await p.waitForSelector('[data-unreport]');
+  await p.click('[data-unreport]');
+  await p.waitForTimeout(250);
+  const after = await p.evaluate((id) => S.reports[id], qid);
+  chk(after && after.on === false && !!after.at, 'Melden: Aufheben speichert Grabstein (kommt beim Sync nicht zurück)');
+  chk(/Noch nichts gemeldet/.test(await p.textContent('#app')), 'Melden: leere Sammelansicht erklärt den Knopf');
+}
+
+// 27) Melden: Grenze greift und der Speicherstand wird nicht aufgebläht
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const res = await p.evaluate(() => {
+    for (let i = 0; i < REPORT_MAX + 25; i++) setReported('fake-' + i, true);
+    return { count: reportCount(), max: REPORT_MAX };
+  });
+  chk(res.count === res.max, 'Melden: Obergrenze von ' + res.max + ' aktiven Meldungen wird eingehalten');
+  // Sanitisierung kappt die Ablage (inkl. Grabsteinen) auf REPORT_KEEP
+  const kept = await p.evaluate(() => {
+    const many = {};
+    for (let i = 0; i < 2000; i++) many['x-' + i] = { on: i < 10, at: '2026-07-14T10:00:0' + (i % 10) + 'Z', note: 'x'.repeat(500) };
+    const s = sanitizeState({ reports: many });
+    return { n: Object.keys(s.reports).length, keep: REPORT_KEEP, active: Object.keys(s.reports).filter(k => s.reports[k].on).length, noteLen: s.reports[Object.keys(s.reports)[0]].note.length };
+  });
+  chk(kept.n === kept.keep && kept.active === 10 && kept.noteLen === 300,
+    'Melden: Sanitisierung kappt Menge und Notizlänge, aktive Meldungen bleiben');
 }
 
 chk(errors.length === 0, 'keine Laufzeitfehler');

@@ -104,6 +104,29 @@
     out.totalAnswered = ta;
     out.totalCorrect = tc;
 
+    // reports (als „fragwürdig" gemeldete Fragen): KEIN Max/Union, sondern der jüngere
+    // Zeitstempel gewinnt je Frage. Nur so wirkt das Aufheben einer Meldung auf allen
+    // Geräten – bei einer reinen Vereinigung käme sie vom anderen Gerät zurück.
+    // Eine vorhandene Notiz geht dabei nie verloren (der neuere Eintrag darf sie nur ersetzen,
+    // nicht leeren).
+    const reports = {};
+    for (const src of [a.reports || {}, b.reports || {}]) {
+      for (const id in src) {
+        const inc = src[id] || {};
+        const cur = reports[id];
+        if (!cur) { reports[id] = { on: inc.on === true, at: String(inc.at || ""), note: String(inc.note || "") }; continue; }
+        const incAt = String(inc.at || ""), curAt = String(cur.at || "");
+        const newer = incAt > curAt ? inc : cur;
+        const older = incAt > curAt ? cur : inc;
+        reports[id] = {
+          on: newer.on === true,
+          at: incAt > curAt ? incAt : curAt,
+          note: String(newer.note || older.note || ""),
+        };
+      }
+    }
+    out.reports = reports;
+
     // badges: Vereinigung, frühestes Datum behalten
     const badges = {};
     for (const src of [a.badges || {}, b.badges || {}]) {

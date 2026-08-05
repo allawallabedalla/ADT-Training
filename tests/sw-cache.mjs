@@ -3,6 +3,7 @@
 // wichtigsten – dass die App OFFLINE weiter aus dem Cache lädt.
 // BASE via Umgebungsvariable (Default: http://localhost:8399/index.html).
 import { createRequire } from 'node:module';
+import { seedContent } from './seed-content.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('/opt/node22/lib/node_modules/playwright/index.js');
 
@@ -13,6 +14,8 @@ const chk = (c, m) => { if (!c) { pass = false; console.log('FAIL: ' + m); } els
 const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); // SW erlaubt (Default)
 const p = await ctx.newPage();
+await p.addInitScript(() => localStorage.setItem('adt_onboarded', '1'));
+await seedContent(p);   // Zugangsschutz für den Test neutralisieren (siehe seed-content.mjs)
 const errors = [];
 p.on('pageerror', (e) => errors.push('PAGEERROR ' + e.message));
 p.on('console', (m) => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text()); });

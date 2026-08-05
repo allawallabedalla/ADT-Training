@@ -570,6 +570,25 @@ h1, h2, h3 { line-height: 1.2; }
 .review-item .ri-lab { color: var(--text-dim); }
 .review-item .ri-exp { margin: 8px 0 0; font-size: 14px; color: var(--text-dim); line-height: 1.5; }
 
+/* ---------- Frage melden („fragwürdig") ----------
+   Bewusst zurückhaltend: Der Knopf soll beim Üben nicht mit „Antwort prüfen" konkurrieren,
+   aber im markierten Zustand eindeutig sichtbar sein. */
+.q-foot { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--separator); display: flex; }
+.review-item .q-foot { margin-top: 12px; padding-top: 10px; }
+.report-btn {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 40px;
+  padding: 8px 13px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  background: var(--bg-elev-2); color: var(--text-dim);
+  transition: background .12s ease, color .12s ease;
+}
+.report-btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+.report-btn:active { opacity: .6; }
+.report-btn.on { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.report-item { border-left-color: var(--warn); }
+.report-item .report-note { width: 100%; margin-top: 10px; font-size: 15px; }
+.report-item .report-remove { margin-top: 10px; padding: 11px; min-height: 44px; color: var(--danger); box-shadow: none; background: var(--bg-elev-2); }
+:root[data-fontsize="large"] .report-btn { font-size: 15px; }
+
 /* ---------- Breite Fenster / Desktop: App als zentrierte Spalte darstellen ----------
    Nur ab 700px aktiv – die iPhone-Darstellung (schmales Vollbild) bleibt unangetastet.
    Sticky-Appbar und fixe Aktionsleiste werden auf die Spaltenbreite ausgerichtet. */

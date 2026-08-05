@@ -14,6 +14,7 @@ funktioniert danach **komplett offline** – ganz ohne App Store.
 - **Prüfungsgetreues Format** – Multiple-Choice mit *mehreren* richtigen Antworten; nur *vollständig* richtig zählt (kein Teilpunkt, § 5 der Prüfungsordnung)
 - **Erklärung zu jeder Frage** – der Lerninhalt wird vermittelt, nicht nur abgefragt
 - **Gamification** – XP, Level, Tages-Serie (Streak) und Erfolge/Badges
+- **Fragen als „fragwürdig" melden** – ein Tipp unter der Frage (am Laptop: Taste **M**); gesammelt unter *Einstellungen → Gemeldete Fragen*, dort mit Notiz versehbar und als Text/Datei exportierbar
 - **Fortschritt bleibt gespeichert** (lokal auf dem Gerät, kein Konto, kein Server)
 
 ## Auf dem iPhone installieren

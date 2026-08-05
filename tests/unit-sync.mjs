@@ -65,6 +65,30 @@ const mOld = S.mergeStates({ schemaVersion: 2, perQuestion: { qz: { seen: 1, cor
   { perQuestion: { qz: { seen: 1, correct: 1 } }, badges: {} });
 ok(mOld.perQuestion.qz.box === 4 && mOld.perQuestion.qz.due === '2026-08-01', 'merge SRS: lokale Box überlebt altes Remote ohne SRS');
 
+// ---- Gemeldete Fragen („fragwürdig"): jüngerer Zeitstempel gewinnt, Notiz bleibt ----
+const RA = { perQuestion: {}, badges: {}, reports: {
+  r1: { on: true, at: '2026-07-14T10:00:00Z', note: 'Antwort B stimmt nicht' },   // hier gemeldet
+  r2: { on: false, at: '2026-07-14T12:00:00Z', note: '' },                        // hier aufgehoben (jünger)
+  r3: { on: true, at: '2026-07-14T09:00:00Z', note: '' },
+} };
+const RB = { perQuestion: {}, badges: {}, reports: {
+  r2: { on: true, at: '2026-07-14T08:00:00Z', note: 'unklar' },                   // älter → verliert
+  r3: { on: true, at: '2026-07-14T11:00:00Z', note: '' },                         // jünger, ohne Notiz
+  r4: { on: true, at: '2026-07-14T13:00:00Z', note: 'Tippfehler' },               // nur remote
+} };
+const mr = S.mergeStates(RA, RB);
+ok(mr.reports.r1.on === true && mr.reports.r1.note === 'Antwort B stimmt nicht', 'merge reports: einseitige Meldung inkl. Notiz übernommen');
+ok(mr.reports.r2.on === false, 'merge reports: jüngeres Aufheben gewinnt (kommt NICHT zurück)');
+ok(mr.reports.r2.note === 'unklar', 'merge reports: Notiz überlebt das Aufheben');
+ok(mr.reports.r3.on === true && mr.reports.r3.at === '2026-07-14T11:00:00Z', 'merge reports: jüngerer Zeitstempel gewinnt');
+ok(mr.reports.r4.on === true && mr.reports.r4.note === 'Tippfehler', 'merge reports: neue Meldung vom anderen Gerät übernommen');
+// Kommutativ: gleiches Ergebnis, egal welche Seite „lokal" ist (Schlüsselreihenfolge egal).
+const canon = (o) => JSON.stringify(Object.keys(o).sort().map(k => [k, o[k].on, o[k].at, o[k].note]));
+const mrRev = S.mergeStates(RB, RA);
+ok(canon(mrRev.reports) === canon(mr.reports), 'merge reports: Reihenfolge egal (kommutativ)');
+const mrNone = S.mergeStates({ perQuestion: {}, badges: {} }, { perQuestion: {}, badges: {} });
+ok(mrNone.reports && Object.keys(mrNone.reports).length === 0, 'merge reports: fehlendes Feld ergibt leeres Objekt');
+
 // ---- Code-Erzeugung / Normalisierung ----
 ok(/^ADT-[A-Z2-9]{5}-[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(S.generateCode()), 'generateCode Format');
 ok(S.normalizeCode('adt xxxxx yyyyy zzzzz') === 'ADT-XXXXX-YYYYY-ZZZZZ', 'normalizeCode');

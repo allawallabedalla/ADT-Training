@@ -10,10 +10,18 @@ Der Runner führt der Reihe nach aus:
 1. **Syntaxprüfung** aller JS-Dateien (`node --check`).
 2. **Fragen-Validierung** (`validate-questions.mjs`) – IDs, Themen, correct-Indizes, Erklärungen, difficulty.
 3. **Unit-Tests** (`unit-sync.mjs`) – reine Logik in `js/sync.js`: Merge, Code-Erzeugung/-Normalisierung, Header-Logik (sb_-Key vs. JWT), Retry, Offline/Pending.
-4. **E2E-Smoke** (`e2e-smoke.mjs`, Playwright, Service Worker *blockiert*) – App lädt fehlerfrei, Sanitisierung, **Reset leert wirklich** (Regression), Backup-Import mergt, Prüfungsablauf, SRS/Migration, Rechenaufgaben, Barrierefreiheit (Übung + Prüfung), Tagesziel/Onboarding – ohne Laufzeitfehler.
+4. **E2E-Smoke** (`e2e-smoke.mjs`, Playwright, Service Worker *blockiert*) – App lädt fehlerfrei, Sanitisierung, **Reset leert wirklich** (Regression), Backup-Import mergt, Prüfungsablauf, SRS/Migration, Rechenaufgaben, Barrierefreiheit (Übung + Prüfung), Tagesziel/Onboarding, Zugangsschutz, Fragen melden – ohne Laufzeitfehler.
 5. **Service Worker / Offline** (`sw-cache.mjs`, Playwright mit *aktivem* SW) – Registrierung, App-Shell im Precache, Kontrolle und **Laden ohne Netz** aus dem Cache.
 
 Exit-Code 0 = alles grün.
+
+## Zugangsschutz in den Tests
+
+Seit `contentGated: true` verlangt die App beim Start einen Zugangscode. Damit die
+Browser-Tests nicht am Freischalt-Bildschirm hängen, hinterlegt `seed-content.mjs` den
+öffentlichen **Beispielkatalog** aus `data/questions.js` als „freigeschaltete" Inhalte
+(`page()` macht das automatisch). Wer den Schutz selbst testen will, nimmt
+`page({ seeded: false })` – dann ist er scharf.
 
 ## Voraussetzungen
 - Node 22, `python3` (statischer Server).

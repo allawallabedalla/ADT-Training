@@ -68,6 +68,11 @@ Priorisierung: **P1** = als Nächstes sinnvoll · **P2** = danach · **P3** = ni
 Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
+- ✅ **Fragen als „fragwürdig" melden** (v0.30.0, 2026-08-05): Melde-Knopf unter jeder Frage
+  (Übung + Prüfungs-Auswertung), Sammelansicht in den Einstellungen mit Notiz je Frage,
+  Kopieren/Export als Markdown, Sync über Geräte (jüngerer Zeitstempel gewinnt, Grabstein beim
+  Aufheben). Nebenbei behoben: Sanitisierung bei `localStorage`-Katalog und der seit
+  `contentGated: true` blockierte Testlauf (`tests/seed-content.mjs`).
 - ✅ **Geräteübergreifende Synchronisation** (Cloud-Sync via Supabase, Sync-Code, verlustarmer Merge) — v0.2.0, 2026-07-13
 - ✅ **Robustheits-Paket** (v0.3.0, 2026-07-13): Migrations-Gerüst · defensive Zustands-Sanitisierung ·
   Fehler-Boundary · Sofort-Speichern beim Schließen · Sync-Härtung (Retry/Backoff, „ausstehend") ·

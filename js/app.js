@@ -46,7 +46,7 @@ let DATA_OK = checkData();
  * 1) Persistenter Zustand (localStorage, robust gegen Defekte)
  * ------------------------------------------------------------------ */
 const STORE_KEY = "adt_trainer_state_v1";   // NIE umbenennen – siehe workbook.md („Speicherstände sind heilig")
-const SCHEMA_VERSION = 2;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
+const SCHEMA_VERSION = 3;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
 
 // Spaced Repetition (Leitner): Box 0–5. Pause bis zur nächsten Wiederholung in Tagen.
 // Richtig -> eine Box höher (längere Pause); falsch -> zurück auf Box 0 (heute erneut).
@@ -63,6 +63,7 @@ const DEFAULT_STATE = {
   totalCorrect: 0,
   perQuestion: {},              // id -> { seen, correct, wrong, lastResult, box, due }
   orphanQuestions: {},          // Fortschritt zu IDs, die der aktuelle Katalog nicht kennt
+  reports: {},                  // id -> { on, at, note } — als „fragwürdig" gemeldete Fragen
   badges: {},                   // badgeId -> ISO-Datum
   examsPassed: 0,
   bestExamPct: 0,
@@ -91,6 +92,10 @@ const MIGRATIONS = {
     }
     return s;
   },
+  // v2 -> v3: Feld `reports` (als „fragwürdig" gemeldete Fragen) ergänzt. Rein additiv –
+  // es gibt nichts umzurechnen; sanitizeState() legt das leere Objekt an. Die Version wird
+  // trotzdem erhöht, damit das Datenmodell und die Migrationskette lückenlos dokumentiert sind.
+  3: (s) => s,
 };
 function migrate(state) {
   let v = Number(state && state.schemaVersion) || 1;
@@ -108,6 +113,12 @@ function migrate(state) {
 
 // Frischer Standardzustand als echte Tiefkopie (KEINE geteilten Objekt-Referenzen!).
 function freshState() { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
+
+/* Grenzen für gemeldete Fragen (Details siehe Abschnitt „Fragen melden").
+   Hier oben deklariert, weil sanitizeState() sie braucht. */
+const REPORT_MAX = 300;        // gleichzeitig aktive Meldungen
+const REPORT_NOTE_MAX = 300;   // Zeichen je Notiz
+const REPORT_KEEP = 600;       // gespeicherte Einträge inkl. „aufgehoben"-Vermerke
 
 // Defensiv säubern: ein teilweise defekter Stand darf die App nie brechen.
 // Baut IMMER frische perQuestion/badges-Objekte, damit nie eine Referenz auf
@@ -162,6 +173,25 @@ function sanitizeState(raw) {
   }
   const rawBg = (src.badges && typeof src.badges === "object") ? src.badges : {};
   for (const k of Object.keys(rawBg)) s.badges[k] = rawBg[k];
+  // Meldungen („fragwürdige" Fragen): bewusst NICHT nach bekannten IDs gefiltert – sie sind
+  // Feedback ZUM Katalog und sollen einen Katalog-Wechsel überleben (sonst verschwände genau
+  // die Rückmeldung zu einer Frage, die deshalb geändert wurde). Nur Form und Menge begrenzen.
+  const rawRep = (src.reports && typeof src.reports === "object") ? src.reports : {};
+  s.reports = {};
+  const repEntries = Object.keys(rawRep)
+    .filter(id => typeof id === "string" && id.length <= 80)
+    .map(id => {
+      const r = rawRep[id] || {};
+      return [id, {
+        on: r.on === true,
+        at: typeof r.at === "string" ? r.at.slice(0, 40) : "",
+        note: typeof r.note === "string" ? r.note.slice(0, REPORT_NOTE_MAX) : "",
+      }];
+    })
+    // Aktive Meldungen zuerst, danach die neuesten – so überlebt beim Kappen das Wichtigste.
+    .sort((a, b) => (Number(b[1].on) - Number(a[1].on)) || String(b[1].at).localeCompare(String(a[1].at)))
+    .slice(0, REPORT_KEEP);
+  for (const [id, r] of repEntries) s.reports[id] = r;
   return s;
 }
 
@@ -719,6 +749,123 @@ function correctAnswerText(q) {
 }
 function fmtNum(n) { return String(Number(n)).replace(".", ","); }   // deutsche Dezimaldarstellung
 
+/* ------------------------------------------------------------------ *
+ * 4b) Fragen melden („fragwürdig") – Feedback zum Fragenkatalog
+ * ------------------------------------------------------------------
+ * Zweck: Beim Üben mit EINEM Tipp festhalten, dass eine Frage komisch wirkt
+ * (falsche Antwort, unklar formuliert, Tippfehler) – ohne den Lernfluss zu
+ * unterbrechen. Gesammelt wird alles unter Einstellungen → „Gemeldete Fragen";
+ * dort lässt sich je Meldung eine Notiz ergänzen und das Ganze kopieren oder als
+ * Datei exportieren, um die Fragen später gebündelt zu überarbeiten.
+ *
+ * Datenmodell: S.reports[id] = { on, at, note }. Das AUFHEBEN einer Markierung
+ * wird als { on:false } MIT neuem Zeitstempel gespeichert (Grabstein): Der
+ * Cloud-Merge entscheidet je Frage über den jüngeren Zeitstempel – sonst würde
+ * eine vom anderen Gerät stammende Meldung nach dem Entfernen zurückkehren.
+ */
+function reportsMap() {
+  if (!S.reports || typeof S.reports !== "object") S.reports = {};
+  return S.reports;
+}
+function isReported(id) { const r = reportsMap()[id]; return !!(r && r.on); }
+function reportCount() { const m = reportsMap(); return Object.keys(m).filter(id => m[id] && m[id].on).length; }
+// Gemeldete Fragen, neueste zuerst. `q` ist null, wenn der aktuelle Katalog die ID nicht kennt.
+function reportedList() {
+  const m = reportsMap();
+  return Object.keys(m)
+    .filter(id => m[id] && m[id].on)
+    .map(id => ({ id, at: m[id].at || "", note: m[id].note || "", q: QUESTIONS.find(q => q.id === id) || null }))
+    .sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function setReported(id, on, note) {
+  const m = reportsMap();
+  const prev = m[id] || {};
+  if (on && !prev.on && reportCount() >= REPORT_MAX) return false;   // Obergrenze erreicht
+  m[id] = {
+    on: !!on,
+    at: new Date().toISOString(),
+    note: String(note != null ? note : (prev.note || "")).slice(0, REPORT_NOTE_MAX),
+  };
+  saveState();
+  return true;
+}
+// Umschalten; gibt den neuen Zustand zurück (unverändert, wenn die Grenze erreicht ist).
+function toggleReport(id) {
+  const next = !isReported(id);
+  if (!setReported(id, next)) {
+    toast("⚠️ Zu viele Meldungen – bitte erst welche abarbeiten");
+    return isReported(id);
+  }
+  return next;
+}
+function setReportNote(id, note) {
+  const r = reportsMap()[id];
+  if (!r || !r.on) return;
+  const clean = String(note || "").slice(0, REPORT_NOTE_MAX);
+  if (clean === (r.note || "")) return;
+  r.note = clean;
+  r.at = new Date().toISOString();   // Notiz zählt als Änderung → gewinnt beim Merge
+  saveState();
+}
+
+const REPORT_LABEL_ON = "Als fragwürdig gemeldet";
+const REPORT_LABEL_OFF = "Frage melden";
+// Melde-Knopf für eine Frage (Übung und Prüfungs-Auswertung nutzen denselben).
+function reportButtonHtml(id) {
+  const on = isReported(id);
+  return `<button class="report-btn${on ? " on" : ""}" data-report="${esc(id)}" aria-pressed="${on ? "true" : "false"}"
+    title="Frage als fragwürdig markieren – sammelt Feedback unter Einstellungen">${icon("flag")}<span class="rb-txt">${on ? REPORT_LABEL_ON : REPORT_LABEL_OFF}</span></button>`;
+}
+// Knöpfe in `root` verdrahten. Aktualisiert in place – kein Re-Render, damit der
+// Lernfluss (Auswahl, Scrollposition, Fokus) unangetastet bleibt.
+function wireReportButtons(root) {
+  root.querySelectorAll("[data-report]").forEach(el => el.addEventListener("click", () => {
+    const id = el.dataset.report;
+    const on = toggleReport(id);
+    el.classList.toggle("on", on);
+    el.setAttribute("aria-pressed", on ? "true" : "false");
+    const lbl = el.querySelector(".rb-txt");
+    if (lbl) lbl.textContent = on ? REPORT_LABEL_ON : REPORT_LABEL_OFF;
+    hapticFeedback(true);
+    toast(on ? "🚩 Frage gemeldet – danke!" : "Meldung aufgehoben");
+  }));
+}
+
+// Alle Meldungen als lesbarer Text (zum Kopieren oder als Datei) – so lässt sich das
+// Feedback direkt in die Fragenpflege übernehmen.
+function reportsAsText() {
+  const list = reportedList();
+  const lines = [
+    "# ADT Trainer – gemeldete Fragen",
+    "",
+    "Stand: " + new Date().toLocaleString("de-DE"),
+    "App-Version: " + APP_VERSION + (contentVersionLabel() ? " · Fragen-" + contentVersionLabel() : ""),
+    "Anzahl: " + list.length,
+    "",
+  ];
+  for (const r of list) {
+    const q = r.q;
+    const t = q && TOPICS[q.topic];
+    lines.push("---", "");
+    lines.push("## " + r.id + (t ? " · " + t.name : ""));
+    lines.push("Gemeldet am: " + (r.at ? new Date(r.at).toLocaleString("de-DE") : "unbekannt"));
+    if (r.note) lines.push("Notiz: " + r.note);
+    if (q) {
+      lines.push("", "Frage: " + q.question);
+      if (Array.isArray(q.options) && q.options.length) {
+        lines.push("Antwortmöglichkeiten:");
+        q.options.forEach((o, i) => lines.push("  " + (q.correct.includes(i) ? "[x] " : "[ ] ") + o));
+      }
+      lines.push("Richtig: " + correctAnswerText(q));
+      if (q.explanation) lines.push("Erklärung: " + q.explanation);
+    } else {
+      lines.push("", "(Diese Frage ist im aktuellen Katalog nicht mehr enthalten.)");
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
 // Session: { questions:[...], idx, mode, answers:{}, order:[...perQuestion shuffled option order] }
 let SESSION = null;
 
@@ -986,7 +1133,7 @@ const ICONS = {
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.29.0";
+const APP_VERSION = "0.30.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1016,7 +1163,7 @@ const BADGE_ICON = {
   secure25: { i: "shield", c: "#34c759" }, streak14: { i: "bolt", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
 };
 
-const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", stats: "Statistik", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis" };
+const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", stats: "Statistik", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis", reports: "Gemeldete Fragen" };
 function setStreak() {
   if (streakEl) streakEl.innerHTML = '<span class="streak-flame">' + icon("flame") + "</span>" + S.streak;
 }
@@ -1206,6 +1353,15 @@ function renderSettings() {
     <div class="section-title">Lern-Erinnerungen</div>
     <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
 
+  // Gesammeltes Feedback zu fragwürdigen Fragen (beim Üben per Knopf markiert).
+  const nRep = reportCount();
+  const feedback = `
+    <div class="section-title">Fragen-Feedback</div>
+    <div class="ios-group">
+      <button class="mode-btn" id="btnReports">${iconTile("flag", "#ff9500")}<span class="txt"><b>Gemeldete Fragen${nRep ? " (" + nRep + ")" : ""}</b>
+        <p>${nRep ? "Ansehen, kommentieren, exportieren" : "Beim Üben unter der Frage auf „" + REPORT_LABEL_OFF + "“ tippen"}</p></span><span class="chev">›</span></button>
+    </div>`;
+
   // Lerninhalte: erlaubt das erneute Freischalten mit einem neuen Zugangscode.
   // Ohne diesen Weg bleibt ein Gerät für immer auf dem Katalog hängen, mit dem es
   // einmal freigeschaltet wurde – der Freischalt-Bildschirm erscheint nur, wenn noch
@@ -1240,7 +1396,7 @@ function renderSettings() {
     </div>`;
 
   app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
-    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${content}${remind}`;
+    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${feedback}${content}${remind}`;
 
   const $ = (id) => document.getElementById(id);
   const stTheme = $("setTheme"); if (stTheme) stTheme.addEventListener("change", () => { setTheme(stTheme.value); toast("🎨 Design übernommen"); });
@@ -1265,6 +1421,7 @@ function renderSettings() {
   });
   const bDel = $("btnDeleteCloud"); if (bDel) bDel.addEventListener("click", deleteCloudData);
   const bRe = $("btnRelock"); if (bRe) bRe.addEventListener("click", relockContent);
+  const bRep = $("btnReports"); if (bRep) bRep.addEventListener("click", () => go("reports"));
   const bEx = $("btnExport"); if (bEx) bEx.addEventListener("click", exportProgress);
   const bIm = $("btnImport"); const imf = $("importFile");
   if (bIm && imf) {
@@ -1514,10 +1671,12 @@ function renderQuiz() {
       ${hint}
       ${answerArea}
       ${explain}
+      <div class="q-foot">${reportButtonHtml(q.id)}</div>
     </div>
     <div class="spacer-lg"></div>
   `;
   wireImageZoom(app);
+  wireReportButtons(app);
 
   if (!numeric && !checked) {
     const optsEl = app.querySelector(".options");
@@ -1890,6 +2049,7 @@ function renderExamResult() {
       <p class="ri-line"><span class="ri-lab">Deine Antwort:</span> ${your}</p>
       ${r.ok ? "" : `<p class="ri-line"><span class="ri-lab">Richtig:</span> ${corr}</p>`}
       <p class="ri-exp">${esc(q.explanation)}</p>
+      <div class="q-foot">${reportButtonHtml(q.id)}</div>
     </div>`;
   }).join("");
 
@@ -1913,6 +2073,7 @@ function renderExamResult() {
     ${review}
     <div class="spacer-lg"></div>
   `;
+  wireReportButtons(app);
 
   actionbar.classList.remove("hidden");
   const wrongIds = res.results.filter(r => !r.ok).map(r => r.q.id);
@@ -1999,6 +2160,95 @@ function renderStats() {
     <p class="muted center" style="margin-top:14px;font-size:12px">Die Prüfungs-Historie wird lokal auf diesem Gerät geführt.</p>`;
 }
 
+/* ---- Gemeldete Fragen (gesammeltes Feedback) ---- */
+function renderReports() {
+  updateAppbar("reports");
+  actionbar.classList.add("hidden");
+  const list = reportedList();
+
+  if (!list.length) {
+    app.innerHTML = `<h1 class="large-title">Gemeldete Fragen</h1>
+      <div class="empty"><div class="ic">🚩</div>
+        <h2>Noch nichts gemeldet</h2>
+        <p class="muted">Tippe beim Üben unter einer Frage auf <b>„${REPORT_LABEL_OFF}"</b>, wenn sie
+        fragwürdig wirkt – falsche Antwort, unklar formuliert oder ein Tippfehler.
+        Hier sammelt sich alles, damit die Fragen später gebündelt überarbeitet werden können.</p></div>`;
+    return;
+  }
+
+  const items = list.map(r => {
+    const q = r.q;
+    const t = q ? TOPICS[q.topic] : null;
+    const when = r.at ? new Date(r.at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "–";
+    return `<div class="review-item report-item">
+      <div class="ri-head">🚩 ${esc(when)} · ${t ? esc(t.name) : "Thema unbekannt"} · ${esc(r.id)}</div>
+      <p class="ri-q">${q ? esc(q.question) : "Diese Frage ist im aktuellen Katalog nicht mehr enthalten."}</p>
+      ${q ? `<p class="ri-line"><span class="ri-lab">Richtig:</span> ${esc(correctAnswerText(q))}</p>` : ""}
+      <input class="input report-note" type="text" data-note="${esc(r.id)}" value="${esc(r.note)}"
+        placeholder="Was stimmt nicht? (optional)" aria-label="Notiz zur gemeldeten Frage" autocomplete="off">
+      <button class="btn-ghost report-remove" data-unreport="${esc(r.id)}">Meldung aufheben</button>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = `<h1 class="large-title">Gemeldete Fragen<span class="sub">${list.length} markiert</span></h1>
+    <div class="q-card">
+      <p class="muted" style="margin:0 0 12px">Notiz je Frage ergänzen und alles gebündelt weitergeben –
+      zum Kopieren (z. B. in eine Nachricht) oder als Datei.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-ghost" id="repCopy" style="width:auto;padding:11px 16px">${icon("copy")} Alle kopieren</button>
+        <button class="btn-ghost" id="repExport" style="width:auto;padding:11px 16px">${icon("export")} Als Datei</button>
+      </div>
+    </div>
+    ${items}
+    <button class="btn-ghost" id="repClear" style="color:var(--danger);margin-top:6px">Alle Meldungen aufheben</button>
+    <div class="spacer-lg"></div>`;
+
+  app.querySelectorAll("[data-note]").forEach(el => {
+    el.addEventListener("change", () => setReportNote(el.dataset.note, el.value));
+    el.addEventListener("blur", () => setReportNote(el.dataset.note, el.value));
+  });
+  app.querySelectorAll("[data-unreport]").forEach(el => el.addEventListener("click", () => {
+    setReported(el.dataset.unreport, false);
+    toast("Meldung aufgehoben");
+    renderReports();
+  }));
+  document.getElementById("repCopy").addEventListener("click", copyReports);
+  document.getElementById("repExport").addEventListener("click", exportReports);
+  document.getElementById("repClear").addEventListener("click", async () => {
+    const ok = await modalChoice("Alle Meldungen aufheben",
+      `Wirklich alle ${list.length} Markierungen entfernen? Die Notizen gehen dabei verloren.`,
+      [{ label: "Ja, aufheben", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]);
+    if (!ok) return;
+    for (const r of list) setReported(r.id, false);
+    toast("Alle Meldungen aufgehoben");
+    renderReports();
+  });
+}
+
+function copyReports() {
+  const txt = reportsAsText();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(() => toast("📋 Meldungen kopiert")).catch(() => toast("⚠️ Kopieren nicht möglich – bitte exportieren"));
+  } else {
+    toast("⚠️ Kopieren nicht möglich – bitte exportieren");
+  }
+}
+
+function exportReports() {
+  try {
+    const blob = new Blob([reportsAsText()], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "adt-trainer-gemeldete-fragen-" + todayStr() + ".md";
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+    toast("💾 Datei gespeichert");
+  } catch (e) {
+    console.warn("Export der Meldungen fehlgeschlagen", e);
+    toast("⚠️ Export nicht möglich");
+  }
+}
+
 /* ---- Info / Anleitung ---- */
 function infoRow(name, tint, title, text) {
   return `<div class="mode-btn info-row">${iconTile(name, tint)}<span class="txt"><b>${title}</b><p>${text}</p></span></div>`;
@@ -2037,6 +2287,12 @@ function renderInfo() {
       ${infoRow("flame", "#ff6b22", "Tages-Serie", "Jeden Tag üben hält die Serie am Leben – ein Ausrutscher-Tag ist erlaubt (Gnadentag)")}
       ${infoRow("trophy", "#ffb300", "Erfolge", BADGES.length + " Abzeichen – Fleiß, Serien, Prüfung & sichere Fragen")}
     </div>
+
+    <div class="section-title">Fragwürdige Fragen melden</div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Unter jeder Frage sitzt <b>„${REPORT_LABEL_OFF}"</b> 🚩 – ein Tipp genügt, wenn eine Frage
+    falsch, unklar oder fehlerhaft wirkt (am Laptop: Taste <b>M</b>). Das unterbricht das Üben nicht; gesammelt wird alles unter
+    <b>Einstellungen → Gemeldete Fragen</b>. Dort lässt sich je Frage eine Notiz ergänzen und die Liste kopieren oder
+    als Datei exportieren, um die Fragen später gebündelt zu überarbeiten.</p></div>
 
     <div class="section-title">Auf allen Geräten</div>
     <div class="q-card"><p style="margin:0;line-height:1.55">Unter <b>Einstellungen</b> einen <b>Sync-Code</b> erstellen und auf weiteren Geräten eingeben – dein Fortschritt ist überall gleich. Jeder eigene Code steht für einen eigenen, unabhängigen Fortschritt.</p></div>
@@ -2084,6 +2340,7 @@ function renderView(view) {
     else if (view === "badges") renderBadges();
     else if (view === "stats") renderStats();
     else if (view === "settings") renderSettings();
+    else if (view === "reports") renderReports();
     else if (view === "info") renderInfo();
     return true;
   } catch (e) {
@@ -2141,6 +2398,12 @@ function goBack() { history.back(); }
 function optionButtons() { return Array.from(app.querySelectorAll(".options .opt")); }
 function handleQuizKey(e) {
   const i = SESSION.idx;
+  // „m" wie melden: Frage als fragwürdig markieren (auch nach dem Prüfen).
+  if (e.key === "m" || e.key === "M") {
+    const rb = app.querySelector("[data-report]");
+    if (rb) { e.preventDefault(); rb.click(); }
+    return;
+  }
   if (SESSION.checked[i]) { if (e.key === "Enter") { const nb = document.getElementById("nextBtn"); if (nb) { e.preventDefault(); nb.click(); } } return; }
   if (currentQ().type === "numeric") return;   // Zahl-Eingabefeld hat eigenen Enter-Handler
   if (/^[1-9]$/.test(e.key)) {
@@ -2367,6 +2630,16 @@ async function relockContent() {
   location.reload();
 }
 
+// Zurücksetzen betrifft den LERNfortschritt. Gemeldete Fragen sind Feedback zum Katalog,
+// kein Fortschritt – sie bleiben deshalb erhalten (und werden beim nächsten Sync wieder
+// hochgeschoben, auch nach „überall zurücksetzen").
+function freshStateKeepingReports() {
+  const keep = reportsMap();
+  const s = freshState();
+  s.reports = JSON.parse(JSON.stringify(keep));
+  return s;
+}
+
 async function confirmReset() {
   if (syncEnabled()) {
     const choice = await modalChoice(
@@ -2380,13 +2653,13 @@ async function confirmReset() {
     );
     if (!choice) return;
     if (choice === "all") {
-      S = freshState(); persistLocal();
+      S = freshStateKeepingReports(); persistLocal();
       const r = await ADTSync.overwriteRemote(S);
       toast(r && r.ok ? "Überall zurückgesetzt" : "Lokal zurückgesetzt – Cloud folgt bei Verbindung");
     } else {
       // Verbindung trennen, damit der lokale Reset nicht aus der Cloud zurückkehrt
       ADTSync.setCode(null);
-      S = freshState(); persistLocal();
+      S = freshStateKeepingReports(); persistLocal();
       toast("Zurückgesetzt · Cloud-Verbindung getrennt");
     }
     go("home");
@@ -2396,7 +2669,7 @@ async function confirmReset() {
       "Wirklich den gesamten Lernfortschritt (XP, Level, Serie, Erfolge) löschen? Das kann nicht rückgängig gemacht werden.",
       [{ label: "Ja, löschen", value: true, variant: "danger" }, { label: "Abbrechen", value: false, variant: "ghost" }]
     );
-    if (ok) { S = freshState(); persistLocal(); toast("Fortschritt zurückgesetzt"); go("home"); }
+    if (ok) { S = freshStateKeepingReports(); persistLocal(); toast("Fortschritt zurückgesetzt"); go("home"); }
   }
 }
 
@@ -2491,7 +2764,11 @@ if (hyd === "fehler") {
 }
 
 // Erst jetzt steht der richtige Katalog fest — vorher darf sanitizeState() nicht filtern.
-CONTENT_READY = (hyd === "ok") || !contentGateActive();
+// contentUnlocked() gehört dazu: kleine Kataloge liegen in localStorage und wurden von
+// data/questions.js bereits synchron übernommen (hydrateContent meldet dann „leer", weil es
+// nur die IndexedDB-Ablage kennt). Ohne diesen Fall bliebe die Sanitisierung dauerhaft
+// zahnlos – fremde Frage-IDs würden nie aussortiert/geparkt.
+CONTENT_READY = (hyd === "ok") || !contentGateActive() || contentUnlocked();
 DATA_OK = checkData();
 S = loadState();
 
