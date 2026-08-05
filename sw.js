@@ -36,8 +36,46 @@ self.addEventListener("install", (e) => {
   ));
 });
 
+/* ---- Aktualisierung auf Zuruf („Nach Updates suchen") ----
+ * Die App-Shell hält sich zwar per stale-while-revalidate selbst aktuell, aber immer erst
+ * für den NÄCHSTEN Start – und auf dem iPhone bleibt eine Home-Bildschirm-App gerne tagelang
+ * im Hintergrund. Damit man eine neue Version nicht durch Neuinstallieren erzwingen muss,
+ * lädt der Service Worker hier auf Zuruf alle Shell-Dateien frisch aus dem Netz in den Cache.
+ * Der Umweg über den Service Worker ist nötig: Ein `fetch` aus der Seite heraus liefe erneut
+ * durch dessen fetch-Handler und bekäme genau die alte Kopie aus dem Cache zurück.
+ * Antwort: { ok, version } – `version` ist die AUSGELIEFERTE App-Version (aus js/app.js). */
+// Bewusst an die DEKLARATION gebunden (Zeilenanfang + const): Ein Kommentar, der den Namen
+// nur erwähnt, darf die Erkennung nicht kapern.
+function versionFromAppJs(text) {
+  const m = /^\s*const APP_VERSION\s*=\s*"([^"]+)"/m.exec(text || "");
+  return m ? m[1] : "";
+}
+async function refreshShell() {
+  const cache = await caches.open(CACHE);
+  let version = "";
+  // Einzeln und fehlertolerant: eine nicht erreichbare Datei darf den Rest nicht verhindern.
+  await Promise.all(ASSETS.map(async (u) => {
+    try {
+      const res = await fetch(new Request(u, { cache: "reload" }));   // echtes Netz, kein HTTP-Cache
+      if (!cacheable(res)) return;
+      if (/js\/app\.js$/.test(u)) version = versionFromAppJs(await res.clone().text());
+      await cache.put(u, res);
+    } catch (err) { console.warn("Update: Datei übersprungen", u, err); }
+  }));
+  return version;
+}
+
 self.addEventListener("message", (e) => {
-  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (!e.data) return;
+  if (e.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (e.data.type === "REFRESH_SHELL") {
+    const port = e.ports && e.ports[0];
+    const reply = (payload) => { try { if (port) port.postMessage(payload); } catch (_) {} };
+    e.waitUntil(refreshShell().then(
+      (v) => reply({ ok: true, version: v }),
+      (err) => reply({ ok: false, error: String((err && err.message) || err) })
+    ));
+  }
 });
 
 // ---- Web Push: eingehende Benachrichtigung anzeigen ----

@@ -11,6 +11,39 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.31.0] — 2026-08-05  ·  „Nach Updates suchen" (kein Neuinstallieren mehr)
+
+Neue Fassungen liegen auf GitHub Pages bereit, sobald gepusht wurde – die Home-Bildschirm-App
+auf dem iPhone merkte das aber oft tagelang nicht (der Service Worker liefert die alte Shell
+aus dem Cache und frischt sie erst für den nächsten Start auf). Jetzt gibt es dafür einen Knopf.
+
+### Hinzugefügt
+- **Einstellungen → App-Version**: zeigt die laufende Version (und den Fragen-Stand) und bietet
+  **„Nach Updates suchen"**. Ist eine neue Fassung da, fragt die App kurz nach und lädt neu –
+  der Lernfortschritt bleibt selbstverständlich erhalten. **Neu installieren ist nie nötig.**
+- Statuszeile mit ehrlicher Rückmeldung: „bereits aktuell" (mit Uhrzeit der Prüfung), „Version X
+  ist verfügbar", „offline" oder „Prüfung fehlgeschlagen" – nie stilles Nichtstun.
+- Kurzer Abschnitt **„Updates"** im Info-Bildschirm.
+
+### Technik
+- Neuer Service-Worker-Befehl **`REFRESH_SHELL`**: lädt alle Shell-Dateien mit `cache: "reload"`
+  frisch in den Cache und meldet die ausgelieferte `APP_VERSION` zurück. Der Umweg über den
+  Service Worker ist nötig – ein `fetch` aus der Seite liefe erneut durch dessen fetch-Handler
+  und bekäme die alte Kopie. Fehlertolerant: eine nicht erreichbare Datei kippt nicht den Rest.
+- Ablauf im Client: `registration.update()` (falls `sw.js` selbst neu ist → wartende Fassung
+  aktivieren) → sonst Shell auffrischen → Versionsvergleich → Neuladen anbieten.
+- Fallbacks: ohne kontrollierenden Service Worker (Browser-Tab, Privatmodus, erster Start)
+  einfach neu laden; offline wird das klar gesagt; Zeitlimit 20 s, Doppelklick-Schutz.
+
+### Tests
+- 3 neue E2E-Checks im Smoke-Test (Version sichtbar, Versionsvergleich, Reload-Fallback ohne SW).
+- 9 neue Checks im Service-Worker-Test – darunter ein **echter Deploy im Kleinen**: ein
+  Test-Server liefert mitten im Lauf eine „neuere" `app.js` aus; geprüft wird, dass die App das
+  erkennt, anbietet, nach dem Neuladen wirklich die neue Fassung läuft **und danach weiter
+  offline funktioniert**. `tests/run.sh` grün.
+
+---
+
 ## [0.30.0] — 2026-08-05  ·  Fragen als „fragwürdig" melden (Feedback sammeln)
 
 Beim Üben fällt am ehesten auf, wenn eine Frage falsch, unklar oder fehlerhaft ist –

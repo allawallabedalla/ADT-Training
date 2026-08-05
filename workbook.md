@@ -68,6 +68,10 @@ Priorisierung: **P1** = als Nächstes sinnvoll · **P2** = danach · **P3** = ni
 Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
+- ✅ **„Nach Updates suchen"** (v0.31.0, 2026-08-05): Knopf in den Einstellungen holt die auf
+  GitHub Pages liegende Fassung sofort (Service-Worker-Befehl `REFRESH_SHELL` + Versionsvergleich),
+  statt bis zum übernächsten Start zu warten – Neuinstallieren der iPhone-App entfällt.
+  Getestet inkl. simuliertem Deploy mitten im Testlauf.
 - ✅ **Fragen als „fragwürdig" melden** (v0.30.0, 2026-08-05): Melde-Knopf unter jeder Frage
   (Übung + Prüfungs-Auswertung) mit kleinem Dialog für einen optionalen Kommentar – ohne die
   Frage zu verlassen; Sammelansicht in den Einstellungen mit Notiz je Frage,

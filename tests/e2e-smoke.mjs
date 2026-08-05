@@ -682,6 +682,23 @@ async function page(opts = {}) {
     'Melden: Sanitisierung kappt Menge und Notizlänge, aktive Meldungen bleiben');
 }
 
+// 28) Update-Knopf: sichtbar mit Version; ohne Service Worker führt er sauber zum Neuladen
+{
+  const p = await page();   // dieser Test läuft mit BLOCKIERTEM Service Worker
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="settings"]');
+  await p.waitForSelector('#btnUpdate');
+  const card = await p.textContent('.q-card:has(#btnUpdate)');
+  const ver = await p.evaluate(() => APP_VERSION);
+  chk(card.includes('Version ' + ver), 'Update: Einstellungen zeigen die laufende Version (' + ver + ')');
+  chk(await p.evaluate(() => updateAvailable('99.9.9') === true && updateAvailable(APP_VERSION) === false && updateAvailable('') === false),
+    'Update: Versionsvergleich (neu / gleich / unbekannt)');
+  // Ohne Service Worker ist Neuladen der richtige Weg – die Seite muss danach normal stehen
+  await Promise.all([p.waitForNavigation({ waitUntil: 'networkidle' }), p.click('#btnUpdate')]);
+  await p.waitForSelector('.level-card');
+  chk(true, 'Update: ohne Service Worker lädt der Knopf die App neu (ohne Fehler)');
+}
+
 chk(errors.length === 0, 'keine Laufzeitfehler');
 if (errors.length) errors.forEach((e) => console.log('  ' + e));
 await browser.close();

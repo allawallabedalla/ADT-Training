@@ -1155,7 +1155,10 @@ const ICONS = {
   shield: '<path d="M12 3l7 2.5v5.5c0 4.3-2.9 7.4-7 8.5-4.1-1.1-7-4.2-7-8.5V5.5z"/><path d="M9 12l2 2 4-4.5"/>',
   share: '<path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M7 11.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1"/>',
 };
-const APP_VERSION = "0.30.0";
+// Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
+// Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
+// und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
+const APP_VERSION = "0.31.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1375,6 +1378,16 @@ function renderSettings() {
     <div class="section-title">Lern-Erinnerungen</div>
     <div id="remindBox"><div class="q-card"><p class="muted" style="margin:0">Lädt…</p></div></div>`;
 
+  // App-Aktualisierung: neue Fassungen liegen auf GitHub Pages bereit, die
+  // Home-Bildschirm-App merkt das aber oft erst Tage später (Cache des Service Workers).
+  const appUpdate = `
+    <div class="section-title">App-Version</div>
+    <div class="q-card">
+      <p style="margin:0 0 4px"><b>Version ${esc(APP_VERSION)}</b>${contentVersionLabel() ? " · Fragen-" + esc(contentVersionLabel()) : ""}</p>
+      <p class="muted" id="updateStatus" style="margin:0 0 12px" role="status" aria-live="polite">Holt die neueste Fassung – ohne die App neu zu installieren.</p>
+      <button class="btn-ghost" id="btnUpdate" style="width:auto;padding:11px 16px">${icon("sync")} Nach Updates suchen</button>
+    </div>`;
+
   // Gesammeltes Feedback zu fragwürdigen Fragen (beim Üben per Knopf markiert).
   const nRep = reportCount();
   const feedback = `
@@ -1418,7 +1431,7 @@ function renderSettings() {
     </div>`;
 
   app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
-    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${feedback}${content}${remind}`;
+    <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${feedback}${content}${remind}${appUpdate}`;
 
   const $ = (id) => document.getElementById(id);
   const stTheme = $("setTheme"); if (stTheme) stTheme.addEventListener("change", () => { setTheme(stTheme.value); toast("🎨 Design übernommen"); });
@@ -1444,6 +1457,7 @@ function renderSettings() {
   const bDel = $("btnDeleteCloud"); if (bDel) bDel.addEventListener("click", deleteCloudData);
   const bRe = $("btnRelock"); if (bRe) bRe.addEventListener("click", relockContent);
   const bRep = $("btnReports"); if (bRep) bRep.addEventListener("click", () => go("reports"));
+  const bUp = $("btnUpdate"); if (bUp) bUp.addEventListener("click", () => checkForUpdate());
   const bEx = $("btnExport"); if (bEx) bEx.addEventListener("click", exportProgress);
   const bIm = $("btnImport"); const imf = $("importFile");
   if (bIm && imf) {
@@ -2326,6 +2340,11 @@ function renderInfo() {
     <div class="section-title">Als App installieren</div>
     <div class="q-card"><p style="margin:0;line-height:1.55">In <b>Safari</b> unten auf <b>Teilen</b> → <b>„Zum Home-Bildschirm"</b>. Danach startet die App im Vollbild und läuft komplett offline.</p></div>
 
+    <div class="section-title">Updates</div>
+    <div class="q-card"><p style="margin:0;line-height:1.55">Neue Fassungen kommen automatisch – meist beim übernächsten Start. Wer nicht warten will:
+    <b>Einstellungen → App-Version → „Nach Updates suchen"</b>. Die App holt dann sofort die neueste Fassung.
+    <b>Neu installieren ist nie nötig</b>, und der Lernfortschritt bleibt dabei erhalten.</p></div>
+
     <div class="section-title">Datenschutz & Hinweise</div>
     <div class="q-card"><p style="margin:0;line-height:1.6">
       Dein Lernfortschritt wird <b>lokal auf diesem Gerät</b> gespeichert. Nur wenn du <b>Geräte-Sync</b>
@@ -2484,6 +2503,96 @@ function showUpdateBanner(worker) {
     try { worker.postMessage({ type: "SKIP_WAITING" }); }
     catch (e) { location.reload(); }
   });
+}
+
+/* ---- „Nach Updates suchen" (App-Aktualisierung auf Knopfdruck) ----------------------
+ * Die App liegt auf GitHub Pages; eine neue Fassung ist also einfach da, sobald gepusht
+ * wurde. Nur merkt die Home-Bildschirm-App auf dem iPhone das oft tagelang nicht: Der
+ * Service Worker liefert die alte Shell aus dem Cache und aktualisiert sie erst für den
+ * NÄCHSTEN Start. Dieser Knopf erzwingt den Vorgang – Neuinstallieren ist nie nötig.
+ *
+ * Ablauf: (1) auf einen neuen Service Worker prüfen, (2) Shell frisch in den Cache holen
+ * (macht der Service Worker, siehe sw.js → REFRESH_SHELL), (3) ausgelieferte mit laufender
+ * Version vergleichen und das Neuladen anbieten. */
+const SW_REFRESH_TIMEOUT_MS = 20000;
+function updateAvailable(remoteVersion) {
+  // Jede Abweichung zählt – auch ein bewusstes Zurückrollen soll ankommen.
+  return !!remoteVersion && remoteVersion !== APP_VERSION;
+}
+// Service Worker bitten, die App-Shell frisch zu laden. Liefert { ok, version } oder null.
+function swRefreshShell() {
+  return new Promise((resolve) => {
+    if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return resolve(null);
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    const t = setTimeout(() => finish(null), SW_REFRESH_TIMEOUT_MS);
+    try {
+      const ch = new MessageChannel();
+      ch.port1.onmessage = (ev) => { clearTimeout(t); finish(ev.data || null); };
+      navigator.serviceWorker.controller.postMessage({ type: "REFRESH_SHELL" }, [ch.port2]);
+    } catch (e) { clearTimeout(t); finish(null); }
+  });
+}
+// Wartenden Service Worker aktivieren und neu laden (controllerchange löst den Reload aus).
+function applyWaitingWorker(worker) {
+  swUpdateAccepted = true;
+  try { worker.postMessage({ type: "SKIP_WAITING" }); }
+  catch (e) { location.reload(); }
+  setTimeout(() => { if (!document.hidden) location.reload(); }, 2500);   // Sicherheitsnetz
+}
+let updateCheckRunning = false;
+async function checkForUpdate(opts = {}) {
+  if (updateCheckRunning) return;
+  updateCheckRunning = true;
+  const status = (txt) => { const el = document.getElementById("updateStatus"); if (el) el.textContent = txt; };
+  try {
+    if (!navigator.onLine) { status("Offline – zum Aktualisieren online gehen."); toast("🔌 Offline"); return; }
+    status("Suche nach Updates…");
+
+    // Ohne Service Worker (z. B. normaler Browser-Tab, Privatmodus) bleibt nur das
+    // harte Neuladen – dabei holt der Browser die Dateien ohnehin frisch.
+    if (!("serviceWorker" in navigator)) { location.reload(); return; }
+
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) { try { await reg.update(); } catch (e) { /* offline/blockiert: unten weiter */ } }
+
+    // Fall A: sw.js selbst ist neu → es wartet bereits eine neue Fassung.
+    if (reg && reg.waiting && navigator.serviceWorker.controller) {
+      status("Neue Version wird geladen…");
+      applyWaitingWorker(reg.waiting);
+      return;
+    }
+
+    // Ohne kontrollierenden Service Worker (normaler Browser-Tab, Privatmodus, allererster
+    // Start) gibt es gar keine Cache-Schicht, die im Weg stehen könnte – neu laden genügt.
+    if (!navigator.serviceWorker.controller) { status("Lädt neu…"); location.reload(); return; }
+
+    // Fall B: nur Shell-Dateien (app.js/css/Fragen) sind neu → frisch in den Cache holen.
+    const res = await swRefreshShell();
+    if (!res || !res.ok) {
+      status("Update-Prüfung nicht möglich – bitte später erneut versuchen.");
+      toast("⚠️ Prüfung fehlgeschlagen");
+      return;
+    }
+    if (!updateAvailable(res.version)) {
+      status("Aktuell: Version " + APP_VERSION + " · zuletzt geprüft " + new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }));
+      toast("✅ Bereits aktuell");
+      return;
+    }
+
+    status("Version " + res.version + " ist verfügbar.");
+    const ok = opts.auto ? true : await modalChoice(
+      "Neue Version verfügbar",
+      `Version ${res.version} ist da (installiert: ${APP_VERSION}). Jetzt neu laden? Dein Fortschritt bleibt erhalten.`,
+      [{ label: "Jetzt aktualisieren", value: true }, { label: "Später", value: false, variant: "ghost" }]);
+    if (ok) { status("Wird geladen…"); location.reload(); }
+  } catch (e) {
+    console.warn("Update-Prüfung fehlgeschlagen", e);
+    status("Update-Prüfung fehlgeschlagen.");
+    toast("⚠️ Prüfung fehlgeschlagen");
+  } finally {
+    updateCheckRunning = false;
+  }
 }
 
 // Wiederverwendbarer Auswahl-Dialog. buttons: [{label, value, variant}]. Promise -> value.
