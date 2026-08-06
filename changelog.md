@@ -11,6 +11,31 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.36.0] — 2026-08-06  ·  Melden = ein Tipp: Issue entsteht sofort
+
+### Geändert
+- **„Frage melden" legt das Issue direkt an** – nicht erst später über die Sammelansicht.
+  Ein Tipp, optional eine Notiz, „Melden": Die Meldung steht in der Liste **und** das Issue
+  ist angelegt. Der Dialog sagt das vorher an („Es wird direkt ein GitHub-Issue angelegt.").
+- Das Anlegen läuft **im Hintergrund, ohne await**: Die Frage bleibt sofort bedienbar, das
+  Ergebnis kommt als Toast nach („✅ Issue #77 angelegt"). Niemand wartet vor einer Frage
+  auf das Netz.
+
+### Verhalten bei Problemen
+- Schlägt das Anlegen fehl, bleibt die Meldung trotzdem gespeichert und erscheint in der Liste –
+  dort holt der Knopf „Als Issue" es nach. Ein kurzer Toast weist darauf hin.
+- Ist der direkte Weg nicht eingerichtet (keine Edge Function/kein Zugangscode), verhält sich
+  alles wie bisher: melden, sammeln, später als Issue oder Datei weitergeben.
+- Wird die Notiz einer schon gemeldeten Frage nachgetragen und es gibt noch kein Issue,
+  entsteht es beim Speichern.
+
+### Tests
+- 4 neue E2E-Checks: Ansage im Dialog, Issue entsteht unmittelbar beim Melden im Quiz, die
+  Frage bleibt dabei stehen, und die Meldung taucht zusätzlich mit Nummer und Notiz in der
+  Liste auf. `tests/run.sh` grün.
+
+---
+
 ## [0.35.0] — 2026-08-06  ·  Issues direkt aus der App anlegen
 
 ### Hinzugefügt

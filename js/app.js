@@ -823,10 +823,14 @@ async function openReportDialog(id) {
        { label: "Abbrechen", value: null, variant: "ghost" }]
     : [{ label: "Melden", value: "save" },
        { label: "Abbrechen", value: null, variant: "ghost" }];
+  // Steht der direkte Weg bereit, entsteht das Issue sofort beim Melden – das gehört in den Text,
+  // damit klar ist, dass danach nichts mehr zu tun ist.
+  const auto = issueApiPossible();
   const res = await modalPrompt(
     on ? "Meldung bearbeiten" : "Frage melden",
     on ? "Diese Frage ist als fragwürdig markiert. Notiz ändern oder die Meldung aufheben."
-       : "Was wirkt fragwürdig? Die Notiz ist optional – „Melden“ genügt.",
+       : ("Was wirkt fragwürdig? Die Notiz ist optional – „Melden“ genügt." +
+          (auto ? " Es wird direkt ein GitHub-Issue angelegt." : "")),
     {
       value: cur.note || "",
       placeholder: "z. B. Antwort B ist auch richtig",
@@ -842,7 +846,26 @@ async function openReportDialog(id) {
   }
   hapticFeedback(true);
   toast(on ? "📝 Notiz gespeichert" : "🚩 Frage gemeldet – danke!");
+  autoCreateIssue(id);     // läuft im Hintergrund weiter – der Lernfluss wartet nicht
   return true;
+}
+
+/* Ein Tipp genügt: Direkt beim Melden entsteht das Issue. Bewusst OHNE await – das
+   Netz kann eine Sekunde brauchen, und solange soll niemand vor der Frage warten.
+   Das Ergebnis kommt als Toast nach; die Meldung steht in jedem Fall schon in der Liste,
+   und schlägt das Anlegen fehl, bleibt dort der Knopf „Als Issue" zum Nachholen. */
+function autoCreateIssue(id) {
+  if (!issueApiPossible()) return;
+  const r = reportedList().find(x => x.id === id);
+  if (!r || r.issueNumber) return;                  // nicht gemeldet oder längst angelegt
+  createIssueDirect(r).then((res) => {
+    if (res && res.ok) {
+      toast(res.existing ? "Issue #" + res.number + " gibt es schon" : "✅ Issue #" + res.number + " angelegt");
+    } else if (res && res.error !== "not-possible") {
+      toast("⚠️ Issue nicht angelegt – Einstellungen → Gemeldete Fragen");
+    }
+    if (VIEW === "reports") renderReports();         // Liste zeigt die Nummer sofort
+  }).catch(() => {});
 }
 function setReportNote(id, note) {
   const r = reportsMap()[id];
@@ -1298,7 +1321,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.35.0";
+const APP_VERSION = "0.36.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an

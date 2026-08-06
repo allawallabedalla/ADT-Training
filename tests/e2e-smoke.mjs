@@ -740,6 +740,36 @@ async function page(opts = {}) {
     chk(rec.issueNumber === 42 && rec.issueUrl === 'https://github.com/o/r/issues/42', 'Direkt: Issue-Nummer und Link gespeichert');
     chk(/#42/.test(await q.textContent('.issued-note')), 'Direkt: Liste zeigt „Issue #42 angelegt"');
 
+    // Ein Tipp genügt: Melden IM QUIZ legt das Issue direkt an (ohne Umweg über die Liste)
+    const q2 = await page();
+    await q2.route('**/functions/v1/create-issue', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, number: 77, url: 'https://github.com/o/r/issues/77' }),
+    }));
+    await q2.goto(BASE, { waitUntil: 'networkidle' });
+    const qid3 = await q2.evaluate(() => {
+      localStorage.setItem('adt_content_code', 'test-zugangscode-lang');
+      const x = QUESTIONS.find(y => y.type !== 'numeric');
+      SESSION = { mode: 'mixed', topic: null, questions: [x], optionOrders: [x.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
+      go('quiz');
+      return x.id;
+    });
+    await q2.waitForSelector('.report-btn');
+    await q2.click('.report-btn');
+    await q2.waitForSelector('.modal-input');
+    chk(/direkt ein GitHub-Issue/.test(await q2.textContent('.modal-msg')), 'Sofort: Dialog sagt an, dass ein Issue entsteht');
+    await q2.fill('.modal-input', 'Antwort passt nicht');
+    await q2.click('.modal-actions .modal-btn');     // „Melden"
+    await q2.waitForFunction((id) => S.reports[id] && S.reports[id].issueNumber === 77, qid3, { timeout: 8000 });
+    chk(true, 'Sofort: „Frage melden" legt das Issue unmittelbar an (Issue #77)');
+    chk(await q2.$('.q-card .opt') !== null && await q2.$('.report-btn.on') !== null,
+      'Sofort: die Frage bleibt stehen, Knopf ist markiert');
+    // … und die Meldung steht trotzdem in der Liste
+    await q2.evaluate(() => go('reports'));
+    await q2.waitForSelector('.report-item');
+    chk(/#77/.test(await q2.textContent('.issued-note')) && /Antwort passt nicht/.test(await q2.inputValue('.report-note')),
+      'Sofort: Meldung erscheint zusätzlich in der Liste – mit Issue-Nummer und Notiz');
+
     // Serverfehler → ehrliche Rückfrage statt stummem Scheitern
     const e = await page();
     await e.route('**/functions/v1/create-issue', (route) => route.fulfill({

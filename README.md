@@ -14,7 +14,7 @@ funktioniert danach **komplett offline** – ganz ohne App Store.
 - **Prüfungsgetreues Format** – Multiple-Choice mit *mehreren* richtigen Antworten; nur *vollständig* richtig zählt (kein Teilpunkt, § 5 der Prüfungsordnung)
 - **Erklärung zu jeder Frage** – der Lerninhalt wird vermittelt, nicht nur abgefragt
 - **Gamification** – XP, Level, Tages-Serie (Streak) und Erfolge/Badges
-- **Fragen als „fragwürdig" melden** – ein Tipp unter der Frage öffnet einen kleinen Dialog: melden mit oder ohne Kommentar, ohne die Frage zu verlassen (am Laptop: Taste **M**). Gesammelt unter *Einstellungen → Gemeldete Fragen* und als Text/Datei exportierbar
+- **Fragen als „fragwürdig" melden** – ein Tipp unter der Frage, optional mit Kommentar (am Laptop: Taste **M**). Ist der direkte Weg eingerichtet, entsteht daraus **sofort ein GitHub-Issue**; gesammelt wird alles zusätzlich unter *Einstellungen → Gemeldete Fragen*
 - **Meldungen als Backlog** – der Export ist eine Liste zum Abhaken; `node tools/reports-to-backlog.mjs <export.md>` pflegt daraus [`docs/fragen-backlog.md`](docs/fragen-backlog.md)
 - **Updates ohne Neuinstallieren** – *Einstellungen → App-Version → „Nach Updates suchen"* holt die neueste Fassung von GitHub Pages
 - **Fortschritt bleibt gespeichert** (lokal auf dem Gerät, kein Konto, kein Server)
@@ -187,6 +187,9 @@ Dialog über der Frage: melden mit oder ohne Kommentar, danach geht es dort weit
 wo man war. Der komplette Weg:
 
 1. **Melden** (in der App, beim Üben) – optionaler Kommentar, z. B. „Antwort B ist auch richtig".
+   Ist der direkte Weg eingerichtet (siehe „Issues direkt anlegen"), **entsteht das GitHub-Issue
+   sofort mit diesem einen Tipp** – im Hintergrund, die Frage bleibt bedienbar. Alles Weitere
+   ist dann nur noch Nachschlagen.
 2. **Sammeln**: *Einstellungen → Fragen-Feedback → Gemeldete Fragen*. Dort ist jede
    Meldung mit Fragetext, Thema, ID und Datum aufgelistet, die Notiz bleibt änderbar.
 3. **Exportieren**: „Als Datei" (Markdown) oder „Alle kopieren". Der Export ist bereits
