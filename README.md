@@ -192,12 +192,16 @@ wo man war. Der komplette Weg:
 3. **Exportieren**: „Als Datei" (Markdown) oder „Alle kopieren". Der Export ist bereits
    ein **Backlog zum Abhaken** – je Frage ein Kästchen, darunter Notiz, Fragetext,
    Antwortmöglichkeiten (richtige markiert), Lösung und Erklärung.
-4. **Direkt als GitHub-Issue** (schnellster Weg): „Als Issue" öffnet GitHubs Formular mit
-   fertig ausgefülltem Titel und Text – du tippst dort nur noch „Create". Es entsteht
-   **ein Issue je Frage**, damit jeder Vorgang für sich geschlossen werden kann; bereits
-   geöffnete Meldungen sind in der Liste als „Issue vorbereitet am …" markiert. Die App
-   verschickt dabei **nichts selbst** und kennt kein Token; Zielrepo ist `feedbackRepo`
-   in [`config.js`](config.js).
+4. **Als GitHub-Issue** – ein Issue je Frage, damit jeder Vorgang für sich geschlossen
+   werden kann. Zwei Wege, die App nimmt automatisch den besseren:
+   - **Direkt** (wenn die Edge Function eingerichtet ist, siehe unten): Tipp auf „Als Issue",
+     das Issue entsteht sofort, man **bleibt in der App**. Danach steht „Issue #12 angelegt"
+     mit Link am Eintrag.
+   - **Über das Formular** (ohne Serverteil): GitHub öffnet sich mit fertig ausgefülltem
+     Titel und Text – dort nur noch „Create" tippen. Der Eintrag ist dann als
+     „Issue vorbereitet am …" markiert.
+
+   Zielrepo für den Formular-Weg ist `feedbackRepo` in [`config.js`](config.js).
 
    > **Das Zielrepo muss privat sein.** Der Issue-Text enthält den Fragetext, und die
    > Lerninhalte sind zugangsgeschützt (`contentGated: true`). Voreingestellt ist deshalb das
@@ -224,6 +228,37 @@ wo man war. Der komplette Weg:
 > Lernfortschritt) und – falls Geräte-Sync aktiv ist – zusätzlich in Supabase. **Nicht**
 > in git: Erst der Export bringt sie ins Repo. „Fortschritt zurücksetzen" löscht sie
 > bewusst nicht (Feedback ist kein Lernfortschritt).
+
+### Issues direkt anlegen (optional, ohne GitHub-Umweg)
+
+Damit die App das Issue **selbst** anlegen kann, braucht es einen kleinen Serverteil: Ein
+GitHub-Token darf **niemals** in eine öffentlich ausgelieferte Web-App, deshalb hält ihn eine
+**Supabase Edge Function**. Die App schickt nur die Meldung dorthin und bekommt die
+Issue-Nummer zurück.
+
+1. **Tabelle anlegen**: [`supabase/feedback-issues.sql`](supabase/feedback-issues.sql) im
+   SQL Editor ausführen (Dublettenschutz + Mengenbegrenzung).
+2. **Token erzeugen**: GitHub → Settings → Developer settings → **Fine-grained personal access
+   token**. *Repository access:* nur das Ziel-Repo. *Permissions:* **Issues: Read and write** –
+   sonst nichts. Kurze Laufzeit wählen und im Kalender vermerken (abgelaufene Tokens sind der
+   häufigste Grund, warum es später „plötzlich nicht mehr geht").
+3. **Function deployen**:
+
+   ```bash
+   supabase functions deploy create-issue --no-verify-jwt
+   ```
+
+4. **Secrets setzen** (Dashboard → Edge Functions → *Manage secrets*):
+   - `GITHUB_TOKEN` = der Token aus Schritt 2
+   - `GITHUB_REPO` = `owner/repo` des **privaten** Ziel-Repos
+
+**Schutz:** Der Endpunkt ist – wie alle anon-Endpunkte – offen erreichbar. Er verlangt deshalb
+den **Zugangscode** der Lerninhalte (Prüfung serverseitig gegen `content_gate`, gleiche Quelle
+wie `get_content`), legt **je Frage höchstens ein Issue** an (ein zweiter Aufruf liefert das
+vorhandene zurück) und deckelt auf **30 neue Issues pro Stunde**.
+
+**Ohne diese Einrichtung** funktioniert alles weiter – die App fällt dann automatisch auf den
+Formular-Weg zurück und sagt in einem Satz, warum.
 
 ## Updates ausliefern (GitHub Pages)
 

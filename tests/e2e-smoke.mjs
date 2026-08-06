@@ -713,7 +713,53 @@ async function page(opts = {}) {
   chk(!/(access_token|api[_-]?key|authorization|ghp_|github_pat_|sb_(publishable|secret))/i.test(one),
     'Issue: kein Token/Key im Link');
 
-  // Merkhilfe: nach dem Öffnen ist die Meldung als „Issue vorbereitet" markiert
+  // Direktes Anlegen (Edge Function gemockt): kein Wechsel zu GitHub, Nummer kommt zurück
+  {
+    const q = await page();
+    await q.route('**/functions/v1/create-issue', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, number: 42, url: 'https://github.com/o/r/issues/42' }),
+    }));
+    await q.goto(BASE, { waitUntil: 'networkidle' });
+    const id2 = await q.evaluate(() => {
+      localStorage.setItem('adt_content_code', 'test-zugangscode-lang');
+      const x = QUESTIONS[1];
+      setReported(x.id, true, 'Tippfehler');
+      go('reports');
+      return x.id;
+    });
+    await q.waitForSelector('[data-issue]');
+    chk(await q.evaluate(() => issueApiPossible()), 'Direkt: Voraussetzungen erkannt (Supabase + Zugangscode)');
+    let navigated = false;
+    q.on('popup', () => { navigated = true; });
+    await q.evaluate(() => { window.open = () => { window.__opened = true; return null; }; });
+    await q.click('[data-issue]');
+    await q.waitForSelector('.issued-note');
+    chk(!navigated && !(await q.evaluate(() => window.__opened)), 'Direkt: kein Wechsel zu GitHub nötig');
+    const rec = await q.evaluate((id) => S.reports[id], id2);
+    chk(rec.issueNumber === 42 && rec.issueUrl === 'https://github.com/o/r/issues/42', 'Direkt: Issue-Nummer und Link gespeichert');
+    chk(/#42/.test(await q.textContent('.issued-note')), 'Direkt: Liste zeigt „Issue #42 angelegt"');
+
+    // Serverfehler → ehrliche Rückfrage statt stummem Scheitern
+    const e = await page();
+    await e.route('**/functions/v1/create-issue', (route) => route.fulfill({
+      status: 501, contentType: 'application/json', body: JSON.stringify({ error: 'not-configured' }),
+    }));
+    await e.goto(BASE, { waitUntil: 'networkidle' });
+    await e.evaluate(() => {
+      localStorage.setItem('adt_content_code', 'test-zugangscode-lang');
+      setReported(QUESTIONS[2].id, true, '');
+      go('reports');
+    });
+    await e.waitForSelector('[data-issue]');
+    await e.click('[data-issue]');
+    await e.waitForSelector('.modal-card');
+    chk(/nicht eingerichtet/.test(await e.textContent('.modal-msg')), 'Direkt: Fehlschlag wird benannt und der Link als Ausweg angeboten');
+    await e.click('.modal-actions .modal-btn.btn-ghost');   // „Abbrechen"
+    chk(!(await e.evaluate(() => S.reports[QUESTIONS[2].id].issuedAt)), 'Direkt: Abbruch vermerkt nichts');
+  }
+
+  // Rückfallebene ohne Serverfunktion: Formular öffnen und vermerken
   await p.evaluate(() => { window.open = () => null; });   // GitHub im Test nicht wirklich öffnen
   await p.click('[data-issue]');
   await p.waitForSelector('.issued-note');

@@ -114,7 +114,7 @@
       for (const id in src) {
         const inc = src[id] || {};
         const cur = reports[id];
-        if (!cur) { reports[id] = { on: inc.on === true, at: String(inc.at || ""), note: String(inc.note || ""), issuedAt: String(inc.issuedAt || "") }; continue; }
+        if (!cur) { reports[id] = { on: inc.on === true, at: String(inc.at || ""), note: String(inc.note || ""), issuedAt: String(inc.issuedAt || ""), issueNumber: Number(inc.issueNumber) || 0, issueUrl: String(inc.issueUrl || "") }; continue; }
         const incAt = String(inc.at || ""), curAt = String(cur.at || "");
         const newer = incAt > curAt ? inc : cur;
         const older = incAt > curAt ? cur : inc;
@@ -125,6 +125,9 @@
           note: String(newer.note || older.note || ""),
           // „Issue vorbereitet" ist eine Einbahnstraße: einmal gesetzt, nie wieder leer.
           issuedAt: issA > issB ? issA : issB,
+          // Ebenso das angelegte Issue selbst – die Nummer gilt geräteübergreifend.
+          issueNumber: Number(inc.issueNumber) || Number(cur.issueNumber) || 0,
+          issueUrl: String(inc.issueUrl || cur.issueUrl || ""),
         };
       }
     }
@@ -246,6 +249,31 @@
     catch (e) { console.warn("push_remove fehlgeschlagen", e && e.message); return false; }
   }
 
+  /* ---- Gemeldete Frage direkt als GitHub-Issue anlegen ----
+   * Ruft die Edge Function `create-issue` auf, die den GitHub-Token als Secret hält –
+   * die App selbst kennt kein Token (siehe supabase/functions/create-issue/index.ts).
+   * Rückgabe: { ok, number, url, existing } bzw. { error: "…" } (nie geworfen). */
+  async function createIssue(payload) {
+    const c = cfg();
+    if (!isConfigured()) return { error: "not-configured" };
+    if (!navigator.onLine) return { error: "offline" };
+    const key = c.supabaseAnonKey;
+    const headers = { "Content-Type": "application/json", "apikey": key };
+    if (/^eyJ/.test(key)) headers["Authorization"] = "Bearer " + key;
+    try {
+      const res = await fetch(c.supabaseUrl.replace(/\/+$/, "") + "/functions/v1/create-issue", {
+        method: "POST", headers: headers, body: JSON.stringify(payload || {}),
+      });
+      const txt = await res.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (e) {}
+      if (!res.ok) return { error: (data && data.error) || "http-" + res.status, status: res.status };
+      return data || { error: "empty" };
+    } catch (e) {
+      return { error: "network", message: e && e.message };
+    }
+  }
+
   // ---- Geschützte Lerninhalte abrufen (serverseitige Zugangsprüfung) ----
   // Gibt bei korrektem Code { TOPICS, QUESTIONS } zurück, sonst null (falscher Code/Fehler).
   async function getContent(code) {
@@ -260,7 +288,7 @@
     isConfigured, getCode, setCode, getLastSynced,
     generateCode, normalizeCode, mergeStates,
     syncNow, overwriteRemote,
-    savePush, removePush, getContent,
+    savePush, removePush, getContent, createIssue,
     hasPending,
     isSyncing: () => syncing,
     onChange: (fn) => { onChange = fn; },

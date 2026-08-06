@@ -11,6 +11,34 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.35.0] — 2026-08-06  ·  Issues direkt aus der App anlegen
+
+### Hinzugefügt
+- **„Als Issue" legt das Issue jetzt direkt an** – ohne Wechsel zu GitHub und ohne dort
+  angemeldet zu sein. Danach steht „Issue #12 angelegt" mit Link am Eintrag; die Nummer wird
+  gespeichert und mitsynchronisiert.
+- **Edge Function `create-issue`** (`supabase/functions/create-issue/index.ts`) als Vermittler:
+  Sie hält den GitHub-Token als Secret – die App kennt keinen. Schutz gegen Missbrauch:
+  Zugangscode-Prüfung (serverseitig gegen `content_gate`), **je Frage höchstens ein Issue**
+  (zweiter Aufruf liefert das vorhandene zurück), höchstens 30 neue Issues pro Stunde,
+  Größenbegrenzung. Fehlt das Label im Repo, wird ohne Label erneut versucht.
+- **`supabase/feedback-issues.sql`**: Tabelle für Dublettenschutz und Mengenbegrenzung
+  (RLS an, keine Policies – nur die Function greift mit Service-Role zu).
+- Einrichtungsanleitung im README (Fine-grained Token mit **nur** „Issues: Read and write",
+  Deploy, Secrets).
+
+### Verhalten
+- Der **Formular-Weg bleibt als Rückfallebene**: Ist die Function nicht eingerichtet, man ist
+  offline oder der Code wird abgelehnt, fragt die App nach und öffnet das vorbefüllte Formular –
+  mit einem Satz, **warum** der direkte Weg ausfiel. Gemeldet wird also immer.
+
+### Tests
+- 6 neue E2E-Checks mit gemocktem Endpunkt: Voraussetzungen erkannt, **kein** Wechsel zu GitHub,
+  Nummer und Link gespeichert und angezeigt, Serverfehler wird benannt, Abbruch vermerkt nichts.
+  `tests/run.sh` grün.
+
+---
+
 ## [0.34.0] — 2026-08-06  ·  Ein Issue je Frage statt Sammel-Issue
 
 ### Geändert

@@ -45,7 +45,7 @@
 | **Live-URL (geplant)** | `https://allawallabedalla.github.io/ADT-Training/` |
 | **Fachinhalte pflegen** | `data/questions.js` (bei `contentGated: true`: Pipeline im `Secret`-Repo → Supabase) |
 | **Fragen-Feedback** | Melden in der App → als GitHub-Issue (privates `Secret`-Repo, `config.js` → `feedbackRepo`) **oder** Export → `tools/reports-to-backlog.mjs` → `docs/fragen-backlog.md` (Ablauf: README → „Fragen-Feedback") |
-| **Version** | 0.34.0 (siehe `changelog.md`) |
+| **Version** | 0.35.0 (siehe `changelog.md`) |
 | **Cloud-Sync** | Supabase (kostenlos), Konfiguration in `config.js`; Identität per Sync-Code |
 
 ## 4. Definition of Done (pro Änderung)
@@ -71,6 +71,9 @@ Priorisierung: **P1** = als Nächstes sinnvoll · **P2** = danach · **P3** = ni
 Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
+- ✅ **Issues direkt anlegen** (v0.35.0, 2026-08-06): Edge Function `create-issue` als Vermittler
+  (GitHub-Token als Secret, Zugangscode-Prüfung, Dublettenschutz je Frage, 30/h). Die App bleibt
+  offen, der Formular-Weg bleibt Rückfallebene. Einrichtung: README → „Issues direkt anlegen".
 - ✅ **Meldung als GitHub-Issue** (v0.33.0/0.34.0, 2026-08-06): vorbefüllter Issue-Link – bewusst
   **ein Issue je Frage** (Sammel-Issue wieder entfernt), mit Merkhilfe „Issue vorbereitet";
   ohne Token/Server in der App. Zielrepo per `config.js` (`feedbackRepo`),

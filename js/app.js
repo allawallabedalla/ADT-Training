@@ -187,6 +187,8 @@ function sanitizeState(raw) {
         at: typeof r.at === "string" ? r.at.slice(0, 40) : "",
         note: typeof r.note === "string" ? r.note.slice(0, REPORT_NOTE_MAX) : "",
         issuedAt: typeof r.issuedAt === "string" ? r.issuedAt.slice(0, 40) : "",
+        issueNumber: Math.max(0, Math.floor(Number(r.issueNumber) || 0)),
+        issueUrl: (typeof r.issueUrl === "string" && /^https:\/\/github\.com\//.test(r.issueUrl)) ? r.issueUrl.slice(0, 300) : "",
       }];
     })
     // Aktive Meldungen zuerst, danach die neuesten – so überlebt beim Kappen das Wichtigste.
@@ -265,6 +267,8 @@ function setOnboarded() { try { localStorage.setItem(ONBOARD_KEY, "1"); } catch 
 /* ---- Zugangsschutz für Lerninhalte (Zugangscode → serverseitige Prüfung) ---- */
 const CONTENT_KEY = "adt_content_v1";        // lokal gecachte, freigeschaltete Inhalte
 const CONTENT_CODE_KEY = "adt_content_code"; // Code (für stille Hintergrund-Aktualisierung)
+// Gespeicherter Zugangscode – dient auch als Ausweis gegenüber der Issue-Funktion.
+function getContentCode() { try { return localStorage.getItem(CONTENT_CODE_KEY) || ""; } catch { return ""; } }
 function contentGateActive() { return !!(window.ADT_CONFIG && window.ADT_CONFIG.contentGated); }
 function contentUnlocked() {
   try { return !!localStorage.getItem(CONTENT_KEY) || localStorage.getItem(CONTENT_IDB_FLAG) === "1"; }
@@ -777,6 +781,7 @@ function reportedList() {
     .filter(id => m[id] && m[id].on)
     .map(id => ({
       id, at: m[id].at || "", note: m[id].note || "", issuedAt: m[id].issuedAt || "",
+      issueNumber: m[id].issueNumber || 0, issueUrl: m[id].issueUrl || "",
       q: QUESTIONS.find(q => q.id === id) || null,
     }))
     .sort((a, b) => String(b.at).localeCompare(String(a.at)));
@@ -790,6 +795,8 @@ function setReported(id, on, note) {
     at: new Date().toISOString(),
     note: String(note != null ? note : (prev.note || "")).slice(0, REPORT_NOTE_MAX),
     issuedAt: prev.issuedAt || "",     // Merkzettel „Issue schon angelegt" bleibt erhalten
+    issueNumber: prev.issueNumber || 0,
+    issueUrl: prev.issueUrl || "",
   };
   saveState();
   return true;
@@ -962,6 +969,63 @@ function openIssue(url) {
   if (!url) return;
   try { window.open(url, "_blank", "noopener"); }
   catch (e) { location.href = url; }
+}
+
+/* ---- Issue DIREKT anlegen (ohne Umweg über GitHub) --------------------------------
+ * Bevorzugter Weg: Die Edge Function `create-issue` legt das Issue serverseitig an –
+ * sie hält den GitHub-Token als Secret, die App kennt keinen. Man bleibt in der App und
+ * bekommt nur die Issue-Nummer zurück.
+ * Klappt das nicht (Funktion nicht deployt, offline, kein Zugangscode), bleibt der
+ * vorbefüllte Link als Rückfallebene – gemeldet wird also immer, nur der Weg unterscheidet sich. */
+function issueApiPossible() {
+  return !!(window.ADTSync && ADTSync.isConfigured() && ADTSync.createIssue && getContentCode());
+}
+function issueTitleFor(r) {
+  const t = r.q ? TOPICS[r.q.topic] : null;
+  return "Frage " + r.id + (t ? " · " + t.name : "");
+}
+function issueBodyFor(r) {
+  const t = r.q ? TOPICS[r.q.topic] : null;
+  return [
+    "**Frage-ID:** `" + r.id + "`",
+    "**Thema:** " + (t ? t.name : "unbekannt"),
+    "**Gemeldet:** " + reportDate(r.at) + " · " + versionLine(),
+    "",
+  ].concat(reportDetailLines(r, "")).join("\n");
+}
+// Ergebnis: { ok, number, url, existing } | { error }
+async function createIssueDirect(r) {
+  if (!issueApiPossible()) return { error: "not-possible" };
+  const res = await ADTSync.createIssue({
+    code: getContentCode(),
+    id: r.id,
+    title: issueTitleFor(r),
+    body: issueBodyFor(r),
+  });
+  if (res && res.ok && res.number) {
+    const rec = reportsMap()[r.id];
+    if (rec) {
+      rec.issueNumber = res.number;
+      rec.issueUrl = String(res.url || "");
+      rec.issuedAt = new Date().toISOString();
+      rec.at = rec.issuedAt;
+      saveState();
+    }
+  }
+  return res || { error: "empty" };
+}
+// Erklärt einen Fehlschlag in einem Satz – nie nur „hat nicht geklappt".
+function issueErrorText(err) {
+  switch (err) {
+    case "offline": return "Offline – Issue später anlegen.";
+    case "unauthorized": return "Zugangscode wurde nicht akzeptiert.";
+    case "rate-limited": return "Zu viele Issues in kurzer Zeit – bitte später.";
+    case "not-configured":
+    case "not-possible": return "Direktes Anlegen ist nicht eingerichtet.";
+    case "http-404":
+    case "http-501": return "Die Serverfunktion ist noch nicht eingerichtet.";
+    default: return "Anlegen fehlgeschlagen (" + err + ").";
+  }
 }
 
 // Session: { questions:[...], idx, mode, answers:{}, order:[...perQuestion shuffled option order] }
@@ -1234,7 +1298,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.34.0";
+const APP_VERSION = "0.35.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2301,9 +2365,11 @@ function renderReports() {
       ${q ? `<p class="ri-line"><span class="ri-lab">Richtig:</span> ${esc(correctAnswerText(q))}</p>` : ""}
       <input class="input report-note" type="text" data-note="${esc(r.id)}" value="${esc(r.note)}"
         placeholder="Was stimmt nicht? (optional)" aria-label="Notiz zur gemeldeten Frage" autocomplete="off">
-      ${issued ? `<p class="ri-line issued-note">${icon("share")} Issue vorbereitet am ${esc(issued)}</p>` : ""}
+      ${r.issueNumber
+        ? `<p class="ri-line issued-note">${icon("share")} Issue <a class="link" href="${esc(r.issueUrl || "#")}" target="_blank" rel="noopener">#${esc(String(r.issueNumber))}</a> angelegt am ${esc(issued)}</p>`
+        : (issued ? `<p class="ri-line issued-note">${icon("share")} Issue vorbereitet am ${esc(issued)}</p>` : "")}
       <div class="report-actions">
-        ${hasIssueTarget ? `<button class="btn-ghost${issued ? " done" : ""}" data-issue="${esc(r.id)}">${icon("share")} ${issued ? "Issue erneut öffnen" : "Als Issue"}</button>` : ""}
+        ${hasIssueTarget ? `<button class="btn-ghost${issued ? " done" : ""}" data-issue="${esc(r.id)}">${icon("share")}<span class="ib-txt">${r.issueNumber ? "Nochmal senden" : (issued ? "Issue erneut öffnen" : "Als Issue")}</span></button>` : ""}
         <button class="btn-ghost report-remove" data-unreport="${esc(r.id)}">Meldung aufheben</button>
       </div>
     </div>`;
@@ -2332,9 +2398,27 @@ function renderReports() {
     toast("Meldung aufgehoben");
     renderReports();
   }));
-  app.querySelectorAll("[data-issue]").forEach(el => el.addEventListener("click", () => {
+  app.querySelectorAll("[data-issue]").forEach(el => el.addEventListener("click", async () => {
     const r = list.find(x => x.id === el.dataset.issue);
     if (!r) return;
+    // 1. Wahl: direkt serverseitig anlegen – man bleibt in der App.
+    if (issueApiPossible()) {
+      const label = el.querySelector(".ib-txt");
+      const before = label ? label.textContent : "";
+      el.disabled = true; if (label) label.textContent = "Lege an…";
+      const res = await createIssueDirect(r);
+      el.disabled = false; if (label) label.textContent = before;
+      if (res && res.ok) {
+        toast(res.existing ? "Issue #" + res.number + " gibt es schon" : "✅ Issue #" + res.number + " angelegt");
+        renderReports();
+        return;
+      }
+      // 2. Wahl: GitHub-Formular öffnen. Ehrlich sagen, warum der direkte Weg ausfiel.
+      const ok = await modalChoice("Direkt anlegen ging nicht",
+        issueErrorText(res && res.error) + " Stattdessen das ausgefüllte GitHub-Formular öffnen?",
+        [{ label: "Formular öffnen", value: true }, { label: "Abbrechen", value: false, variant: "ghost" }]);
+      if (!ok) return;
+    }
     openIssue(issueForReport(r));
     markIssued(r.id);        // Merkzettel, damit beim Durchgehen nichts doppelt angelegt wird
     renderReports();
