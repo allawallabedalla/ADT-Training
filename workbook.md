@@ -3,7 +3,7 @@
 > Das „Betriebshandbuch" unseres Projekts: **wie** wir zusammenarbeiten, **was**
 > als Nächstes ansteht (Backlog) und **welche Entscheidungen** wir getroffen haben.
 > Wird laufend gepflegt.
-> Stand: 2026-07-13
+> Stand: 2026-08-06
 
 ---
 
@@ -39,12 +39,13 @@
 | | |
 |---|---|
 | **Repository** | `allawallabedalla/ADT-Training` |
-| **Arbeits-Branch** | `claude/adt-training-app-ios-3kmiak` |
+| **Arbeits-Branch** | `claude/wizardly-clarke-qizl3i` |
 | **App-Code** | Repository-**Root** (`index.html`, `css/`, `js/`, `data/`, `icons/`, `sw.js`, `manifest.webmanifest`) |
 | **Hosting** | GitHub Pages (statisch, HTTPS) — Quelle: gewählter Branch + Ordner `/(root)` |
 | **Live-URL (geplant)** | `https://allawallabedalla.github.io/ADT-Training/` |
-| **Fachinhalte pflegen** | `data/questions.js` |
-| **Version** | 0.2.0 (siehe `changelog.md`) |
+| **Fachinhalte pflegen** | `data/questions.js` (bei `contentGated: true`: Pipeline im `Secret`-Repo → Supabase) |
+| **Fragen-Feedback** | Melden in der App → Export → `tools/reports-to-backlog.mjs` → `docs/fragen-backlog.md` (Ablauf: README → „Fragen-Feedback") |
+| **Version** | 0.32.0 (siehe `changelog.md`) |
 | **Cloud-Sync** | Supabase (kostenlos), Konfiguration in `config.js`; Identität per Sync-Code |
 
 ## 4. Definition of Done (pro Änderung)
@@ -56,7 +57,9 @@ Ausführliche Methode: `docs/arbeitsstrategie.md`.
 - [ ] Bei Bugfix: **Regressionstest** ergänzt; bei Feature: Test ergänzt
 - [ ] Bei UI: Screenshot Light **und** Dark, Konsole fehlerfrei
 - [ ] Risiko-Check (neue Kosten/Recht/Security/Usability?) – kurz notiert
-- [ ] Offline-Betrieb intakt (SW-Dateiliste aktuell, `CACHE`/`APP_VERSION` erhöht bei Client-Änderung)
+- [ ] Offline-Betrieb intakt (SW-Dateiliste aktuell, `CACHE`/`APP_VERSION` erhöht bei Client-Änderung).
+      **`APP_VERSION` immer erhöhen** – App und `sw.js` vergleichen genau diesen Wert für
+      „Nach Updates suchen"; ohne Erhöhung meldet die Prüfung „bereits aktuell".
 - [ ] `changelog.md` (und ggf. `pitch.md`/`workbook.md`) aktualisiert
 - [ ] Kleiner, beschreibender Commit → push Feature-Branch **und** `main`
 

@@ -178,6 +178,63 @@ die App validiert das Format beim Start und meldet Fehler in der Konsole.
 > ADT-Prüfungsfragen. Für maximale Passgenauigkeit sollten die offiziellen
 > Kursunterlagen/Beispielfragen eingearbeitet werden (siehe unten).
 
+## Fragen-Feedback: von der Meldung zur korrigierten Frage
+
+Beim Üben fällt am ehesten auf, wenn eine Frage falsch, unklar oder fehlerhaft ist.
+Dafür sitzt unter **jeder** Frage (Übung und Prüfungs-Auswertung) der Knopf
+**„Frage melden"** 🚩 – am Laptop auch Taste **M**. Ein Tipp öffnet einen kleinen
+Dialog über der Frage: melden mit oder ohne Kommentar, danach geht es dort weiter,
+wo man war. Der komplette Weg:
+
+1. **Melden** (in der App, beim Üben) – optionaler Kommentar, z. B. „Antwort B ist auch richtig".
+2. **Sammeln**: *Einstellungen → Fragen-Feedback → Gemeldete Fragen*. Dort ist jede
+   Meldung mit Fragetext, Thema, ID und Datum aufgelistet, die Notiz bleibt änderbar.
+3. **Exportieren**: „Als Datei" (Markdown) oder „Alle kopieren". Der Export ist bereits
+   ein **Backlog zum Abhaken** – je Frage ein Kästchen, darunter Notiz, Fragetext,
+   Antwortmöglichkeiten (richtige markiert), Lösung und Erklärung.
+4. **Ins Repo übernehmen**:
+
+   ```bash
+   node tools/reports-to-backlog.mjs ~/Downloads/adt-trainer-gemeldete-fragen-2026-08-06.md
+   ```
+
+   Das pflegt **[`docs/fragen-backlog.md`](docs/fragen-backlog.md)**: neue IDs kommen
+   unter *Offen* dazu, **abgehakte Einträge bleiben abgehakt** (unter *Erledigt*),
+   **vorhandene Einträge werden nie überschrieben** – Notizen von Hand bleiben stehen.
+   Denselben Export mehrfach einspielen ändert nichts.
+5. **Korrigieren**: Die Frage in der Inhalts-Quelle anpassen und neu ausliefern – bei
+   `contentGated: true` liegen die Fragen **nicht** im Repo, sondern in Supabase
+   (gebaut über die Pipeline im `Secret`-Repo, siehe `supabase/content-gate.sql`).
+   Ohne Zugangsschutz: direkt in [`data/questions.js`](data/questions.js).
+6. **Abhaken** im Backlog – erledigt wird nur durchs Häkchen, nichts verschwindet von allein.
+
+> **Wo liegen die Meldungen?** Lokal im `localStorage` (im selben Datensatz wie der
+> Lernfortschritt) und – falls Geräte-Sync aktiv ist – zusätzlich in Supabase. **Nicht**
+> in git: Erst der Export bringt sie ins Repo. „Fortschritt zurücksetzen" löscht sie
+> bewusst nicht (Feedback ist kein Lernfortschritt).
+
+## Updates ausliefern (GitHub Pages)
+
+Ein Push auf den Pages-Branch **ist** das Deployment – eine Neuinstallation auf dem
+iPhone ist nie nötig. Bei den Nutzerinnen kommt die neue Fassung so an:
+
+- **Von allein**: Der Service Worker lädt die neue Shell im Hintergrund; spätestens beim
+  übernächsten Start läuft sie. Liegt ein neuer Service Worker bereit, erscheint zusätzlich
+  das In-App-Banner „Neue Version verfügbar".
+- **Sofort auf Wunsch**: *Einstellungen → App-Version → „Nach Updates suchen"*. Die App holt
+  die Shell frisch, vergleicht die ausgelieferte mit der laufenden `APP_VERSION` und bietet
+  das Neuladen an. Der Lernfortschritt bleibt dabei erhalten.
+
+> **Einmaliger Sonderfall:** Ein Gerät, auf dem noch eine Version **vor 0.31.0** läuft, kennt
+> den Knopf naturgemäß nicht. Für diesen einen Sprung: App aus dem App-Umschalter wischen und
+> zweimal öffnen (erster Start lädt im Hintergrund, zweiter startet die neue Fassung). Danach
+> genügt immer der Knopf.
+
+**Beim Ausliefern zu beachten:** `APP_VERSION` in [`js/app.js`](js/app.js) erhöhen – die App
+und `sw.js` vergleichen genau diesen Wert (`sw.js` liest die Deklarationszeile per Regex aus
+der ausgelieferten Datei). Ohne Erhöhung meldet die Update-Prüfung „bereits aktuell",
+obwohl die Dateien frisch geholt wurden.
+
 ## Struktur
 
 ```
@@ -190,6 +247,9 @@ die App validiert das Format beim Start und meldet Fehler in der Konsole.
 ├── js/app.js               App-Logik (Quiz-Engine, Gamification)
 ├── js/sync.js              Cloud-Sync (Merge-Logik, Supabase-Anbindung)
 ├── data/questions.js       Fragen-Datenbank  ← hier Inhalte pflegen
+├── docs/fragen-backlog.md  Arbeitsliste der gemeldeten Fragen (per Werkzeug gepflegt)
+├── tools/                  Werkzeuge (u. a. reports-to-backlog.mjs)
+├── tests/                  Testnetz – `bash tests/run.sh`
 └── icons/                  App-Icons (PNG)
 ```
 
