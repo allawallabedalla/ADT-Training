@@ -192,7 +192,17 @@ wo man war. Der komplette Weg:
 3. **Exportieren**: „Als Datei" (Markdown) oder „Alle kopieren". Der Export ist bereits
    ein **Backlog zum Abhaken** – je Frage ein Kästchen, darunter Notiz, Fragetext,
    Antwortmöglichkeiten (richtige markiert), Lösung und Erklärung.
-4. **Ins Repo übernehmen**:
+4. **Direkt als GitHub-Issue** (schnellster Weg): In der Sammelansicht öffnet „Als Issue"
+   bzw. „Alle als ein Issue" GitHubs Formular mit fertig ausgefülltem Titel und Text – du
+   tippst dort nur noch „Create". Die App verschickt dabei **nichts selbst** und kennt kein
+   Token; Zielrepo ist `feedbackRepo` in [`config.js`](config.js).
+
+   > **Das Zielrepo muss privat sein.** Der Issue-Text enthält den Fragetext, und die
+   > Lerninhalte sind zugangsgeschützt (`contentGated: true`). Voreingestellt ist deshalb das
+   > private `allawallabedalla/Secret` – nicht das öffentliche App-Repo. Ist `feedbackRepo`
+   > leer, erscheinen die Knöpfe gar nicht.
+
+5. **Oder als Datei ins Repo übernehmen**:
 
    ```bash
    node tools/reports-to-backlog.mjs ~/Downloads/adt-trainer-gemeldete-fragen-2026-08-06.md
@@ -202,11 +212,11 @@ wo man war. Der komplette Weg:
    unter *Offen* dazu, **abgehakte Einträge bleiben abgehakt** (unter *Erledigt*),
    **vorhandene Einträge werden nie überschrieben** – Notizen von Hand bleiben stehen.
    Denselben Export mehrfach einspielen ändert nichts.
-5. **Korrigieren**: Die Frage in der Inhalts-Quelle anpassen und neu ausliefern – bei
+6. **Korrigieren**: Die Frage in der Inhalts-Quelle anpassen und neu ausliefern – bei
    `contentGated: true` liegen die Fragen **nicht** im Repo, sondern in Supabase
    (gebaut über die Pipeline im `Secret`-Repo, siehe `supabase/content-gate.sql`).
    Ohne Zugangsschutz: direkt in [`data/questions.js`](data/questions.js).
-6. **Abhaken** im Backlog – erledigt wird nur durchs Häkchen, nichts verschwindet von allein.
+7. **Abhaken** im Backlog – erledigt wird nur durchs Häkchen, nichts verschwindet von allein.
 
 > **Wo liegen die Meldungen?** Lokal im `localStorage` (im selben Datensatz wie der
 > Lernfortschritt) und – falls Geräte-Sync aktiv ist – zusätzlich in Supabase. **Nicht**

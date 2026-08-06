@@ -11,6 +11,34 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.33.0] — 2026-08-06  ·  Meldung als GitHub-Issue (ohne Token in der App)
+
+### Hinzugefügt
+- **„Als Issue"** je gemeldeter Frage und **„Alle als ein Issue"** in der Sammelansicht.
+  Die App öffnet GitHubs eigenes „neues Issue"-Formular mit vorbefülltem Titel und Text –
+  abgeschickt wird in GitHub per Hand („Create"). Damit braucht die App **kein Token, keinen
+  Server und keine zusätzliche Berechtigung**; es gibt keine neue Angriffsfläche.
+- Einzel-Issue: Frage-ID, Thema, Meldedatum, App-/Fragen-Version, Notiz, Fragetext,
+  Antwortmöglichkeiten (richtige markiert), Lösung, Erklärung – Label `frage-feedback`.
+  Sammel-Issue: das komplette Backlog als Checkliste.
+- **`config.js` → `feedbackRepo`** ("owner/repo"). Leer = die Knöpfe erscheinen gar nicht.
+  Voreingestellt auf das **private** `allawallabedalla/Secret`: Der Issue-Text enthält den
+  Fragetext, und die Lerninhalte sind zugangsgeschützt – in einem öffentlichen Repo
+  (wie `ADT-Training`) wären sie damit offen einsehbar.
+
+### Technik
+- Längengrenze: sehr lange Sammel-Listen werden gekürzt, damit die URL nicht abgeschnitten
+  wird (Grenze ~7 kB) – der gekürzte Text weist auf den vollständigen Datei-Export hin.
+- Die Detailangaben zu einer Meldung stehen nur noch an einer Stelle im Code
+  (`reportDetailLines`) und werden von Backlog-Export und Issue gemeinsam genutzt.
+
+### Tests
+- 10 neue E2E-Checks: Knöpfe nur bei konfiguriertem Repo, Ziel-URL, Titel mit Frage-ID,
+  Notiz und Lösung im Text, Label, **kein Token/Key im Link**, Kürzung bei 40 Meldungen
+  (bleibt unter 8 kB und sagt es), und ohne Repo weder Knöpfe noch Link. `tests/run.sh` grün.
+
+---
+
 ## [0.32.0] — 2026-08-05  ·  Gemeldete Fragen werden ein Backlog
 
 Damit aus dem Feedback eine Arbeitsliste wird, statt einer losen Textdatei.

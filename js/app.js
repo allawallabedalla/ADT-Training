@@ -857,38 +857,98 @@ function wireReportButtons(root) {
    je Frage ein Kästchen zum Abhaken, darunter eingerückt alles, was zum Korrigieren nötig ist.
    Genau dieses Format liest `tools/reports-to-backlog.mjs` ein und führt es mit
    `docs/fragen-backlog.md` zusammen – abgehakte Einträge bleiben abgehakt. */
+function reportDate(iso) { return iso ? new Date(iso).toLocaleDateString("de-DE") : "unbekannt"; }
+// Alles, was zum Korrigieren einer gemeldeten Frage nötig ist – einmal formuliert,
+// genutzt vom Backlog-Export (eingerückt) und vom GitHub-Issue (ohne Einrückung).
+function reportDetailLines(r, indent) {
+  const p = indent || "";
+  const q = r.q;
+  const out = [];
+  if (r.note) out.push(p + "Notiz: " + r.note);
+  if (q) {
+    out.push(p + "Frage: " + q.question);
+    if (Array.isArray(q.options) && q.options.length) {
+      q.options.forEach((o, i) => out.push(p + (q.correct.includes(i) ? "· [richtig] " : "· ") + o));
+    }
+    out.push(p + "Lösung: " + correctAnswerText(q));
+    if (q.explanation) out.push(p + "Erklärung: " + q.explanation);
+  } else {
+    out.push(p + "(Diese Frage ist im aktuellen Katalog nicht mehr enthalten.)");
+  }
+  return out;
+}
+function versionLine() {
+  return "App " + APP_VERSION + (contentVersionLabel() ? " · Fragen-" + contentVersionLabel() : "");
+}
 function reportsAsText() {
   const list = reportedList();
-  const d = (iso) => (iso ? new Date(iso).toLocaleDateString("de-DE") : "unbekannt");
   const lines = [
     "# Fragen-Backlog (gemeldete Fragen)",
     "",
-    "Stand: " + new Date().toLocaleString("de-DE") +
-      " · App " + APP_VERSION + (contentVersionLabel() ? " · Fragen-" + contentVersionLabel() : ""),
+    "Stand: " + new Date().toLocaleString("de-DE") + " · " + versionLine(),
     "Offen: " + list.length,
     "",
     "## Offen",
     "",
   ];
   for (const r of list) {
-    const q = r.q;
-    const t = q ? TOPICS[q.topic] : null;
-    lines.push(`- [ ] **${r.id}**` + (t ? " · " + t.name : "") + " · gemeldet " + d(r.at));
-    if (r.note) lines.push("      Notiz: " + r.note);
-    if (q) {
-      lines.push("      Frage: " + q.question);
-      if (Array.isArray(q.options) && q.options.length) {
-        q.options.forEach((o, i) => lines.push("      " + (q.correct.includes(i) ? "· [richtig] " : "· ") + o));
-      }
-      lines.push("      Lösung: " + correctAnswerText(q));
-      if (q.explanation) lines.push("      Erklärung: " + q.explanation);
-    } else {
-      lines.push("      (Diese Frage ist im aktuellen Katalog nicht mehr enthalten.)");
-    }
+    const t = r.q ? TOPICS[r.q.topic] : null;
+    lines.push(`- [ ] **${r.id}**` + (t ? " · " + t.name : "") + " · gemeldet " + reportDate(r.at));
+    lines.push(...reportDetailLines(r, "      "));
     lines.push("");
   }
   if (!list.length) lines.push("(keine offenen Meldungen)", "");
   return lines.join("\n");
+}
+
+/* ---- Meldung als GitHub-Issue ----------------------------------------------------
+ * Bewusst OHNE Token in der App: Wir bauen nur GitHubs eigenen „neues Issue"-Link mit
+ * vorbefülltem Titel und Text. Getippt wird „Create" dann in GitHub – dadurch braucht die
+ * App kein Geheimnis, keinen Server und keine zusätzliche Berechtigung.
+ * Zielrepo steht in config.js (`feedbackRepo`). Es sollte PRIVAT sein: Die Fragen sind
+ * zugangsgeschützt und haben in einem öffentlichen Repo nichts zu suchen. Ist nichts
+ * konfiguriert, erscheinen die Knöpfe gar nicht erst. */
+const FEEDBACK_LABEL = "frage-feedback";
+const ISSUE_URL_MAX = 7000;      // konservativ – lange URLs schlucken manche Browser stumm
+function feedbackRepo() {
+  const r = (window.ADT_CONFIG && ADT_CONFIG.feedbackRepo) || "";
+  return /^[\w.-]+\/[\w.-]+$/.test(String(r).trim()) ? String(r).trim() : "";
+}
+// Vorbefüllter Link; kürzt den Text notfalls, damit die URL nicht abgeschnitten wird.
+function issueUrl(title, body) {
+  const repo = feedbackRepo();
+  if (!repo) return "";
+  const base = "https://github.com/" + repo + "/issues/new?labels=" + encodeURIComponent(FEEDBACK_LABEL) +
+    "&title=" + encodeURIComponent(String(title).slice(0, 200)) + "&body=";
+  const hint = "\n\n… gekürzt – der vollständige Stand steckt im Datei-Export der App.";
+  const room = Math.max(500, ISSUE_URL_MAX - base.length - encodeURIComponent(hint).length);
+  let b = String(body);
+  if (encodeURIComponent(b).length > room) {
+    while (b.length > 300 && encodeURIComponent(b).length > room) b = b.slice(0, Math.floor(b.length * 0.9));
+    b += hint;
+  }
+  return base + encodeURIComponent(b);
+}
+function issueForReport(r) {
+  const t = r.q ? TOPICS[r.q.topic] : null;
+  const title = "Frage " + r.id + (t ? " · " + t.name : "");
+  const body = [
+    "**Frage-ID:** `" + r.id + "`",
+    "**Thema:** " + (t ? t.name : "unbekannt"),
+    "**Gemeldet:** " + reportDate(r.at) + " · " + versionLine(),
+    "",
+  ].concat(reportDetailLines(r, "")).join("\n");
+  return issueUrl(title, body);
+}
+function issueForAllReports() {
+  const list = reportedList();
+  const title = "Fragen-Feedback: " + list.length + " gemeldete Frage(n) · " + todayStr();
+  return issueUrl(title, reportsAsText());
+}
+function openIssue(url) {
+  if (!url) return;
+  try { window.open(url, "_blank", "noopener"); }
+  catch (e) { location.href = url; }
 }
 
 // Session: { questions:[...], idx, mode, answers:{}, order:[...perQuestion shuffled option order] }
@@ -1161,7 +1221,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.32.0";
+const APP_VERSION = "0.33.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2215,6 +2275,7 @@ function renderReports() {
     return;
   }
 
+  const hasIssueTarget = !!feedbackRepo();
   const items = list.map(r => {
     const q = r.q;
     const t = q ? TOPICS[q.topic] : null;
@@ -2225,18 +2286,23 @@ function renderReports() {
       ${q ? `<p class="ri-line"><span class="ri-lab">Richtig:</span> ${esc(correctAnswerText(q))}</p>` : ""}
       <input class="input report-note" type="text" data-note="${esc(r.id)}" value="${esc(r.note)}"
         placeholder="Was stimmt nicht? (optional)" aria-label="Notiz zur gemeldeten Frage" autocomplete="off">
-      <button class="btn-ghost report-remove" data-unreport="${esc(r.id)}">Meldung aufheben</button>
+      <div class="report-actions">
+        ${hasIssueTarget ? `<button class="btn-ghost" data-issue="${esc(r.id)}">${icon("share")} Als Issue</button>` : ""}
+        <button class="btn-ghost report-remove" data-unreport="${esc(r.id)}">Meldung aufheben</button>
+      </div>
     </div>`;
   }).join("");
 
   app.innerHTML = `<h1 class="large-title">Gemeldete Fragen<span class="sub">${list.length} markiert</span></h1>
     <div class="q-card">
       <p class="muted" style="margin:0 0 12px">Notiz je Frage ergänzen und alles gebündelt weitergeben –
-      zum Kopieren (z. B. in eine Nachricht) oder als Datei.</p>
+      ${hasIssueTarget ? "als GitHub-Issue, " : ""}zum Kopieren (z. B. in eine Nachricht) oder als Datei.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${hasIssueTarget ? `<button class="btn-ghost" id="repIssueAll" style="width:auto;padding:11px 16px">${icon("share")} Alle als ein Issue</button>` : ""}
         <button class="btn-ghost" id="repCopy" style="width:auto;padding:11px 16px">${icon("copy")} Alle kopieren</button>
         <button class="btn-ghost" id="repExport" style="width:auto;padding:11px 16px">${icon("export")} Als Datei</button>
       </div>
+      ${hasIssueTarget ? `<p class="muted" style="margin:12px 0 0;font-size:13px">Das Issue wird in <b>${esc(feedbackRepo())}</b> vorbereitet – in GitHub nur noch „Create" tippen.</p>` : ""}
     </div>
     ${items}
     <button class="btn-ghost" id="repClear" style="color:var(--danger);margin-top:6px">Alle Meldungen aufheben</button>
@@ -2251,6 +2317,12 @@ function renderReports() {
     toast("Meldung aufgehoben");
     renderReports();
   }));
+  app.querySelectorAll("[data-issue]").forEach(el => el.addEventListener("click", () => {
+    const r = list.find(x => x.id === el.dataset.issue);
+    if (r) openIssue(issueForReport(r));
+  }));
+  const iAll = document.getElementById("repIssueAll");
+  if (iAll) iAll.addEventListener("click", () => openIssue(issueForAllReports()));
   document.getElementById("repCopy").addEventListener("click", copyReports);
   document.getElementById("repExport").addEventListener("click", exportReports);
   document.getElementById("repClear").addEventListener("click", async () => {

@@ -687,7 +687,49 @@ async function page(opts = {}) {
     'Melden: Sanitisierung kappt Menge und Notizlänge, aktive Meldungen bleiben');
 }
 
-// 28) Update-Knopf: sichtbar mit Version; ohne Service Worker führt er sauber zum Neuladen
+// 28) Meldung als GitHub-Issue: vorbefüllter Link, ohne Token in der App
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const qid = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    setReported(q.id, true, 'Antwort B ist auch richtig');
+    go('reports');
+    return q.id;
+  });
+  await p.waitForSelector('.report-item');
+  chk(await p.$('[data-issue]') !== null && await p.$('#repIssueAll') !== null,
+    'Issue: Knöpfe erscheinen, wenn ein Zielrepo konfiguriert ist');
+
+  const one = await p.evaluate((id) => issueForReport(reportedList().find(r => r.id === id)), qid);
+  const repo = await p.evaluate(() => feedbackRepo());
+  const u = new URL(one);
+  chk(u.origin === 'https://github.com' && u.pathname === '/' + repo + '/issues/new', 'Issue: Link zeigt auf das konfigurierte Repo (' + repo + ')');
+  chk(u.searchParams.get('title').includes(qid), 'Issue: Titel enthält die Frage-ID');
+  chk(u.searchParams.get('body').includes('Antwort B ist auch richtig'), 'Issue: Notiz steht im Text');
+  chk(u.searchParams.get('body').includes('Lösung:'), 'Issue: Lösung zum Korrigieren dabei');
+  chk(u.searchParams.get('labels') === 'frage-feedback', 'Issue: Label gesetzt');
+  // Kein Zugangsmittel im Link (der Repo-NAME darf „Secret" heißen – gemeint sind Tokens/Keys)
+  chk(!/(access_token|api[_-]?key|authorization|ghp_|github_pat_|sb_(publishable|secret))/i.test(one),
+    'Issue: kein Token/Key im Link');
+
+  // Sammel-Issue + Längengrenze: sehr viele Meldungen dürfen die URL nicht sprengen
+  const all = await p.evaluate(() => {
+    QUESTIONS.slice(0, 40).forEach((q, i) => setReported(q.id, true, 'Notiz '.repeat(20) + i));
+    return { url: issueForAllReports(), n: reportCount() };
+  });
+  chk(all.n > 30 && all.url.length <= 8000, 'Issue: Sammel-Link bleibt trotz ' + all.n + ' Meldungen unter 8 kB (' + all.url.length + ')');
+  chk(decodeURIComponent(new URL(all.url).searchParams.get('body')).includes('gekürzt'),
+    'Issue: gekürzter Sammel-Text sagt das ehrlich');
+
+  // Ohne konfiguriertes Repo bleiben die Knöpfe weg (keine toten Wege in der Oberfläche)
+  await p.evaluate(() => { window.ADT_CONFIG.feedbackRepo = ''; go('reports'); });
+  await p.waitForSelector('.report-item');
+  chk(!(await p.$('[data-issue]')) && !(await p.$('#repIssueAll')) && await p.evaluate(() => issueForReport(reportedList()[0]) === ''),
+    'Issue: ohne Zielrepo keine Knöpfe und kein Link');
+}
+
+// 29) Update-Knopf: sichtbar mit Version; ohne Service Worker führt er sauber zum Neuladen
 {
   const p = await page();   // dieser Test läuft mit BLOCKIERTEM Service Worker
   await p.goto(BASE, { waitUntil: 'networkidle' });

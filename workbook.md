@@ -44,8 +44,8 @@
 | **Hosting** | GitHub Pages (statisch, HTTPS) — Quelle: gewählter Branch + Ordner `/(root)` |
 | **Live-URL (geplant)** | `https://allawallabedalla.github.io/ADT-Training/` |
 | **Fachinhalte pflegen** | `data/questions.js` (bei `contentGated: true`: Pipeline im `Secret`-Repo → Supabase) |
-| **Fragen-Feedback** | Melden in der App → Export → `tools/reports-to-backlog.mjs` → `docs/fragen-backlog.md` (Ablauf: README → „Fragen-Feedback") |
-| **Version** | 0.32.0 (siehe `changelog.md`) |
+| **Fragen-Feedback** | Melden in der App → als GitHub-Issue (privates `Secret`-Repo, `config.js` → `feedbackRepo`) **oder** Export → `tools/reports-to-backlog.mjs` → `docs/fragen-backlog.md` (Ablauf: README → „Fragen-Feedback") |
+| **Version** | 0.33.0 (siehe `changelog.md`) |
 | **Cloud-Sync** | Supabase (kostenlos), Konfiguration in `config.js`; Identität per Sync-Code |
 
 ## 4. Definition of Done (pro Änderung)
@@ -71,6 +71,9 @@ Priorisierung: **P1** = als Nächstes sinnvoll · **P2** = danach · **P3** = ni
 Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
+- ✅ **Meldung als GitHub-Issue** (v0.33.0, 2026-08-06): vorbefüllter Issue-Link je Meldung und
+  für alle zusammen – ohne Token/Server in der App. Zielrepo per `config.js` (`feedbackRepo`),
+  bewusst das **private** `Secret`-Repo, weil der Issue-Text den geschützten Fragetext enthält.
 - ✅ **Meldungen → Backlog** (v0.32.0, 2026-08-05): Der Export der gemeldeten Fragen ist jetzt
   ein Markdown-Backlog zum Abhaken; `tools/reports-to-backlog.mjs` führt ihn verlustfrei mit
   `docs/fragen-backlog.md` zusammen (Abgehaktes bleibt abgehakt, Handnotizen bleiben stehen).
