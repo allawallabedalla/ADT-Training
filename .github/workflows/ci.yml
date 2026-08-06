@@ -20,10 +20,12 @@ jobs:
           node-version: "22"
       - name: Syntaxprüfung (node --check)
         run: |
-          for f in config.js js/sync.js js/app.js sw.js data/questions.js; do
+          for f in config.js js/sync.js js/app.js sw.js data/questions.js tools/reports-to-backlog.mjs; do
             node --check "$f"
           done
       - name: Fragen-Datenbank validieren
         run: node tests/validate-questions.mjs
       - name: Unit-Tests (Sync-Logik)
         run: node tests/unit-sync.mjs
+      - name: Unit-Tests (Meldungen -> Backlog)
+        run: node tests/unit-backlog.mjs
