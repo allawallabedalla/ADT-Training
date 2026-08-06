@@ -68,6 +68,9 @@ Priorisierung: **P1** = als Nächstes sinnvoll · **P2** = danach · **P3** = ni
 Status: ⬜ offen · 🟡 in Arbeit · ✅ erledigt.
 
 ### Kürzlich erledigt
+- ✅ **Meldungen → Backlog** (v0.32.0, 2026-08-05): Der Export der gemeldeten Fragen ist jetzt
+  ein Markdown-Backlog zum Abhaken; `tools/reports-to-backlog.mjs` führt ihn verlustfrei mit
+  `docs/fragen-backlog.md` zusammen (Abgehaktes bleibt abgehakt, Handnotizen bleiben stehen).
 - ✅ **„Nach Updates suchen"** (v0.31.0, 2026-08-05): Knopf in den Einstellungen holt die auf
   GitHub Pages liegende Fassung sofort (Service-Worker-Befehl `REFRESH_SHELL` + Versionsvergleich),
   statt bis zum übernächsten Start zu warten – Neuinstallieren der iPhone-App entfällt.

@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { seedContent } from './seed-content.mjs';
+import { parseItems } from '../tools/reports-to-backlog.mjs';
 const require = createRequire(import.meta.url);
 const { chromium } = require('/opt/node22/lib/node_modules/playwright/index.js');
 
@@ -631,6 +632,10 @@ async function page(opts = {}) {
   chk(note === 'Quelle fehlt', 'Melden: Notiz in der Liste änderbar');
   const txt = await p.evaluate(() => reportsAsText());
   chk(txt.includes(qid) && txt.includes('Quelle fehlt'), 'Melden: Export-Text enthält Frage-ID und Notiz');
+  // Naht zum Repo-Backlog: der Export der App muss vom Werkzeug verstanden werden
+  const parsed = parseItems(txt);
+  chk(parsed.length === 1 && parsed[0].id === qid && !parsed[0].done && parsed[0].lines.join('\n').includes('Quelle fehlt'),
+    'Melden: Export ist ein gültiges Backlog (tools/reports-to-backlog.mjs liest es)');
 
   // Zurücksetzen des Fortschritts darf Meldungen NICHT löschen (Feedback ≠ Lernfortschritt)
   await p.evaluate(() => { S = freshStateKeepingReports(); persistLocal(); });

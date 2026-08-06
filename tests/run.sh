@@ -8,7 +8,7 @@ PORT="${PORT:-8399}"
 fail=0
 
 echo "== 1) Syntaxprüfung (node --check) =="
-for f in config.js js/sync.js js/app.js sw.js data/questions.js; do
+for f in config.js js/sync.js js/app.js sw.js data/questions.js tools/reports-to-backlog.mjs; do
   if node --check "$f"; then echo "  ok: $f"; else echo "  FAIL: $f"; fail=1; fi
 done
 
@@ -17,6 +17,9 @@ node tests/validate-questions.mjs || fail=1
 
 echo "== 3) Unit-Tests (sync-Logik) =="
 node tests/unit-sync.mjs || fail=1
+
+echo "== 3b) Unit-Tests (Meldungen -> Backlog) =="
+node tests/unit-backlog.mjs || fail=1
 
 echo "== 4) E2E-Smoke (Browser) =="
 python3 -m http.server "$PORT" >/dev/null 2>&1 &

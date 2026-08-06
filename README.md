@@ -15,6 +15,7 @@ funktioniert danach **komplett offline** – ganz ohne App Store.
 - **Erklärung zu jeder Frage** – der Lerninhalt wird vermittelt, nicht nur abgefragt
 - **Gamification** – XP, Level, Tages-Serie (Streak) und Erfolge/Badges
 - **Fragen als „fragwürdig" melden** – ein Tipp unter der Frage öffnet einen kleinen Dialog: melden mit oder ohne Kommentar, ohne die Frage zu verlassen (am Laptop: Taste **M**). Gesammelt unter *Einstellungen → Gemeldete Fragen* und als Text/Datei exportierbar
+- **Meldungen als Backlog** – der Export ist eine Liste zum Abhaken; `node tools/reports-to-backlog.mjs <export.md>` pflegt daraus [`docs/fragen-backlog.md`](docs/fragen-backlog.md)
 - **Updates ohne Neuinstallieren** – *Einstellungen → App-Version → „Nach Updates suchen"* holt die neueste Fassung von GitHub Pages
 - **Fortschritt bleibt gespeichert** (lokal auf dem Gerät, kein Konto, kein Server)
 

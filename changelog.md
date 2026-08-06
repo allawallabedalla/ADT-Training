@@ -11,6 +11,32 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.32.0] — 2026-08-05  ·  Gemeldete Fragen werden ein Backlog
+
+Damit aus dem Feedback eine Arbeitsliste wird, statt einer losen Textdatei.
+
+### Geändert
+- **Export/Kopieren der Meldungen ist jetzt ein Markdown-Backlog**: je Frage ein Kästchen zum
+  Abhaken (`- [ ] **tnm-012** · Thema · gemeldet …`), darunter eingerückt Notiz, Fragetext,
+  Antwortmöglichkeiten (richtige markiert), Lösung und Erklärung – alles, was zum Korrigieren
+  nötig ist, direkt am Eintrag.
+
+### Hinzugefügt
+- **`tools/reports-to-backlog.mjs`**: führt so einen Export mit `docs/fragen-backlog.md`
+  zusammen – `node tools/reports-to-backlog.mjs <export.md>`. Neue IDs kommen unter „Offen"
+  dazu; **abgehakte Einträge bleiben abgehakt** (auch wenn die Frage in der App noch gemeldet
+  ist) und stehen unter „Erledigt"; **vorhandene Einträge werden nie überschrieben**, damit
+  Notizen von Hand stehen bleiben. Nichts verschwindet von allein – erledigt wird durch Abhaken.
+- **`docs/fragen-backlog.md`** als Arbeitsliste im Repo (startet leer).
+
+### Tests
+- Neuer Unit-Test `tests/unit-backlog.mjs` (11 Checks: Parsen, erstes Zusammenführen, keine
+  Dubletten, Abgehaktes bleibt abgehakt, Handnotizen überleben, leerer Export löscht nichts),
+  eingehängt in `tests/run.sh`.
+- Zusätzlicher E2E-Check an der Naht: der Export der App wird tatsächlich vom Werkzeug gelesen.
+
+---
+
 ## [0.31.0] — 2026-08-05  ·  „Nach Updates suchen" (kein Neuinstallieren mehr)
 
 Neue Fassungen liegen auf GitHub Pages bereit, sobald gepusht wurde – die Home-Bildschirm-App

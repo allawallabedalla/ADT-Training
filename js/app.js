@@ -853,38 +853,41 @@ function wireReportButtons(root) {
   }));
 }
 
-// Alle Meldungen als lesbarer Text (zum Kopieren oder als Datei) – so lässt sich das
-// Feedback direkt in die Fragenpflege übernehmen.
+/* Alle Meldungen als Markdown-**Backlog** (zum Kopieren oder als Datei):
+   je Frage ein Kästchen zum Abhaken, darunter eingerückt alles, was zum Korrigieren nötig ist.
+   Genau dieses Format liest `tools/reports-to-backlog.mjs` ein und führt es mit
+   `docs/fragen-backlog.md` zusammen – abgehakte Einträge bleiben abgehakt. */
 function reportsAsText() {
   const list = reportedList();
+  const d = (iso) => (iso ? new Date(iso).toLocaleDateString("de-DE") : "unbekannt");
   const lines = [
-    "# ADT Trainer – gemeldete Fragen",
+    "# Fragen-Backlog (gemeldete Fragen)",
     "",
-    "Stand: " + new Date().toLocaleString("de-DE"),
-    "App-Version: " + APP_VERSION + (contentVersionLabel() ? " · Fragen-" + contentVersionLabel() : ""),
-    "Anzahl: " + list.length,
+    "Stand: " + new Date().toLocaleString("de-DE") +
+      " · App " + APP_VERSION + (contentVersionLabel() ? " · Fragen-" + contentVersionLabel() : ""),
+    "Offen: " + list.length,
+    "",
+    "## Offen",
     "",
   ];
   for (const r of list) {
     const q = r.q;
-    const t = q && TOPICS[q.topic];
-    lines.push("---", "");
-    lines.push("## " + r.id + (t ? " · " + t.name : ""));
-    lines.push("Gemeldet am: " + (r.at ? new Date(r.at).toLocaleString("de-DE") : "unbekannt"));
-    if (r.note) lines.push("Notiz: " + r.note);
+    const t = q ? TOPICS[q.topic] : null;
+    lines.push(`- [ ] **${r.id}**` + (t ? " · " + t.name : "") + " · gemeldet " + d(r.at));
+    if (r.note) lines.push("      Notiz: " + r.note);
     if (q) {
-      lines.push("", "Frage: " + q.question);
+      lines.push("      Frage: " + q.question);
       if (Array.isArray(q.options) && q.options.length) {
-        lines.push("Antwortmöglichkeiten:");
-        q.options.forEach((o, i) => lines.push("  " + (q.correct.includes(i) ? "[x] " : "[ ] ") + o));
+        q.options.forEach((o, i) => lines.push("      " + (q.correct.includes(i) ? "· [richtig] " : "· ") + o));
       }
-      lines.push("Richtig: " + correctAnswerText(q));
-      if (q.explanation) lines.push("Erklärung: " + q.explanation);
+      lines.push("      Lösung: " + correctAnswerText(q));
+      if (q.explanation) lines.push("      Erklärung: " + q.explanation);
     } else {
-      lines.push("", "(Diese Frage ist im aktuellen Katalog nicht mehr enthalten.)");
+      lines.push("      (Diese Frage ist im aktuellen Katalog nicht mehr enthalten.)");
     }
     lines.push("");
   }
+  if (!list.length) lines.push("(keine offenen Meldungen)", "");
   return lines.join("\n");
 }
 
@@ -1158,7 +1161,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.31.0";
+const APP_VERSION = "0.32.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
