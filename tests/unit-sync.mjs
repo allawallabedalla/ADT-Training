@@ -86,6 +86,13 @@ ok(mr.reports.r4.on === true && mr.reports.r4.note === 'Tippfehler', 'merge repo
 const canon = (o) => JSON.stringify(Object.keys(o).sort().map(k => [k, o[k].on, o[k].at, o[k].note]));
 const mrRev = S.mergeStates(RB, RA);
 ok(canon(mrRev.reports) === canon(mr.reports), 'merge reports: Reihenfolge egal (kommutativ)');
+// „Issue vorbereitet" ist eine Einbahnstraße: einmal gesetzt, darf es kein Merge zurücknehmen
+const mi = S.mergeStates(
+  { perQuestion: {}, badges: {}, reports: { r9: { on: true, at: '2026-08-06T09:00:00Z', note: 'a', issuedAt: '2026-08-06T08:00:00Z' } } },
+  { perQuestion: {}, badges: {}, reports: { r9: { on: true, at: '2026-08-06T10:00:00Z', note: 'b' } } });   // jünger, aber ohne Vermerk
+ok(mi.reports.r9.note === 'b' && mi.reports.r9.issuedAt === '2026-08-06T08:00:00Z',
+  'merge reports: „Issue vorbereitet" bleibt erhalten, auch wenn die jüngere Seite es nicht kennt');
+
 const mrNone = S.mergeStates({ perQuestion: {}, badges: {} }, { perQuestion: {}, badges: {} });
 ok(mrNone.reports && Object.keys(mrNone.reports).length === 0, 'merge reports: fehlendes Feld ergibt leeres Objekt');
 

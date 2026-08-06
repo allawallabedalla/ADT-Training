@@ -114,14 +114,17 @@
       for (const id in src) {
         const inc = src[id] || {};
         const cur = reports[id];
-        if (!cur) { reports[id] = { on: inc.on === true, at: String(inc.at || ""), note: String(inc.note || "") }; continue; }
+        if (!cur) { reports[id] = { on: inc.on === true, at: String(inc.at || ""), note: String(inc.note || ""), issuedAt: String(inc.issuedAt || "") }; continue; }
         const incAt = String(inc.at || ""), curAt = String(cur.at || "");
         const newer = incAt > curAt ? inc : cur;
         const older = incAt > curAt ? cur : inc;
+        const issA = String(inc.issuedAt || ""), issB = String(cur.issuedAt || "");
         reports[id] = {
           on: newer.on === true,
           at: incAt > curAt ? incAt : curAt,
           note: String(newer.note || older.note || ""),
+          // „Issue vorbereitet" ist eine Einbahnstraße: einmal gesetzt, nie wieder leer.
+          issuedAt: issA > issB ? issA : issB,
         };
       }
     }

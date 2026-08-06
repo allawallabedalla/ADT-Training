@@ -11,6 +11,34 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.34.0] — 2026-08-06  ·  Ein Issue je Frage statt Sammel-Issue
+
+### Geändert
+- **Das Sammel-Issue ist raus.** Jede gemeldete Frage bekommt ihr **eigenes** Issue – ein
+  Vorgang je Frage, der für sich diskutiert, zugewiesen und geschlossen werden kann. Ein
+  Sammel-Issue müsste man von Hand nachpflegen und bliebe offen, bis die letzte Frage erledigt ist.
+- Die Sammelansicht bleibt unverändert bestehen (Liste, Notiz je Frage, „Alle kopieren",
+  „Als Datei", „Meldung aufheben") – nur der Sammel-Knopf ist weg.
+
+### Hinzugefügt
+- **Merkhilfe „Issue vorbereitet am …"**: Wurde für eine Meldung schon ein Issue geöffnet, steht
+  das am Eintrag, der Knopf heißt dann „Issue erneut öffnen", und oben zählt die Karte mit
+  („Bereits vorbereitet: 2 von 5"). Beim Durchgehen einer längeren Liste legt man so nichts doppelt an.
+  Bewusst als *Merkhilfe* formuliert: Ob in GitHub am Ende „Create" getippt wurde, kann die App
+  nicht wissen – sie hat nur den Link geöffnet.
+
+### Technik
+- Neues Feld `S.reports[id].issuedAt` (kein Schema-Sprung nötig – additiv, `sanitizeState`
+  ergänzt es). Im Cloud-Merge eine **Einbahnstraße**: einmal gesetzt, nimmt kein Merge es
+  zurück, auch wenn die jüngere Seite es nicht kennt.
+
+### Tests
+- Angepasst und ergänzt: kein Sammel-Issue mehr, Vermerk nach dem Öffnen, Knopfbeschriftung,
+  Zähler, Vermerk überlebt spätere Notizänderungen, Kürzung bei übergroßem Text; dazu ein
+  Unit-Test für die Einbahnstraße im Merge. `tests/run.sh` grün.
+
+---
+
 ## [0.33.0] — 2026-08-06  ·  Meldung als GitHub-Issue (ohne Token in der App)
 
 ### Hinzugefügt

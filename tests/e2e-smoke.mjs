@@ -698,8 +698,8 @@ async function page(opts = {}) {
     return q.id;
   });
   await p.waitForSelector('.report-item');
-  chk(await p.$('[data-issue]') !== null && await p.$('#repIssueAll') !== null,
-    'Issue: Knöpfe erscheinen, wenn ein Zielrepo konfiguriert ist');
+  chk(await p.$('[data-issue]') !== null, 'Issue: Knopf erscheint, wenn ein Zielrepo konfiguriert ist');
+  chk(!(await p.$('#repIssueAll')), 'Issue: kein Sammel-Issue mehr – bewusst eins je Frage');
 
   const one = await p.evaluate((id) => issueForReport(reportedList().find(r => r.id === id)), qid);
   const repo = await p.evaluate(() => feedbackRepo());
@@ -713,20 +713,27 @@ async function page(opts = {}) {
   chk(!/(access_token|api[_-]?key|authorization|ghp_|github_pat_|sb_(publishable|secret))/i.test(one),
     'Issue: kein Token/Key im Link');
 
-  // Sammel-Issue + Längengrenze: sehr viele Meldungen dürfen die URL nicht sprengen
-  const all = await p.evaluate(() => {
-    QUESTIONS.slice(0, 40).forEach((q, i) => setReported(q.id, true, 'Notiz '.repeat(20) + i));
-    return { url: issueForAllReports(), n: reportCount() };
-  });
-  chk(all.n > 30 && all.url.length <= 8000, 'Issue: Sammel-Link bleibt trotz ' + all.n + ' Meldungen unter 8 kB (' + all.url.length + ')');
-  chk(decodeURIComponent(new URL(all.url).searchParams.get('body')).includes('gekürzt'),
-    'Issue: gekürzter Sammel-Text sagt das ehrlich');
+  // Merkhilfe: nach dem Öffnen ist die Meldung als „Issue vorbereitet" markiert
+  await p.evaluate(() => { window.open = () => null; });   // GitHub im Test nicht wirklich öffnen
+  await p.click('[data-issue]');
+  await p.waitForSelector('.issued-note');
+  chk(await p.evaluate((id) => !!S.reports[id].issuedAt, qid), 'Issue: geöffnetes Issue wird am Eintrag vermerkt');
+  chk(/Issue erneut öffnen/.test(await p.textContent('[data-issue]')), 'Issue: Knopf wechselt zu „erneut öffnen"');
+  chk(/Bereits vorbereitet: <b>1<\/b>/.test(await p.innerHTML('.q-card')), 'Issue: Zähler „bereits vorbereitet" stimmt');
+  // Notiz ändern darf den Vermerk nicht verlieren
+  await p.evaluate((id) => setReportNote(id, 'noch eine Ergänzung'), qid);
+  chk(await p.evaluate((id) => !!S.reports[id].issuedAt, qid), 'Issue: Vermerk überlebt spätere Änderungen');
+
+  // Längengrenze: ein übergroßer Text (sehr lange Frage/Erklärung) darf die URL nicht sprengen
+  const long = await p.evaluate(() => issueUrl('Lange Frage', 'Erklärung mit Umlauten äöü '.repeat(1000)));
+  chk(long.length <= 8000, 'Issue: Link bleibt auch bei sehr langem Text unter 8 kB (' + long.length + ')');
+  chk(decodeURIComponent(new URL(long).searchParams.get('body')).includes('gekürzt'), 'Issue: Kürzung wird im Text gesagt');
 
   // Ohne konfiguriertes Repo bleiben die Knöpfe weg (keine toten Wege in der Oberfläche)
   await p.evaluate(() => { window.ADT_CONFIG.feedbackRepo = ''; go('reports'); });
   await p.waitForSelector('.report-item');
-  chk(!(await p.$('[data-issue]')) && !(await p.$('#repIssueAll')) && await p.evaluate(() => issueForReport(reportedList()[0]) === ''),
-    'Issue: ohne Zielrepo keine Knöpfe und kein Link');
+  chk(!(await p.$('[data-issue]')) && await p.evaluate(() => issueForReport(reportedList()[0]) === ''),
+    'Issue: ohne Zielrepo kein Knopf und kein Link');
 }
 
 // 29) Update-Knopf: sichtbar mit Version; ohne Service Worker führt er sauber zum Neuladen

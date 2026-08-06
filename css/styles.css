@@ -591,6 +591,9 @@ h1, h2, h3 { line-height: 1.2; }
 .report-item .report-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .report-item .report-actions .btn-ghost { width: auto; flex: 1 1 46%; padding: 11px 14px; min-height: 44px; box-shadow: none; background: var(--bg-elev-2); }
 .report-item .report-remove { color: var(--danger); }
+.report-item .report-actions .btn-ghost.done { color: var(--text-dim); }
+.report-item .issued-note { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; color: var(--success); }
+.report-item .issued-note svg { width: 15px; height: 15px; }
 :root[data-fontsize="large"] .report-btn { font-size: 15px; }
 
 /* ---------- Breite Fenster / Desktop: App als zentrierte Spalte darstellen ----------

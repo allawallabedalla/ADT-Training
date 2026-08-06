@@ -186,6 +186,7 @@ function sanitizeState(raw) {
         on: r.on === true,
         at: typeof r.at === "string" ? r.at.slice(0, 40) : "",
         note: typeof r.note === "string" ? r.note.slice(0, REPORT_NOTE_MAX) : "",
+        issuedAt: typeof r.issuedAt === "string" ? r.issuedAt.slice(0, 40) : "",
       }];
     })
     // Aktive Meldungen zuerst, danach die neuesten – so überlebt beim Kappen das Wichtigste.
@@ -774,7 +775,10 @@ function reportedList() {
   const m = reportsMap();
   return Object.keys(m)
     .filter(id => m[id] && m[id].on)
-    .map(id => ({ id, at: m[id].at || "", note: m[id].note || "", q: QUESTIONS.find(q => q.id === id) || null }))
+    .map(id => ({
+      id, at: m[id].at || "", note: m[id].note || "", issuedAt: m[id].issuedAt || "",
+      q: QUESTIONS.find(q => q.id === id) || null,
+    }))
     .sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
 function setReported(id, on, note) {
@@ -785,9 +789,20 @@ function setReported(id, on, note) {
     on: !!on,
     at: new Date().toISOString(),
     note: String(note != null ? note : (prev.note || "")).slice(0, REPORT_NOTE_MAX),
+    issuedAt: prev.issuedAt || "",     // Merkzettel „Issue schon angelegt" bleibt erhalten
   };
   saveState();
   return true;
+}
+/* Merken, dass für diese Frage schon ein Issue vorbereitet wurde. Bewusst als Merkhilfe
+   formuliert, nicht als Tatsache: Ob in GitHub am Ende „Create" getippt wurde, kann die
+   App nicht wissen – sie hat nur den Link geöffnet. */
+function markIssued(id) {
+  const r = reportsMap()[id];
+  if (!r) return;
+  r.issuedAt = new Date().toISOString();
+  r.at = r.issuedAt;                   // zählt als Änderung → gewinnt beim Cloud-Merge
+  saveState();
 }
 /* Melde-Dialog: kleiner Alert mit Notizfeld – die Frage bleibt darunter stehen, es wird
    nichts verlassen und nichts neu gerendert. Die Notiz ist optional: „Melden" genügt.
@@ -940,11 +955,9 @@ function issueForReport(r) {
   ].concat(reportDetailLines(r, "")).join("\n");
   return issueUrl(title, body);
 }
-function issueForAllReports() {
-  const list = reportedList();
-  const title = "Fragen-Feedback: " + list.length + " gemeldete Frage(n) · " + todayStr();
-  return issueUrl(title, reportsAsText());
-}
+/* Bewusst EIN Issue je Frage (kein Sammel-Issue): Jede Frage ist ein eigener Vorgang, der
+   für sich diskutiert, zugewiesen und geschlossen werden kann. Ein Sammel-Issue müsste man
+   von Hand nachpflegen und bliebe offen, bis die letzte Frage erledigt ist. */
 function openIssue(url) {
   if (!url) return;
   try { window.open(url, "_blank", "noopener"); }
@@ -1221,7 +1234,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.33.0";
+const APP_VERSION = "0.34.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2276,18 +2289,21 @@ function renderReports() {
   }
 
   const hasIssueTarget = !!feedbackRepo();
+  const issuedCount = list.filter(r => r.issuedAt).length;
   const items = list.map(r => {
     const q = r.q;
     const t = q ? TOPICS[q.topic] : null;
     const when = r.at ? new Date(r.at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "–";
+    const issued = r.issuedAt ? new Date(r.issuedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "";
     return `<div class="review-item report-item">
       <div class="ri-head">🚩 ${esc(when)} · ${t ? esc(t.name) : "Thema unbekannt"} · ${esc(r.id)}</div>
       <p class="ri-q">${q ? esc(q.question) : "Diese Frage ist im aktuellen Katalog nicht mehr enthalten."}</p>
       ${q ? `<p class="ri-line"><span class="ri-lab">Richtig:</span> ${esc(correctAnswerText(q))}</p>` : ""}
       <input class="input report-note" type="text" data-note="${esc(r.id)}" value="${esc(r.note)}"
         placeholder="Was stimmt nicht? (optional)" aria-label="Notiz zur gemeldeten Frage" autocomplete="off">
+      ${issued ? `<p class="ri-line issued-note">${icon("share")} Issue vorbereitet am ${esc(issued)}</p>` : ""}
       <div class="report-actions">
-        ${hasIssueTarget ? `<button class="btn-ghost" data-issue="${esc(r.id)}">${icon("share")} Als Issue</button>` : ""}
+        ${hasIssueTarget ? `<button class="btn-ghost${issued ? " done" : ""}" data-issue="${esc(r.id)}">${icon("share")} ${issued ? "Issue erneut öffnen" : "Als Issue"}</button>` : ""}
         <button class="btn-ghost report-remove" data-unreport="${esc(r.id)}">Meldung aufheben</button>
       </div>
     </div>`;
@@ -2295,14 +2311,13 @@ function renderReports() {
 
   app.innerHTML = `<h1 class="large-title">Gemeldete Fragen<span class="sub">${list.length} markiert</span></h1>
     <div class="q-card">
-      <p class="muted" style="margin:0 0 12px">Notiz je Frage ergänzen und alles gebündelt weitergeben –
-      ${hasIssueTarget ? "als GitHub-Issue, " : ""}zum Kopieren (z. B. in eine Nachricht) oder als Datei.</p>
+      <p class="muted" style="margin:0 0 12px">Notiz je Frage ergänzen und weitergeben –
+      ${hasIssueTarget ? "je Frage ein GitHub-Issue, " : ""}oder alles zusammen kopieren bzw. als Datei sichern.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${hasIssueTarget ? `<button class="btn-ghost" id="repIssueAll" style="width:auto;padding:11px 16px">${icon("share")} Alle als ein Issue</button>` : ""}
         <button class="btn-ghost" id="repCopy" style="width:auto;padding:11px 16px">${icon("copy")} Alle kopieren</button>
         <button class="btn-ghost" id="repExport" style="width:auto;padding:11px 16px">${icon("export")} Als Datei</button>
       </div>
-      ${hasIssueTarget ? `<p class="muted" style="margin:12px 0 0;font-size:13px">Das Issue wird in <b>${esc(feedbackRepo())}</b> vorbereitet – in GitHub nur noch „Create" tippen.</p>` : ""}
+      ${hasIssueTarget ? `<p class="muted" style="margin:12px 0 0;font-size:13px">„Als Issue" legt <b>je Frage ein eigenes Issue</b> in <b>${esc(feedbackRepo())}</b> an – in GitHub nur noch „Create" tippen.${issuedCount ? ` Bereits vorbereitet: <b>${issuedCount}</b> von ${list.length}.` : ""}</p>` : ""}
     </div>
     ${items}
     <button class="btn-ghost" id="repClear" style="color:var(--danger);margin-top:6px">Alle Meldungen aufheben</button>
@@ -2319,10 +2334,11 @@ function renderReports() {
   }));
   app.querySelectorAll("[data-issue]").forEach(el => el.addEventListener("click", () => {
     const r = list.find(x => x.id === el.dataset.issue);
-    if (r) openIssue(issueForReport(r));
+    if (!r) return;
+    openIssue(issueForReport(r));
+    markIssued(r.id);        // Merkzettel, damit beim Durchgehen nichts doppelt angelegt wird
+    renderReports();
   }));
-  const iAll = document.getElementById("repIssueAll");
-  if (iAll) iAll.addEventListener("click", () => openIssue(issueForAllReports()));
   document.getElementById("repCopy").addEventListener("click", copyReports);
   document.getElementById("repExport").addEventListener("click", exportReports);
   document.getElementById("repClear").addEventListener("click", async () => {

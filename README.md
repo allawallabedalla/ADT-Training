@@ -192,10 +192,12 @@ wo man war. Der komplette Weg:
 3. **Exportieren**: „Als Datei" (Markdown) oder „Alle kopieren". Der Export ist bereits
    ein **Backlog zum Abhaken** – je Frage ein Kästchen, darunter Notiz, Fragetext,
    Antwortmöglichkeiten (richtige markiert), Lösung und Erklärung.
-4. **Direkt als GitHub-Issue** (schnellster Weg): In der Sammelansicht öffnet „Als Issue"
-   bzw. „Alle als ein Issue" GitHubs Formular mit fertig ausgefülltem Titel und Text – du
-   tippst dort nur noch „Create". Die App verschickt dabei **nichts selbst** und kennt kein
-   Token; Zielrepo ist `feedbackRepo` in [`config.js`](config.js).
+4. **Direkt als GitHub-Issue** (schnellster Weg): „Als Issue" öffnet GitHubs Formular mit
+   fertig ausgefülltem Titel und Text – du tippst dort nur noch „Create". Es entsteht
+   **ein Issue je Frage**, damit jeder Vorgang für sich geschlossen werden kann; bereits
+   geöffnete Meldungen sind in der Liste als „Issue vorbereitet am …" markiert. Die App
+   verschickt dabei **nichts selbst** und kennt kein Token; Zielrepo ist `feedbackRepo`
+   in [`config.js`](config.js).
 
    > **Das Zielrepo muss privat sein.** Der Issue-Text enthält den Fragetext, und die
    > Lerninhalte sind zugangsgeschützt (`contentGated: true`). Voreingestellt ist deshalb das
