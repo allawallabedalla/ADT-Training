@@ -8,7 +8,7 @@
 > Hinweis: Die Beobachtungs-Abschnitte sind von Hand geschrieben; `reports-to-backlog.mjs`
 > überträgt nur die Kästchen-Einträge – Prosa vor „## Offen" nach einem Lauf wieder einsetzen.
 
-Zuletzt aktualisiert: 2026-08-13 · offen: 18 · erledigt: 0
+Zuletzt aktualisiert: 2026-08-13 · offen: 0 · erledigt: 18
 
 ### Beobachtung: gehäuft „ohne Abbildung/Tabelle nicht lösbar"
 
@@ -120,9 +120,29 @@ entschieden**, nicht je gemeldeter Frage. Aus jeder Kode-Tabelle bleibt die eine
 Prinzip prüft (z. B. `gyn-b9-128`: „(r, l)" = Seitenangabe Pflicht), die Schlüssel-Drills fallen.
 Die ID-Invariante aus `RESUME.md` gilt unverändert.
 
-## Offen
+### Umsetzung (13.08.): Runde E ist gefahren
 
-- [ ] **gyn-b3-044** · Zervixkarzinom · gemeldet 06.08.2026 · [Issue #6](https://github.com/allawallabedalla/Secret/issues/6)
+Alles unten steht im Secret-Repo auf `claude/gabs-neue-issues-3x2js2`
+(Commits `3f5fea1` + `fa9bff5`), Bilanz in `material/relevanz/BILANZ.md`:
+
+- `pipeline/relevanz.py` kennt jetzt **Kategorie E** und die erweiterte **Kategorie A**,
+  dazu `--work DIR` und `--nur A,B,C,D,E` für getrennte Runden.
+- **296 Kandidaten** geprüft → **51 `keep` · 7 `rewrite` · 244 `delete`**.
+- Katalog **5.951 → 5.707 Fragen**, Version `2026-08-13-f191e8a4`.
+  ID-Invariante maschinell geprüft: 0 neue IDs, 7 Fragen behalten ihre ID und ihren Fortschritt.
+- Trennlinie: gefallen ist, wo ein **Klassifikationskode selbst die Antwort** ist. Geblieben
+  sind Regelanwendung (Kodierregeln, Kodierbeispiele, Befundlesen), **oBDS-Feldschlüssel**
+  (`T` = trifft nicht zu, `R` = Revision, `SZ` = Stammzelltransplantation) und Sachfragen.
+- Kein Thema ist leer geworden; am stärksten betroffen `gyn_icdo_morphologie` (98 → 38).
+
+**Offen bleibt nur der Upload** (Beobachtung 3): der neue Stand liegt im Repo, aber noch nicht
+in Supabase. `python3 pipeline/build_sql_chunked.py --keep-code` → 15 Dateien nach
+`material/supabase/`, dann `material/relevanz/UPLOAD.md` abarbeiten (Zugangscode bleibt gültig,
+Geräte müssen sich nicht neu anmelden). Erst danach zeigt die App `Stand 13.08.2026 · f191e8`.
+
+## Erledigt — alle 18 Meldungen abgearbeitet (13.08.2026)
+
+- [x] **gyn-b3-044** · Zervixkarzinom · gemeldet 06.08.2026 · [Issue #6](https://github.com/allawallabedalla/Secret/issues/6)
       Notiz: Frage ist ohne Folie kaum zu verstehen
       Frage: Welche Altersgrenze in Jahren nennt das Kursskript beim CIN-Management
       („Alter: jünger als … Jahre")?
@@ -133,8 +153,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       (Befundkonstellation aus der Folie) in den Fragetext holen, oder die Frage streichen.
       Nachtrag 13.08. (Regel 1): Die Zahl steht auf der Folie direkt lesbar – ein Bild wäre die
       Antwort selbst. Also `delete`, außer der Kontext lässt sich sinnvoll in den Text holen.
+      **Ergebnis (13.08.):** `delete` — isolierte Zahl ohne Befundkonstellation, von der Folie ablesbar (Regel 1).
 
-- [ ] **brust-b5-038** · Brustkrebs – Kodierung & Dokumentation · gemeldet 06.08.2026 · [Issue #7](https://github.com/allawallabedalla/Secret/issues/7)
+- [x] **brust-b5-038** · Brustkrebs – Kodierung & Dokumentation · gemeldet 06.08.2026 · [Issue #7](https://github.com/allawallabedalla/Secret/issues/7)
       Notiz: Hier wird auf eine nicht sichtbare Tabelle verwiesen
       Frage: Welcher ICD-10-Kode gehört laut Übersichtstabelle zu C50.* mit dem
       Dignitätscode XXXX/0 (gutartig)?
@@ -146,8 +167,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Nachtrag 13.08. (Regeln 1+2): Bild fällt weg – die Tabellenzeile *ist* die Antwort. Und als
       Frage nach einem ICD-10-Kode fällt sie unter Regel 2. Rettbarer Kern: die Dignitätslogik
       (Endziffer /0 = gutartig → D-Kodegruppe statt C50.*). `rewrite` darauf, sonst `delete`.
+      **Ergebnis (13.08.):** `delete` mit Runde E — reine ICD-10-Kode-Abfrage; die Dignitätslogik (/0 → D-Gruppe) wird in `medgrund-b2-013` weiterhin geprüft.
 
-- [ ] **deskstat-b2-009** · Deskriptive Statistik – Häufigkeiten & Grafische Darstellung · gemeldet 06.08.2026 · [Issue #8](https://github.com/allawallabedalla/Secret/issues/8)
+- [x] **deskstat-b2-009** · Deskriptive Statistik – Häufigkeiten & Grafische Darstellung · gemeldet 06.08.2026 · [Issue #8](https://github.com/allawallabedalla/Secret/issues/8)
       Notiz: Nicht lösbar ohne Folie
       Frage: Wie viele Fälle weisen in der Häufigkeitstabelle „Haarfarbe" (geordnet nach
       Codes) fehlende Angaben auf (Gesamtzahl 43)?
@@ -159,8 +181,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Nachtrag 13.08. (Regel 1): Grenzfall. Die „3" steht in der Tabelle als eigene Zeile
       („fehlend"), ist also ablesbar statt zu errechnen – dann ist das Bild die Antwort.
       `rewrite` auf eine echte Rechenaufgabe (Anteil fehlender Angaben an n = 43) oder `delete`.
+      **Ergebnis (13.08.):** `rewrite` — echte Rechenaufgabe: „43 Fälle, bei 40 liegt die Angabe vor → Anteil fehlender Angaben in %" (7,0 %, Toleranz 0,2). Zahlen stehen im Fragetext, keine Tabelle nötig.
 
-- [ ] **strahl-b6-073** · Strahlentherapie – Dokumentations-Fallbeispiele · gemeldet 06.08.2026 · [Issue #9](https://github.com/allawallabedalla/Secret/issues/9)
+- [x] **strahl-b6-073** · Strahlentherapie – Dokumentations-Fallbeispiele · gemeldet 06.08.2026 · [Issue #9](https://github.com/allawallabedalla/Secret/issues/9)
       Notiz: Nicht lösbar ohne Folien
       Frage: Welche Angaben stehen im Dokumentationsbeispiel Aderhautmelanom bei Ende
       Grund und Nebenwirkungen?
@@ -175,8 +198,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Nachtrag 13.08. (Regel 1): **Hier bleibt der Fix richtig** – die Fallbeschreibung ist
       Eingangsmaterial („keine Pausen", „gut toleriert"), die Kodes E/K folgen erst daraus.
       Also Fallbeschreibung in den Fragetext holen; ein Bild braucht es dafür nicht.
+      **Ergebnis (13.08.):** `rewrite` — Fallbeschreibung (07.08.–09.08.2023, ohne Unterbrechung, Zieldosis erreicht, keine unerwünschten Wirkungen) steht jetzt im Fragetext; E und K sind daraus erschließbar. Am Folienbild S.88 geprüft.
 
-- [ ] **strahl-b6-043** · Strahlentherapie – oBDS-Kodierung & Meldebögen · gemeldet 07.08.2026 · [Issue #10](https://github.com/allawallabedalla/Secret/issues/10)
+- [x] **strahl-b6-043** · Strahlentherapie – oBDS-Kodierung & Meldebögen · gemeldet 07.08.2026 · [Issue #10](https://github.com/allawallabedalla/Secret/issues/10)
       Notiz: Hier ist wieder eine tabelle verwiesen
       Frage: Wie erklärt die Übersichtstabelle (App: „zum oBDS-Feld 14.12") den simultan
       integrierten Boost (SIB)? · Lösung: Der Boost erfolgt gleichzeitig mit der
@@ -189,8 +213,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       erzeugt. Fix: Floskel streichen („Was bezeichnet der simultan integrierte Boost (SIB)?"),
       Erklärung behalten. Lohnt sich als **generische Suche**: alle Fragen mit „laut
       Übersichtstabelle/laut Tabelle" im Fragetext, die inhaltlich gar keine Tabelle brauchen.
+      **Ergebnis (13.08.):** `rewrite` — Floskel „laut Übersichtstabelle" gestrichen, sonst unverändert. Am Folienbild S.85 geprüft.
 
-- [ ] **gyn-b9-108** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #11](https://github.com/allawallabedalla/Secret/issues/11)
+- [x] **gyn-b9-108** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #11](https://github.com/allawallabedalla/Secret/issues/11)
       Notiz: Muss die Codes nicht auswendig können
       Frage: Welche OPS-Zuordnungen gelten für Operationen an den weiblichen Genitalorganen?
       Lösung: 5-65 Ovar, 5-66 Tuba uterina, 5-67 Cervix uteri, 5-68 Inzision/Exzision/
@@ -200,8 +225,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Empfehlung: `rewrite` auf das Prinzip (OPS-Kapitel 5 = Operationen, Gliederung nach
       Organ, Seitenangabe/Zusatzkodes) statt der Nummernliste. Achtung Cluster: **9 Fragen**
       hängen an Folie 87 – zusammen entscheiden.
+      **Ergebnis (13.08.):** `delete` mit Runde E (OPS-Bereichsnummern).
 
-- [ ] **gyn-b1-001** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #12](https://github.com/allawallabedalla/Secret/issues/12)
+- [x] **gyn-b1-001** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #12](https://github.com/allawallabedalla/Secret/issues/12)
       Notiz: Muss die Codes nicht auswendig können
       Frage: Welche Zuordnungen von ICD-10-Code und Lokalisation sind korrekt?
       Lösung: C51 Vulva, C53 Cervix uteri, C56 Ovar (C54 = Corpus uteri, nicht Ovar)
@@ -211,15 +237,17 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       auch ICD-10-Zuordnungen fallen → `delete`.** Wenn ein Rest bleiben soll, dann höchstens
       eine Frage zum Prinzip (Gliederung der weiblichen Genitalorgane in C51–C57), nicht die
       Kode-Zuordnung selbst.
+      **Ergebnis (13.08.):** `delete` mit Runde E — nach Entscheidung 2 fallen auch ICD-10-Zuordnungen.
 
-- [ ] **gyn-b9-123** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #13](https://github.com/allawallabedalla/Secret/issues/13)
+- [x] **gyn-b9-123** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #13](https://github.com/allawallabedalla/Secret/issues/13)
       Notiz: Muss ich nicht auswendig können
       Frage: Welcher Zielgebiet-Schlüssel steht für die Beckenwand? · Lösung: 5.11
       Quelle: gyn, Folie 90 (S.133) — am Folienbild geprüft: **stimmt**
       Einordnung: Kategorie E, reiner Schlüssel-Drill aus einer 9-zeiligen Tabelle.
       Empfehlung: `delete` (siehe Cluster-Entscheidung unten bei #14).
+      **Ergebnis (13.08.):** `delete` mit Runde E (Zielgebiet-Schlüssel).
 
-- [ ] **gyn-b9-121** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #14](https://github.com/allawallabedalla/Secret/issues/14)
+- [x] **gyn-b9-121** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #14](https://github.com/allawallabedalla/Secret/issues/14)
       Notiz: Muss ich nicht auswendig können
       Frage: Welche Zielgebiet-Schlüssel sieht die Doku für gynäkologische Organe vor?
       Lösung: 5.7 Uterus, 5.8 Zervix, 5.9 Vulva, 5.10 Vagina · Quelle: gyn, Folie 90 (S.133)
@@ -230,15 +258,17 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       121–125 und 127 streichen bzw. zu **einer** Übersichtsfrage zusammenführen; behalten,
       was das Prinzip prüft: `gyn-b9-128` („(r, l)" = Seitenangabe Pflicht) und `gyn-b9-126`
       (was der Beckenlymphabfluss 9.10 umfasst – anatomisch/inhaltlich relevant).
+      **Ergebnis (13.08.):** `delete` mit Runde E. Aus dem Cluster Folie 90 bleiben `gyn-b9-126` (Umfang des Beckenlymphabflusses) und `gyn-b9-128` („(r, l)" = Seitenangabe Pflicht).
 
-- [ ] **gyn-b9-124** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #15](https://github.com/allawallabedalla/Secret/issues/15)
+- [x] **gyn-b9-124** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #15](https://github.com/allawallabedalla/Secret/issues/15)
       Notiz: Muss ich nicht können
       Frage: Welches Zielgebiet bezeichnet der Schlüssel 9.8? · Lösung: Paraaortale/paracavale
       Lymphknoten · Quelle: gyn, Folie 90 (S.133) — am Folienbild geprüft: **stimmt**
       Einordnung: Kategorie E, Schlüssel→Text-Richtung derselben Tabelle; die Distraktoren sind
       die Nachbarzeilen (9.9/9.10/9.11). `delete` im Cluster (siehe #14).
+      **Ergebnis (13.08.):** `delete` mit Runde E (Zielgebiet-Schlüssel).
 
-- [ ] **gyn-b9-086** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #16](https://github.com/allawallabedalla/Secret/issues/16)
+- [x] **gyn-b9-086** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #16](https://github.com/allawallabedalla/Secret/issues/16)
       Notiz: Ergibt keinen Sinn mit Bild
       Frage: Welche Gene bzw. Marker sind in der Übersicht zur Dokumentation der genetischen
       Varianten aufgeführt? · Quelle: gyn, Folie 82 (S.129)
@@ -252,15 +282,17 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       daraus ist Regel 1 oben entstanden.
       Empfehlung: `delete`; allenfalls `rewrite` auf den einzigen prüfbaren Kern der Folie (dass
       genetische Varianten je Gen mit Exon-Angabe dokumentiert werden, MMR/MSI zusätzlich).
+      **Ergebnis (13.08.):** `delete` — die Gentabelle enthält die fertige Antwort, ein Bild wäre kein Fix (Regel 1).
 
-- [ ] **gyn-b9-122** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #17](https://github.com/allawallabedalla/Secret/issues/17)
+- [x] **gyn-b9-122** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #17](https://github.com/allawallabedalla/Secret/issues/17)
       Notiz: Muss ich nicht können
       Frage: Welcher Zielgebiet-Schlüssel steht für die Vagina? · Lösung: 5.10
       Quelle: gyn, Folie 90 (S.133) — am Folienbild geprüft: **stimmt**
       Einordnung: Kategorie E; Lösung steht wörtlich in den Optionen von `gyn-b9-121`.
       `delete` im Cluster (siehe #14).
+      **Ergebnis (13.08.):** `delete` mit Runde E (Zielgebiet-Schlüssel).
 
-- [ ] **gyn-b1-005** · Grundlagen & Anatomie · gemeldet 12.08.2026 · [Issue #18](https://github.com/allawallabedalla/Secret/issues/18)
+- [x] **gyn-b1-005** · Grundlagen & Anatomie · gemeldet 12.08.2026 · [Issue #18](https://github.com/allawallabedalla/Secret/issues/18)
       Notiz: Ohne Abbildung kein Sinn
       Frage (App): Welche Epithelarten werden unterschieden?
       Frage (Repo, neuer): Welche Epithelarten nennt das Kursskript in der Übersicht
@@ -274,8 +306,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Ein `image` scheidet nach Regel 1 aus (die Abbildung beschriftet die Antworten). Falls der
       Inhalt erhalten bleiben soll, dann nur mit Kodier-Bezug (Epithelart → Morphologiegruppe),
       das wäre dann eine andere Frage. Unabhängig davon: **Upload-Stand nachziehen** (Beob. 3).
+      **Ergebnis (13.08.):** `delete` — Abbildungs-/Nomenklaturfrage (Entscheidung 3). Die Upload-Abweichung erledigt sich damit für diese Frage; Beobachtung 3 bleibt trotzdem offen.
 
-- [ ] **gyn-b7-003** · Grundlagen & Anatomie · gemeldet 12.08.2026 · [Issue #19](https://github.com/allawallabedalla/Secret/issues/19)
+- [x] **gyn-b7-003** · Grundlagen & Anatomie · gemeldet 12.08.2026 · [Issue #19](https://github.com/allawallabedalla/Secret/issues/19)
       Notiz: Muss keine anaotmise zuordnen [sic]
       Frage: Welche Abschnitte der Tuba uterina nennt das Kursskript?
       Quelle: gyn, Folie 6 (S.91, Prometheus-Abbildung)
@@ -284,8 +317,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       wie #18 (nur der Fantasie-Distraktor „Colliculus tubae" trennt). Empfehlung: `delete` –
       durch Entscheidung 3 bestätigt (Nomenklatur fällt). Als Topographie-Frage (C57.0) neu
       aufziehen geht nach Entscheidung 2 ebenfalls nicht, wenn der Kode die Antwort wäre.
+      **Ergebnis (13.08.):** `delete` mit Runde E (A-Erweiterung: Quelle ist eine Anatomie-Abbildung).
 
-- [ ] **gyn-b7-107** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #20](https://github.com/allawallabedalla/Secret/issues/20)
+- [x] **gyn-b7-107** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #20](https://github.com/allawallabedalla/Secret/issues/20)
       Notiz: Muss genau histocodes nicht auswendig können
       Frage: Welchen Morphologiekode nennt die WHO-5th sowohl für das Large cell NEC als auch
       für das Combined large cell NEC? · Lösung: 8013/3 · Quelle: gyn, Folie 31 (S.104)
@@ -297,8 +331,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Morphologiekode?" → Large cell NEC und Combined large cell NEC. Damit ist sie mit
       Entscheidung 2 vereinbar (Sachverhalt als Antwort, Kode nur als Nebenangabe). Trägt das
       nicht, dann `delete` zusammen mit dem Rest des Clusters.
+      **Ergebnis (13.08.):** `rewrite` — Frage lautet jetzt „Welche zwei Entitäten teilen sich denselben Morphologiekode?"; der Kode steht nur noch in der Erklärung.
 
-- [ ] **gyn-b7-105** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #21](https://github.com/allawallabedalla/Secret/issues/21)
+- [x] **gyn-b7-105** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #21](https://github.com/allawallabedalla/Secret/issues/21)
       Notiz: Muss genaue histocodes nciht können [sic]
       Frage: Welche Kodes nennt die WHO-5th für die neuroendokrinen Karzinome (NEC)?
       Quelle: gyn, Folie 31 (S.104)
@@ -309,16 +344,18 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       vier als richtig markierten Kodes stimmen, 8046/3 steht dort nicht.
       Empfehlung: `delete` (inhaltlich Teilmenge von `gyn-b7-107`); falls sie bleibt, **muss**
       die Erklärung korrigiert werden – so steht eine falsche Aussage über die ICD-O-3 im Katalog.
+      **Ergebnis (13.08.):** `delete` mit Runde E — der Fehler „8046/3 gibt es nicht" entfällt damit; als Audit-Muster in `BILANZ.md` festgehalten.
 
-- [ ] **gyn-b7-092** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #22](https://github.com/allawallabedalla/Secret/issues/22)
+- [x] **gyn-b7-092** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #22](https://github.com/allawallabedalla/Secret/issues/22)
       Notiz: Keine genauen histocodes
       Frage: Welchen Keimzelltumor nennt die WHO-5th für den Eileiter?
       Lösung: 9080/3 Immature teratoma NOS · Quelle: gyn, Folie 27 (S.102)
       Einordnung: Kategorie E. Der einzige lernbare Kern ist die Aussage „beim Eileiter führt die
       WHO nur **einen** Keimzelltumor" – die vier Kode-Distraktoren tragen dazu nichts bei.
       Empfehlung: `rewrite` auf diese Aussage (ohne Kodeliste) oder `delete`.
+      **Ergebnis (13.08.):** `delete` mit Runde E (Morphologiekode).
 
-- [ ] **gyn-b7-023** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #23](https://github.com/allawallabedalla/Secret/issues/23)
+- [x] **gyn-b7-023** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #23](https://github.com/allawallabedalla/Secret/issues/23)
       Notiz: Keine genauen codes
       Frage: Welchen ICD-O-3-Topographiekode hat das Myometrium? · Lösung: C54.2
       Quelle: gyn, Folie 13 (S.95)
@@ -326,7 +363,8 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       C54.1 Endometrium vs. C54.2 Myometrium als typische Verwechslung). **Durch Entscheidung 2
       vom 13.08. überholt → `delete`.** Das war die Grundsatzentscheidung: die ~26 Kode-Fragen
       des `icdo`-Skripts fallen in derselben Runde mit.
+      **Ergebnis (13.08.):** `delete` mit Runde E — nach Entscheidung 2 fällt auch die ICD-O-3-Topographie.
 
-## Erledigt
+## Offen
 
-(noch nichts erledigt)
+(keine offenen Meldungen — neue Meldungen erscheinen als Issue in `allawallabedalla/Secret`)
