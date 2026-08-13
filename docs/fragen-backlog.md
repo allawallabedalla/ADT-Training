@@ -24,6 +24,9 @@ dafür – diese vier sind offenbar trotzdem durchgerutscht (oder als Bild vorge
 aber nicht mit ausgeliefert). Lohnt sich, **einmal gebündelt** anzugehen statt einzeln:
 1. Die vier unten gezielt fixen (Text erweitern **oder** Abbildung als `image` ergänzen –
    die App unterstützt das bereits, siehe `qImageHtml` in `js/app.js`).
+   ⚠ Seit 13.08. eingeschränkt durch **Regel 1** (Entscheidung Nico, s. u.): Ein Bild ist nur
+   dann der Fix, wenn die Antwort daraus erst erschlossen werden muss. Steht die Lösung in der
+   Abbildung ablesbar, wird die Frage gestrichen oder umformuliert – siehe Nachträge unten.
 2. Stichprobenartig querchecken, ob `selfcontained_check.py` zuletzt tatsächlich gegen den
    ausgelieferten Stand lief (nicht nur gegen die Rohgenerierung).
 
@@ -91,6 +94,26 @@ reproduzieren. Praktische Folgen:
   muss das Label in der App exakt der `VERSION` in `main` entsprechen; erst dann sind Meldungen
   eindeutig einer Katalogfassung zuzuordnen.
 
+### Entscheidung Nico (13.08.) — gilt ab sofort für alle Runden
+
+Drei Rückfragen zu den Meldungen, drei Festlegungen:
+
+1. **Eine Abbildung ist nur dann der Fix, wenn sie Eingangsdaten liefert — nicht die Antwort.**
+   Zu #16: „Das Bild enthält auch gleich die fertige Antwort, deshalb unsinnig, es als Hinweis zu
+   behalten." Damit fällt die Standardempfehlung der ersten Runde („Tabelle als `image`
+   ergänzen") für alle Fragen, deren Lösung in der Tabelle **ablesbar** ist – dort wird aus der
+   Frage sonst eine Suchübung. Bild ergänzen bleibt richtig, wo die Abbildung Material zum
+   **Rechnen/Schließen** ist und die Antwort erst daraus entsteht (Fallbeschreibung, Befund,
+   Diagramm). Die vier Einträge vom 06.08. sind unten entsprechend nachgezogen.
+2. **Alle reinen Kode-Abfragen raus** — auch ICD-10-Lokalisation und ICD-O-3-Topographie.
+   Damit sind meine „keep"-Empfehlungen zu `gyn-b1-001` und `gyn-b7-023` hinfällig (unten
+   korrigiert), und die Runde E betrifft die volle Größenordnung: **~281 Fragen** über alle
+   Skripte, davon ~26 im `icdo`-Skript. Maßstab bleibt: fällt nur, was **allein den Kode**
+   abfragt; eine Frage, deren Antwort ein Sachverhalt ist und die einen Kode nur nennt, bleibt.
+3. **Von der Anatomie fallen nur Abbildungs- und Nomenklaturfragen** (lateinische Bezeichnungen,
+   Zuordnung zu Bildbeschriftungen). Anatomie mit Kodier-Bezug bleibt – das Kapitel „Grundlagen &
+   Anatomie" wird also nicht pauschal geleert.
+
 **Empfehlung für die Umsetzung** (im Secret-Repo, nicht hier): eine Relevanz-Runde „E" analog zur
 letzten – `keep` / `rewrite` (ID behalten!) / `delete` je Frage, aber **je Folien-Cluster
 entschieden**, nicht je gemeldeter Frage. Aus jeder Kode-Tabelle bleibt die eine Frage, die das
@@ -108,6 +131,8 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Einordnung: numeric-Frage ohne jeden Kontext, welche Konstellation/Befund gemeint ist –
       reines Erraten oder Auswendiglernen einer isolierten Zahl. Entweder den Kontext
       (Befundkonstellation aus der Folie) in den Fragetext holen, oder die Frage streichen.
+      Nachtrag 13.08. (Regel 1): Die Zahl steht auf der Folie direkt lesbar – ein Bild wäre die
+      Antwort selbst. Also `delete`, außer der Kontext lässt sich sinnvoll in den Text holen.
 
 - [ ] **brust-b5-038** · Brustkrebs – Kodierung & Dokumentation · gemeldet 06.08.2026 · [Issue #7](https://github.com/allawallabedalla/Secret/issues/7)
       Notiz: Hier wird auf eine nicht sichtbare Tabelle verwiesen
@@ -118,6 +143,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Einordnung: Frage verweist wörtlich auf „Übersichtstabelle", die nicht mitgeliefert wird.
       Beste Lösung: die Tabelle (oder den relevanten Ausschnitt) als `image` an die Frage
       hängen – die App kann das bereits (Zoom-Lightbox vorhanden).
+      Nachtrag 13.08. (Regeln 1+2): Bild fällt weg – die Tabellenzeile *ist* die Antwort. Und als
+      Frage nach einem ICD-10-Kode fällt sie unter Regel 2. Rettbarer Kern: die Dignitätslogik
+      (Endziffer /0 = gutartig → D-Kodegruppe statt C50.*). `rewrite` darauf, sonst `delete`.
 
 - [ ] **deskstat-b2-009** · Deskriptive Statistik – Häufigkeiten & Grafische Darstellung · gemeldet 06.08.2026 · [Issue #8](https://github.com/allawallabedalla/Secret/issues/8)
       Notiz: Nicht lösbar ohne Folie
@@ -128,6 +156,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       zugreift, die nicht angezeigt wird – ohne Abbildung nicht beantwortbar.
       Beste Lösung: Tabelle „Haarfarbe" als `image` ergänzen (Musterbeispiel für
       Häufigkeitstabellen ist ohnehin lehrreich zu sehen).
+      Nachtrag 13.08. (Regel 1): Grenzfall. Die „3" steht in der Tabelle als eigene Zeile
+      („fehlend"), ist also ablesbar statt zu errechnen – dann ist das Bild die Antwort.
+      `rewrite` auf eine echte Rechenaufgabe (Anteil fehlender Angaben an n = 43) oder `delete`.
 
 - [ ] **strahl-b6-073** · Strahlentherapie – Dokumentations-Fallbeispiele · gemeldet 06.08.2026 · [Issue #9](https://github.com/allawallabedalla/Secret/issues/9)
       Notiz: Nicht lösbar ohne Folien
@@ -141,6 +172,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       toleriert") mit den zwei Codes – aber im Fragetext selbst fehlt die Fallbeschreibung
       komplett. Wahrscheinlich beim Kürzen verloren gegangen; Fragetext müsste die
       Fallbeschreibung enthalten (oder die Folie als `image`).
+      Nachtrag 13.08. (Regel 1): **Hier bleibt der Fix richtig** – die Fallbeschreibung ist
+      Eingangsmaterial („keine Pausen", „gut toleriert"), die Kodes E/K folgen erst daraus.
+      Also Fallbeschreibung in den Fragetext holen; ein Bild braucht es dafür nicht.
 
 - [ ] **strahl-b6-043** · Strahlentherapie – oBDS-Kodierung & Meldebögen · gemeldet 07.08.2026 · [Issue #10](https://github.com/allawallabedalla/Secret/issues/10)
       Notiz: Hier ist wieder eine tabelle verwiesen
@@ -172,12 +206,11 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Frage: Welche Zuordnungen von ICD-10-Code und Lokalisation sind korrekt?
       Lösung: C51 Vulva, C53 Cervix uteri, C56 Ovar (C54 = Corpus uteri, nicht Ovar)
       Quelle: gyn, S.3 oben
-      Einordnung: **Hier würde ich der Meldung widersprechen → `keep`.** Das ist die eine
-      Kodefamilie, die eine Tumordokumentarin täglich benutzt; die C5x-Lokalisationen der
-      weiblichen Genitalorgane sind Kerninhalt der Basisdokumentation, nicht Nachschlagestoff.
-      Die Frage prüft außerdem eine Verwechslung (C54 vs. C56), keine Nummernwiedergabe.
-      Falls überhaupt Änderung: Fragetext auf „Zuordnung erkennen" zuspitzen. Entscheidung
-      liegt bei Nico – wenn sie fallen soll, dann konsequent für alle ICD-10-Zuordnungsfragen.
+      Einordnung: Ich hatte `keep` vorgeschlagen (C5x-Lokalisationen = tägliches Handwerkszeug,
+      geprüft wird die Verwechslung C54 vs. C56). **Durch Entscheidung 2 vom 13.08. überholt:
+      auch ICD-10-Zuordnungen fallen → `delete`.** Wenn ein Rest bleiben soll, dann höchstens
+      eine Frage zum Prinzip (Gliederung der weiblichen Genitalorgane in C51–C57), nicht die
+      Kode-Zuordnung selbst.
 
 - [ ] **gyn-b9-123** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #13](https://github.com/allawallabedalla/Secret/issues/13)
       Notiz: Muss ich nicht auswendig können
@@ -214,8 +247,11 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Erklärtext. Zwei Zuschnitt-Fehler: eine Option bündelt drei Zeilen („POLE, RET und TP53"),
       und `p16_IHC`/`PD-L1_IHC` stehen nur in der Erklärung, nicht in den Optionen – die Frage
       prüft damit weder Vollständigkeit noch Verständnis, sondern Listen-Wiedererkennung.
-      Empfehlung: `rewrite` auf den einzigen prüfbaren Kern der Folie (dass genetische Varianten
-      je Gen mit Exon-Angabe dokumentiert werden, MMR/MSI zusätzlich) – sonst `delete`.
+      Rückfrage geklärt (13.08.): „Ergibt keinen Sinn mit Bild" heißt **die Tabelle enthält die
+      fertige Antwort** – ein `image` wäre hier kein Fix, sondern gäbe die Lösung her. Genau
+      daraus ist Regel 1 oben entstanden.
+      Empfehlung: `delete`; allenfalls `rewrite` auf den einzigen prüfbaren Kern der Folie (dass
+      genetische Varianten je Gen mit Exon-Angabe dokumentiert werden, MMR/MSI zusätzlich).
 
 - [ ] **gyn-b9-122** · Dokumentation, OPS & Strahlentherapie · gemeldet 12.08.2026 · [Issue #17](https://github.com/allawallabedalla/Secret/issues/17)
       Notiz: Muss ich nicht können
@@ -234,8 +270,10 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Grund `kontext`) – der Supabase-Upload ist hier älter als `main`. Inhaltlich bleibt die
       Frage auch mit Kontext schwach: sie ist allein über den unmöglichen Distraktor
       („sarkomatöses Epithel") lösbar, die drei richtigen Optionen sind dann geraten.
-      Empfehlung: erst Upload nachziehen, dann `rewrite` auf den Kodier-Bezug (Epithelart →
-      Morphologiegruppe) oder `delete`.
+      Empfehlung nach Entscheidung 3 (13.08.): als Nomenklatur-/Abbildungsfrage → `delete`.
+      Ein `image` scheidet nach Regel 1 aus (die Abbildung beschriftet die Antworten). Falls der
+      Inhalt erhalten bleiben soll, dann nur mit Kodier-Bezug (Epithelart → Morphologiegruppe),
+      das wäre dann eine andere Frage. Unabhängig davon: **Upload-Stand nachziehen** (Beob. 3).
 
 - [ ] **gyn-b7-003** · Grundlagen & Anatomie · gemeldet 12.08.2026 · [Issue #19](https://github.com/allawallabedalla/Secret/issues/19)
       Notiz: Muss keine anaotmise zuordnen [sic]
@@ -243,8 +281,9 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Quelle: gyn, Folie 6 (S.91, Prometheus-Abbildung)
       Einordnung: Kategorie A in Reinform – lateinische Anatomie-Nomenklatur einer
       Atlas-Abbildung; im oBDS wird nichts davon so dokumentiert. Gleicher Konstruktionsfehler
-      wie #18 (nur der Fantasie-Distraktor „Colliculus tubae" trennt). Empfehlung: `delete`;
-      falls behalten, dann als Topographie-Frage (C57.0 Tuba uterina) mit Kodier-Bezug.
+      wie #18 (nur der Fantasie-Distraktor „Colliculus tubae" trennt). Empfehlung: `delete` –
+      durch Entscheidung 3 bestätigt (Nomenklatur fällt). Als Topographie-Frage (C57.0) neu
+      aufziehen geht nach Entscheidung 2 ebenfalls nicht, wenn der Kode die Antwort wäre.
 
 - [ ] **gyn-b7-107** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #20](https://github.com/allawallabedalla/Secret/issues/20)
       Notiz: Muss genau histocodes nicht auswendig können
@@ -253,8 +292,11 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Einordnung: Am Folienbild geprüft – **stimmt** (8013/3 steht dort zweimal). Von den fünf
       Fragen des Clusters ist das die einzige mit didaktischem Kern: dass zwei Entitäten
       denselben Kode teilen, ist eine Kodierregel-Beobachtung, kein Nummern-Auswendiglernen.
-      Empfehlung: **`keep` als einzige Frage der Folie 31**, Fragetext auf die Beobachtung
-      zuspitzen („Welche zwei Entitäten teilen sich denselben Morphologiekode?").
+      Empfehlung: **`rewrite` als einzige Frage der Folie 31** – und zwar so, dass die Antwort
+      *nicht* der Kode ist: „Welche zwei Entitäten der WHO-5th teilen sich denselben
+      Morphologiekode?" → Large cell NEC und Combined large cell NEC. Damit ist sie mit
+      Entscheidung 2 vereinbar (Sachverhalt als Antwort, Kode nur als Nebenangabe). Trägt das
+      nicht, dann `delete` zusammen mit dem Rest des Clusters.
 
 - [ ] **gyn-b7-105** · ICD-O-3, Morphologie & Grading · gemeldet 12.08.2026 · [Issue #21](https://github.com/allawallabedalla/Secret/issues/21)
       Notiz: Muss genaue histocodes nciht können [sic]
@@ -280,11 +322,10 @@ Die ID-Invariante aus `RESUME.md` gilt unverändert.
       Notiz: Keine genauen codes
       Frage: Welchen ICD-O-3-Topographiekode hat das Myometrium? · Lösung: C54.2
       Quelle: gyn, Folie 13 (S.95)
-      Einordnung: Grenzfall, ich würde **`keep`** – anders als OPS-Bereiche und Zielgebiete ist
-      die ICD-O-3-Topographie das eigentliche Handwerkszeug der Tumordokumentation, und die
-      Unterteilung C54.1 Endometrium / C54.2 Myometrium ist eine typische Prüfungsverwechslung
-      (difficulty 1, also als Einstiegsfrage gedacht). Wenn Nico auch diese Ebene streichen will,
-      dann bewusst als Grundsatzentscheidung: dann fallen ~26 `icdo`-Fragen mit.
+      Einordnung: Ich hatte `keep` vorgeschlagen (ICD-O-3-Topographie als Handwerkszeug,
+      C54.1 Endometrium vs. C54.2 Myometrium als typische Verwechslung). **Durch Entscheidung 2
+      vom 13.08. überholt → `delete`.** Das war die Grundsatzentscheidung: die ~26 Kode-Fragen
+      des `icdo`-Skripts fallen in derselben Runde mit.
 
 ## Erledigt
 
