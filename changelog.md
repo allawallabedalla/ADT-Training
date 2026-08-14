@@ -11,6 +11,39 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.37.0] — 2026-08-13  ·  Die Prüfung verrät den Fragetyp nicht mehr
+
+### Geändert
+- **Prüfungssimulation: alle Auswahlfragen erscheinen als Mehrfachauswahl.** Checkboxen statt
+  Radiobuttons, einheitlicher Chip „Mehrfachauswahl", keine stille Ersetzung der vorherigen
+  Auswahl. Grund: die echte Prüfung sagt nicht, wie viele Antworten richtig sind, und § 5 der
+  Prüfungsordnung wertet alles-oder-nichts. Wer am Radiobutton abliest „hier ist genau eine
+  richtig", übt eine Erleichterung ein, die es in der Prüfung nicht gibt.
+- Der Hinweis über den Optionen sagt das jetzt auch so: „Es können eine oder mehrere Antworten
+  richtig sein. Nur vollständig richtig zählt."
+- **Der Lernmodus bleibt unverändert** – dort steht weiterhin „Einfachauswahl" bzw.
+  „Mehrfachauswahl" an der Frage, inklusive Radiobutton-Verhalten und Pfeiltasten-Auswahl.
+- Der Fragenkatalog ist davon **nicht** betroffen: `type` bleibt wie er ist, die Auswertung
+  (`gradeQuestion`) vergleicht unverändert exakt.
+
+### Tests
+- 6 neue E2E-Checks: die Prüfung enthält eine single-Frage (Testvoraussetzung), sie zeigt
+  „Mehrfachauswahl" statt „Einfachauswahl", die Optionen tragen `role="checkbox"`, zwei
+  Kreuze bei einer single-Frage bleiben beide stehen – und als Gegenprobe: im Lernmodus wird
+  „Einfachauswahl" weiterhin angezeigt. `tests/run.sh` grün.
+
+### Inhalte (Katalog, Secret-Repo)
+- **Relevanz-Runde E: 5.951 → 5.707 Fragen.** 244 reine Kode-Abfragen entfernt (ICD-10,
+  ICD-O-3-Topographie/Morphologie, OPS, Zielgebiet-Schlüssel), 7 umformuliert. Hintergrund:
+  in der Prüfung sind ICD-10, ICD-O-3 und OPS als Hilfsmittel zugelassen (§ 8.4) – Kodes
+  auswendig zu lernen trainiert etwas, das man dort nachschlagen darf.
+- Geblieben sind Kodierregeln und Anwendungsfälle, oBDS-Feldschlüssel und Sachfragen.
+- **Der Lernfortschritt bleibt erhalten:** IDs wurden nicht neu vergeben; zu den entfernten
+  Fragen hebt die App den Stand als `orphanQuestions` auf. Neuer Katalogstand
+  `2026-08-13-f191e8a4` – sichtbar in Einstellungen → App-Version, sobald eingespielt.
+
+---
+
 ## [0.36.0] — 2026-08-06  ·  Melden = ein Tipp: Issue entsteht sofort
 
 ### Geändert

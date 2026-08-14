@@ -1321,7 +1321,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.36.0";
+const APP_VERSION = "0.37.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2039,13 +2039,20 @@ function startExamTimer() {
   }, 1000);
 }
 
+// Fragetyp AUS SICHT DER PRÜFUNG. Die echte Prüfung sagt nicht, wie viele Antworten richtig
+// sind – und § 5 der Prüfungsordnung wertet alles-oder-nichts (nur vollständig richtig zählt).
+// Wer in der Simulation an den Radiobuttons ablesen kann „hier ist genau eine richtig", übt
+// eine Erleichterung ein, die es in der Prüfung nicht gibt. Deshalb verhalten sich single-
+// und multi-Fragen hier gleich: Mehrfachauswahl. Der Katalog bleibt unberührt, die Übung
+// (Lernmodus) zeigt weiterhin den echten Typ.
+function examPickType(q) { return q.type === "numeric" ? "numeric" : "multi"; }
+
 // In-place-Auswahl in der Prüfung (kein Full-Re-Render → Fokus/VoiceOver stabil,
 // kein Flackern während der Simulation). Aktualisiert Optionen + „beantwortet"-Zähler.
 function examApplyPick(origIdx, buttons) {
-  const q = examQuestions()[EXAM.idx];
   const arr = EXAM.picks[EXAM.idx];
-  if (q.type === "single") EXAM.picks[EXAM.idx] = [origIdx];
-  else { const k = arr.indexOf(origIdx); if (k >= 0) arr.splice(k, 1); else arr.push(origIdx); }
+  const k = arr.indexOf(origIdx);
+  if (k >= 0) arr.splice(k, 1); else arr.push(origIdx);
   const set = new Set(EXAM.picks[EXAM.idx]);
   for (const el of buttons) {
     const oi = parseInt(el.dataset.eoi, 10);
@@ -2053,7 +2060,7 @@ function examApplyPick(origIdx, buttons) {
     el.classList.toggle("selected", on);
     el.setAttribute("aria-checked", on ? "true" : "false");
     const box = el.querySelector(".box");
-    if (box) box.textContent = on ? (q.type === "single" ? "●" : "✓") : "";
+    if (box) box.textContent = on ? "✓" : "";
   }
   saveExam();
   const ov = document.getElementById("examOverview");
@@ -2089,14 +2096,15 @@ function renderExam() {
   const picks = new Set(EXAM.picks[i]);
   const answered = EXAM.picks.filter(p => p.length).length;
 
-  const numeric = q.type === "numeric";
-  const optRole = q.type === "single" ? "radio" : "checkbox";
+  const ptype = examPickType(q);
+  const numeric = ptype === "numeric";
+  const optRole = "checkbox";
   let activeIdx = order.find(oi => picks.has(oi));
   if (activeIdx === undefined) activeIdx = order.length ? order[0] : -1;
   const opts = order.map(origIdx => {
     const isPicked = picks.has(origIdx);
-    const cls = "opt type-" + q.type + (isPicked ? " selected" : "");
-    const mark = isPicked ? (q.type === "single" ? "●" : "✓") : "";
+    const cls = "opt type-" + ptype + (isPicked ? " selected" : "");
+    const mark = isPicked ? "✓" : "";
     const tabindex = origIdx === activeIdx ? "0" : "-1";
     return `<button class="${cls}" data-eoi="${origIdx}" role="${optRole}" aria-checked="${isPicked ? "true" : "false"}" tabindex="${tabindex}"><span class="box" aria-hidden="true">${mark}</span><span class="otext">${esc(q.options[origIdx])}</span></button>`;
   }).join("");
@@ -2110,13 +2118,12 @@ function renderExam() {
       ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
     </div>`;
   } else {
-    const groupRole = q.type === "single" ? "radiogroup" : "group";
-    answerArea = `<div class="options" role="${groupRole}" aria-label="Antwortmöglichkeiten">${opts}</div>`;
+    answerArea = `<div class="options" role="group" aria-label="Antwortmöglichkeiten">${opts}</div>`;
   }
   const typeChip = numeric ? '<span class="chip">Rechenaufgabe</span>'
-    : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
+    : '<span class="chip multi">Mehrfachauswahl</span>';
   const hint = numeric ? '<p class="q-hint">Ergebnis als Zahl eingeben. Auswertung erst nach Abgabe.</p><p class="q-hint err" id="examNumHint" role="alert" style="display:none"></p>'
-    : (q.type === "multi" ? '<p class="q-hint">Mehrere Antworten möglich. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>' : '');
+    : '<p class="q-hint">Es können eine oder mehrere Antworten richtig sein. Nur vollständig richtig zählt. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>';
 
   app.innerHTML = `
     <div class="exam-bar">
@@ -2139,7 +2146,7 @@ function renderExam() {
     const optsEl = app.querySelector(".options");
     const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-eoi]")) : [];
     buttons.forEach(el => el.addEventListener("click", () => { examApplyPick(parseInt(el.dataset.eoi, 10), buttons); setRovingActive(buttons, el); }));
-    if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, q.type, (bel, btns) => examApplyPick(parseInt(bel.dataset.eoi, 10), btns)));
+    if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, examPickType(q), (bel, btns) => examApplyPick(parseInt(bel.dataset.eoi, 10), btns)));
   } else {
     const nf = document.getElementById("examNum");
     if (nf) nf.addEventListener("input", () => examSetNumeric(nf.value));
