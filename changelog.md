@@ -11,6 +11,28 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.38.1] — 2026-08-18  ·  Optisches Nachschärfen & Pomodoro-Tagesziel
+
+### Behoben
+- **Prüfungsbereitschafts-Karte wirkte eingezwängt.** Sie nutzte `14px 16px` Innenabstand,
+  während jede andere große Karte (`.level-card`, `.q-card`, `.today-card`) `20px` verwendet –
+  jetzt einheitlich. Das Stufen-Label ("Fast bereit" / "Bereit 🎉") ist zusätzlich ein
+  Pill-Chip mit Farbfläche statt nacktem Text, analog zu `.chip`/`.pass-badge`.
+- **Titel-Kollision mit der Timer-Pill auf schmalen Screens.** Der Balken-Titel war
+  `position:absolute` mit festen 60px-Rändern, kalkuliert für eine einzelne Pill rechts
+  (Streak). Mit der neuen Pomodoro-Pill kollidierte der Titeltext auf 375px-Screens sichtbar
+  mit ihr – am stärksten ausgerechnet in der Prüfung/Auswertung, wo der Titel dauerhaft
+  sichtbar ist. Der Titel ist jetzt ein echtes Flex-Element (`flex:1`), das sich automatisch
+  zwischen Zurück-Button und den rechten Pills einpasst – unabhängig davon, wie viele es sind.
+
+### Neu
+- **Pomodoro-Tagesziel**, einstellbar unter *Einstellungen → Anzeige & Übung* (Aus/2/4/6/8
+  Runden, Standard 4 – ein voller Zyklus bis zur langen Pause, ~2 Std.). Fortschritt sichtbar
+  im Timer-Panel ("🍅 ×2 / 4 heute") und in der Home-Zeile ("🍅 ×2 von 4 heute – weiter?"),
+  bei Erreichen ein eigener Toast ("🎯 Pomodoro-Ziel erreicht").
+
+---
+
 ## [0.38.0] — 2026-08-18  ·  „Du hast genug gelernt" — Prüfungsbereitschaft & Lern-Timer
 
 Antwort auf ein echtes Nutzerinnen-Gefühl: *„Ich werde nie fertig — wie viel muss ich

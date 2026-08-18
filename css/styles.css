@@ -107,14 +107,17 @@ h1, h2, h3 { line-height: 1.2; }
 }
 .appbar.scrolled { border-bottom-color: var(--separator); }
 .appbar h1 {
-  position: absolute; left: 60px; right: 60px; text-align: center;
+  /* Nimmt als flex:1-Element automatisch den Platz zwischen Zurück-Button und
+     den Pills rechts ein (Pill-Zahl variiert: Streak allein oder Streak+Timer) –
+     bei position:absolute mit festen Insets kollidierte der Titel mit einer
+     zweiten Pill auf schmalen Screens. Ersetzt zugleich den alten .spacer. */
+  flex: 1; min-width: 0; text-align: center;
   font-size: 17px; font-weight: 600; margin: 0; letter-spacing: .2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   opacity: 0; transform: translateY(6px); pointer-events: none;
   transition: opacity .2s ease, transform .2s ease;
 }
 .appbar.scrolled h1 { opacity: 1; transform: none; }
-.appbar .spacer { flex: 1; }
 .streak-pill {
   display: inline-flex; align-items: center; gap: 5px;
   background: var(--bg-elev); border: 0.5px solid var(--border);
@@ -612,17 +615,27 @@ h1, h2, h3 { line-height: 1.2; }
   }
 }
 
-/* ---- Prüfungsbereitschaft (v0.38) ---- */
+/* ---- Prüfungsbereitschaft (v0.38) ----
+ * Padding/Radius folgen bewusst dem Standard-Karten-Maß (.level-card/.q-card:
+ * 20px/16px) statt eigener kleinerer Werte – sonst wirkt die Karte zwischen
+ * den anderen großzügig gepolsterten Karten eingezwängt. */
 .ready-card {
-  display: flex; flex-direction: column; gap: 7px; width: 100%;
+  display: flex; flex-direction: column; gap: 10px; width: 100%;
   background: var(--bg-elev); border: 0.5px solid var(--border);
-  border-radius: 16px; padding: 14px 16px; margin: 12px 0 0;
+  border-radius: var(--radius); padding: 20px; margin: 16px 0 0;
   box-shadow: var(--shadow); text-align: left; color: inherit;
   font: inherit; cursor: pointer;
 }
-.ready-card.static { cursor: default; margin-top: 8px; }
-.ready-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.ready-card .ready-label { font-weight: 700; font-size: 14px; }
+.ready-card.static { cursor: default; margin-top: 0; }
+.ready-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ready-head b { font-size: 17px; }
+/* Statuslabel als Pill, analog .chip/.pass-badge (Farbfläche statt nacktem Text) */
+.ready-card .ready-label {
+  display: inline-flex; align-items: center;
+  font-weight: 700; font-size: 12.5px; letter-spacing: .1px;
+  padding: 5px 11px; border-radius: 999px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+}
 .ready-bar {
   position: relative; display: block; height: 10px; border-radius: 6px;
   background: var(--bg-elev-2); overflow: visible;
@@ -635,11 +648,11 @@ h1, h2, h3 { line-height: 1.2; }
   position: absolute; top: -3px; bottom: -3px; width: 2px;
   background: var(--text-dim); opacity: .65; border-radius: 1px;
 }
-.ready-sub { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; }
+.ready-sub { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
 .ready-sub.muted { opacity: .85; }
 .done-hint {
   margin-top: 14px; line-height: 1.5; font-size: 14.5px;
-  border-left: 4px solid var(--success); 
+  border-left: 4px solid var(--success); padding-left: 12px;
 }
 
 /* ---- Pomodoro-Lern-Timer (v0.38) ---- */
