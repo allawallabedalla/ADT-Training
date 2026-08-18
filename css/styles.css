@@ -621,6 +621,7 @@ h1, h2, h3 { line-height: 1.2; }
   font: inherit; cursor: pointer;
 }
 .ready-card.static { cursor: default; margin-top: 8px; }
+.ready-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .ready-card .ready-label { font-weight: 700; font-size: 14px; }
 .ready-bar {
   position: relative; display: block; height: 10px; border-radius: 6px;
@@ -632,9 +633,9 @@ h1, h2, h3 { line-height: 1.2; }
 }
 .ready-bar .mark {
   position: absolute; top: -3px; bottom: -3px; width: 2px;
-  background: var(--text-2, #8e8e93); opacity: .65; border-radius: 1px;
+  background: var(--text-dim); opacity: .65; border-radius: 1px;
 }
-.ready-sub { font-size: 12.5px; color: var(--text-2, #8e8e93); line-height: 1.45; }
+.ready-sub { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; }
 .ready-sub.muted { opacity: .85; }
 .done-hint {
   margin-top: 14px; line-height: 1.5; font-size: 14.5px;

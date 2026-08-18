@@ -704,10 +704,18 @@ const READY_TOPIC_MIN  = 50;   // kein Thema unter der Bestehensgrenze
 
 function readiness() {
   const total = QUESTIONS.length;
-  const secure = masteredCount();
+  // Ein Durchlauf über den Katalog liefert Gesamt- und Themenstand zugleich
+  // (topicStats je Thema würde den ~5500er-Katalog einmal pro Thema filtern).
+  let secure = 0;
+  const byTopic = {};
+  for (const q of QUESTIONS) {
+    const t = byTopic[q.topic] || (byTopic[q.topic] = { total: 0, mastered: 0 });
+    t.total++;
+    const p = S.perQuestion[q.id];
+    if (p && p.box >= SRS_MASTER_BOX) { secure++; t.mastered++; }
+  }
   const pct = total ? Math.round(secure / total * 100) : 0;
-  const topics = Object.keys(TOPICS).map(k => topicStats(k)).filter(t => t.total > 0);
-  const weakTopics = topics.filter(t => t.pct < READY_TOPIC_MIN).length;
+  const weakTopics = Object.values(byTopic).filter(t => t.mastered / t.total * 100 < READY_TOPIC_MIN).length;
   const target = Math.ceil(total * READY_TARGET_PCT / 100);
   let stage, label, msg;
   if (total && pct >= READY_TARGET_PCT && weakTopics === 0) {
@@ -726,6 +734,35 @@ function readiness() {
     msg = "Jede sichere Frage bleibt sicher – die App merkt sich alles und plant die Wiederholungen. Niemand muss alle " + total + " Fragen können: bestanden ist ab 50 %.";
   }
   return { total, secure, pct, target, weakTopics, stage, label, msg };
+}
+
+/* Eine Karte, zwei Ansichten: kompakt (Startseite, tippbar → Statistik) und
+ * ausführlich (Statistik, mit Begründung). Ein Renderer, damit nichts divergiert. */
+const READY_STAGE_COLORS = ["#8e8e93", "#ff9500", "#ffcc00", "var(--success)"];
+function readinessCardHTML(detailed) {
+  logMastery();
+  const rdy = readiness();
+  if (!rdy.total) return "";
+  const col = READY_STAGE_COLORS[rdy.stage];
+  const forecast = readinessForecastText(rdy);
+  const head = `<span class="ready-head"><b>Prüfungsbereitschaft</b><span class="ready-label" style="color:${col}">${rdy.label}${rdy.stage >= 3 ? " 🎉" : ""}</span></span>`;
+  const bar = `<span class="ready-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rdy.pct}">
+      <span class="fill" style="width:${rdy.pct}%;background:${col}"></span>
+      <span class="mark" style="left:${READY_TARGET_PCT}%" title="Ziel: ${READY_TARGET_PCT} % sicher"></span>
+    </span>`;
+  const zahlen = `<span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${READY_TARGET_PCT} %</span>`;
+  if (!detailed) {
+    return `<button class="ready-card" data-act="stats" aria-label="Prüfungsbereitschaft: ${rdy.label}, ${rdy.pct} Prozent sicher">
+      ${head}${bar}${zahlen}
+      ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
+    </button>`;
+  }
+  return `<div class="ready-card static">
+    ${head}${bar}${zahlen}
+    <span class="ready-sub" style="margin-top:6px">${rdy.msg}</span>
+    ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
+    <span class="ready-sub muted" style="margin-top:6px">Warum ${READY_TARGET_PCT} %? Die Prüfungssimulation gilt ab 50 % als bestanden – wer ${READY_TARGET_PCT} % des Katalogs dauerhaft sicher hat und in keinem Thema unter 50 % liegt, besteht mit Puffer. „Alles wissen" ist ausdrücklich nicht das Ziel.</span>
+  </div>`;
 }
 
 /* Lerntempo-Log (lokal): einmal je Tag der aktuelle „sicher"-Stand, für die
@@ -1464,7 +1501,9 @@ function updateAppbar(view) {
  *  - Zustand über Zeitstempel (endsAt), das Intervall dient nur der Anzeige.
  * ------------------------------------------------------------------ */
 const POMO_KEY = "adt_pomo_v1";
+const POMO_DONE_KEY = "adt_pomo_done";     // Tageszähler getrennt vom Timer – überlebt „Beenden"
 const POMO_WORK = 25 * 60 * 1000, POMO_BREAK = 5 * 60 * 1000, POMO_LONG = 15 * 60 * 1000, POMO_EVERY = 4;
+const POMO_ABANDON_MS = 60 * 60 * 1000;    // länger als 1 h abgelaufen = Sitzung verlassen
 let pomoTickId = null;
 
 function pomoLoad() {
@@ -1472,43 +1511,52 @@ function pomoLoad() {
   catch (e) { return null; }
 }
 function pomoSave(p) { try { if (p) localStorage.setItem(POMO_KEY, JSON.stringify(p)); else localStorage.removeItem(POMO_KEY); } catch (e) {} }
-function pomoDoneToday(p) { return (p && p.done && p.done.date === todayStr()) ? p.done.n : 0; }
+function pomoDoneToday() {
+  try { const o = JSON.parse(localStorage.getItem(POMO_DONE_KEY) || "{}"); return (o && o.date === todayStr()) ? (parseInt(o.n, 10) || 0) : 0; }
+  catch (e) { return 0; }
+}
+function pomoBumpDone() { try { localStorage.setItem(POMO_DONE_KEY, JSON.stringify({ date: todayStr(), n: pomoDoneToday() + 1 })); } catch (e) {} }
 function pomoPhaseMs(phase, n) { return phase === "work" ? POMO_WORK : (phase === "long" ? POMO_LONG : POMO_BREAK); }
 function pomoRemainMs(p) { return p.paused ? p.remainMs : Math.max(0, p.endsAt - Date.now()); }
 function pomoVibrate() { try { if (navigator.vibrate) navigator.vibrate([180, 90, 180]); } catch (e) {} }
 
 function pomoStart() {
-  const prev = pomoLoad();
-  const p = { phase: "work", paused: false, endsAt: Date.now() + POMO_WORK, remainMs: 0,
-              done: (prev && prev.done && prev.done.date === todayStr()) ? prev.done : { date: todayStr(), n: 0 } };
+  const p = { phase: "work", paused: false, endsAt: Date.now() + POMO_WORK, remainMs: null };
   pomoSave(p); pomoEnsureTick(); pomoRender();
   toast("🍅 25 Minuten Fokus – los geht's!");
 }
 function pomoPauseResume() {
   const p = pomoLoad(); if (!p) return;
-  if (p.paused) { p.endsAt = Date.now() + (p.remainMs || pomoPhaseMs(p.phase)); p.paused = false; }
-  else { p.remainMs = pomoRemainMs(p); p.paused = true; }
-  pomoSave(p); pomoRender();
+  if (p.paused) {
+    const rest = Number.isFinite(p.remainMs) ? p.remainMs : pomoPhaseMs(p.phase);
+    p.endsAt = Date.now() + rest; p.paused = false; p.remainMs = null;
+    pomoSave(p);
+    if (rest <= 0) pomoSettle();       // in der letzten Sekunde pausiert → Phase sofort abschließen
+  } else { p.remainMs = pomoRemainMs(p); p.paused = true; pomoSave(p); }
+  pomoRender();
 }
-function pomoStop() {
-  const p = pomoLoad();
-  pomoSave(p && p.done ? null : null);
+function pomoStop(silent) {
+  const n = pomoDoneToday();            // Tageszähler liegt in POMO_DONE_KEY und bleibt erhalten
+  pomoSave(null);
   if (pomoTickId) { clearInterval(pomoTickId); pomoTickId = null; }
   pomoRender(); pomoPanel(false);
-  toast("Timer beendet" + (p && pomoDoneToday(p) ? " – 🍅 ×" + pomoDoneToday(p) + " heute. Stark!" : ""));
+  if (!silent) toast("Timer beendet" + (n ? " – 🍅 ×" + n + " heute. Stark!" : ""));
 }
 // Phasenwechsel, wenn die Zeit abgelaufen ist (auch nach App-Neustart).
 function pomoSettle() {
   const p = pomoLoad(); if (!p || p.paused) return p;
   if (pomoRemainMs(p) > 0) return p;
+  // Lange nach Phasenende zurück (App war zu): Sitzung gilt als verlassen –
+  // Timer still beenden, keine Rundengutschrift, kein nachträglicher Pausen-Toast.
+  if (Date.now() - p.endsAt > POMO_ABANDON_MS) { pomoSave(null); pomoRender(); return null; }
   if (p.phase === "work") {
-    p.done = (p.done && p.done.date === todayStr()) ? p.done : { date: todayStr(), n: 0 };
-    p.done.n += 1;
-    const lang = p.done.n % POMO_EVERY === 0;
+    pomoBumpDone();
+    const n = pomoDoneToday();
+    const lang = n % POMO_EVERY === 0;
     p.phase = lang ? "long" : "break";
-    p.paused = false; p.endsAt = Date.now() + pomoPhaseMs(p.phase);
+    p.paused = false; p.endsAt = Date.now() + pomoPhaseMs(p.phase); p.remainMs = null;
     pomoSave(p); pomoVibrate();
-    toast(lang ? "🍅 Runde " + p.done.n + " geschafft – 15 Minuten lange Pause!" : "🍅 Runde " + p.done.n + " geschafft – 5 Minuten Pause. Beine vertreten! ☕");
+    toast(lang ? "🍅 Runde " + n + " geschafft – 15 Minuten lange Pause!" : "🍅 Runde " + n + " geschafft – 5 Minuten Pause. Beine vertreten! ☕");
   } else {
     p.phase = "work"; p.paused = true; p.remainMs = POMO_WORK;
     pomoSave(p); pomoVibrate();
@@ -1528,6 +1576,8 @@ function pomoSubtitle() {
   const p = pomoLoad();
   if (!p) return "25 min Fokus · 5 min Pause – mit klarem Feierabend";
   const mm = fmtTime(pomoRemainMs(p));
+  if (p.paused && p.phase === "work" && (p.remainMs || 0) >= POMO_WORK)
+    return "🍅 Bereit für Runde " + (pomoDoneToday() + 1) + " – tippen zum Start";
   if (p.paused) return "⏸ Pausiert (" + mm + ") – tippen zum Weitermachen";
   return (p.phase === "work" ? "🍅 Fokus läuft – noch " : "☕ Pause – noch ") + mm;
 }
@@ -1540,11 +1590,18 @@ function pomoRender() {
   const pill = document.getElementById("pomoPill");
   if (!pill) return;
   const p = pomoLoad();
-  if (!p) { pill.classList.add("hidden"); pomoPanelSync(null); return; }
+  if (!p) {
+    pill.classList.add("hidden");
+    const sub0 = document.getElementById("pomoModeSub");
+    if (sub0) sub0.textContent = pomoSubtitle();
+    pomoPanelSync(null); return;
+  }
   pill.classList.remove("hidden");
   const mm = fmtTime(pomoRemainMs(p));
   pill.textContent = (p.paused ? "⏸ " : (p.phase === "work" ? "🍅 " : "☕ ")) + mm;
   pill.classList.toggle("break", p.phase !== "work");
+  const sub = document.getElementById("pomoModeSub");
+  if (sub) sub.textContent = pomoSubtitle();
   pomoPanelSync(p);
 }
 /* Kleines Bedienfeld (am Body, damit View-Wechsel es nicht wegwischen) */
@@ -1584,7 +1641,7 @@ function pomoPanelSync(p) {
   el.querySelector("#pomoTitle").textContent = p.phase === "work"
     ? (wartend ? "Bereit für die nächste Runde?" : (p.paused ? "Fokus (pausiert)" : "Fokus 🍅"))
     : (p.phase === "long" ? "Lange Pause ☕" : "Pause ☕");
-  const n = pomoDoneToday(p);
+  const n = pomoDoneToday();
   el.querySelector("#pomoCount").textContent = n ? "🍅 ×" + n + " heute" : "";
   el.querySelector("#pomoMain").textContent = p.paused ? (wartend ? "Runde starten" : "Weiter") : "Pause";
 }
@@ -1639,25 +1696,7 @@ function renderHome() {
       <button class="today-edit" data-act="goal">Ziel ändern</button>
     </div>`;
 
-  // Prüfungsbereitschaft – beantwortet die Frage „Wie viel muss ich noch?"
-  logMastery();
-  const rdy = readiness();
-  const rdyColors = ["#8e8e93", "#ff9500", "#ffcc00", "var(--success)"];
-  const rdyCol = rdyColors[rdy.stage];
-  const forecast = readinessForecastText(rdy);
-  const readyCard = rdy.total ? `
-    <button class="ready-card" data-act="stats" aria-label="Prüfungsbereitschaft: ${rdy.label}, ${rdy.pct} Prozent sicher">
-      <span class="row" style="justify-content:space-between;align-items:baseline">
-        <b>Prüfungsbereitschaft</b>
-        <span class="ready-label" style="color:${rdyCol}">${rdy.label}${rdy.stage >= 3 ? " 🎉" : ""}</span>
-      </span>
-      <span class="ready-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rdy.pct}">
-        <span class="fill" style="width:${rdy.pct}%;background:${rdyCol}"></span>
-        <span class="mark" style="left:${READY_TARGET_PCT}%" title="Ziel: ${READY_TARGET_PCT} % sicher"></span>
-      </span>
-      <span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${READY_TARGET_PCT} %</span>
-      ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
-    </button>` : "";
+  const readyCard = readinessCardHTML(false);
 
   const standalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
   const installTip = standalone ? "" : `
@@ -1691,7 +1730,7 @@ function renderHome() {
       <button class="mode-btn" data-act="topics">${iconTile("grid", "#5e5ce6")}<span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="due" ${due ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Fällige Wiederholungen</b><p>${due ? due + " Frage" + (due === 1 ? "" : "n") + " heute fällig" : "Super – heute nichts fällig"}</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}>${iconTile("target", "#ff3b30")}<span class="txt"><b>Schwachstellen üben</b><p>${weak ? weak + " Frage" + (weak === 1 ? "" : "n") + " noch nicht sicher" : "Alles sitzt – keine Schwachstellen"}</p></span><span class="chev">›</span></button>
-      <button class="mode-btn" data-act="pomo">${iconTile("timer", "#af52de")}<span class="txt"><b>Lern-Timer (Pomodoro)</b><p>${pomoSubtitle()}</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" data-act="pomo">${iconTile("timer", "#af52de")}<span class="txt"><b>Lern-Timer (Pomodoro)</b><p id="pomoModeSub">${pomoSubtitle()}</p></span><span class="chev">›</span></button>
     </div>
 
     <div class="section-title">Prüfung</div>
@@ -2164,6 +2203,8 @@ function renderResult(right, total, pct) {
   updateAppbar("result");
   actionbar.classList.remove("hidden");
   const isExam = SESSION.mode === "exam";
+  const genug = !isExam && enoughForToday();
+  const morgenN = genug ? dueTomorrowCount() : 0;
   const passed = pct >= 50;
   const R = 76, C = 2 * Math.PI * R, off = C * (1 - pct / 100);
   const color = pct >= 75 ? "var(--success)" : pct >= 50 ? "var(--warn)" : "var(--danger)";
@@ -2187,10 +2228,10 @@ function renderResult(right, total, pct) {
       </div>
       ${isExam ? `<div class="pass-badge ${passed ? "pass" : "fail"}">${passed ? "BESTANDEN" : "NICHT BESTANDEN"} · Grenze 50 %</div>` : ""}
     </div>
-    ${!isExam && enoughForToday() ? `<div class="q-card done-hint">✅ <b>Für heute reicht es wirklich.</b><br>
+    ${genug ? `<div class="q-card done-hint">✅ <b>Für heute reicht es wirklich.</b><br>
       Tagesziel erreicht und keine Wiederholung mehr fällig – mehr bringt heute kaum etwas,
       die Lernintervalle wirken über Nacht. Dein Fortschritt läuft nicht weg: die App sagt dir,
-      wann die nächsten Wiederholungen dran sind.${dueTomorrowCount() ? " Morgen sind es " + dueTomorrowCount() + "." : ""}</div>` : ""}
+      wann die nächsten Wiederholungen dran sind.${morgenN ? " Morgen sind es " + morgenN + "." : ""}</div>` : ""}
     <div class="spacer-lg"></div>
   `;
 
@@ -2608,28 +2649,9 @@ function renderStats() {
       }).join("")
     : `<p class="muted" style="margin:0">Noch keine Prüfungssimulation abgeschlossen.</p>`;
 
-  logMastery();
-  const rdy = readiness();
-  const rdyColors = ["#8e8e93", "#ff9500", "#ffcc00", "var(--success)"];
-  const rdyCol = rdyColors[rdy.stage];
-  const forecast = readinessForecastText(rdy);
-
   app.innerHTML = `
     <h1 class="large-title">Statistik</h1>
-    <div class="ready-card static">
-      <span class="row" style="justify-content:space-between;align-items:baseline">
-        <b>Prüfungsbereitschaft</b>
-        <span class="ready-label" style="color:${rdyCol}">${rdy.label}${rdy.stage >= 3 ? " 🎉" : ""}</span>
-      </span>
-      <span class="ready-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rdy.pct}">
-        <span class="fill" style="width:${rdy.pct}%;background:${rdyCol}"></span>
-        <span class="mark" style="left:${READY_TARGET_PCT}%"></span>
-      </span>
-      <span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${READY_TARGET_PCT} % – Striche markieren das Ziel</span>
-      <span class="ready-sub" style="margin-top:6px">${rdy.msg}</span>
-      ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
-      <span class="ready-sub muted" style="margin-top:6px">Warum ${READY_TARGET_PCT} %? Die Prüfungssimulation gilt ab 50 % als bestanden – wer ${READY_TARGET_PCT} % des Katalogs dauerhaft sicher hat und in keinem Thema unter 50 % liegt, besteht mit Puffer. „Alles wissen" ist ausdrücklich nicht das Ziel.</span>
-    </div>
+    ${readinessCardHTML(true)}
     <div class="stat-grid">
       <div class="stat"><div class="num">${S.totalAnswered}</div><div class="lbl">beantwortet</div></div>
       <div class="stat"><div class="num">${acc}%</div><div class="lbl">Trefferquote</div></div>

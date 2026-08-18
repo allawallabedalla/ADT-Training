@@ -40,6 +40,21 @@ lernen, um alles zu wissen?"* Die App sagt jetzt ehrlich, wann genug genug ist.
   ausdrücklich erlaubt ist. Rein lokal (`adt_pomo_v1`), Zeitstempel-basiert: übersteht
   Ansichtswechsel, Neuladen und App-Wechsel; Phasenende vibriert (wo unterstützt).
 
+### Behoben (Audit nach dem ersten Wurf, gleicher Release)
+- **Pomodoro-Tageszähler überlebt „Beenden"** — er liegt jetzt in einem eigenen Schlüssel
+  (`adt_pomo_done`); vorher löschte `pomoStop()` ihn mitsamt dem Timer-Zustand.
+- **Verlassene Timer**: wer den Timer laufen ließ und Stunden später zurückkommt, bekommt
+  keine nachträgliche Rundengutschrift samt Pausen-Toast mehr — mehr als 1 h nach
+  Phasenende gilt die Sitzung als beendet und der Timer räumt sich still weg.
+- **Pause in der letzten Sekunde**: Fortsetzen bei Restzeit 0 startete die volle Phase neu;
+  jetzt wird die Phase sofort sauber abgeschlossen.
+- **Live-Untertitel**: die Timer-Zeile im „Üben"-Menü tickt jetzt mit statt einzufrieren.
+- **Layout/Theme**: die Kopfzeile der Bereitschafts-Karte nutzt eine eigene Flex-Klasse
+  (`.ready-head` — das generische `.row` war nie ein Flex-Container) und den vorhandenen
+  Farb-Token `--text-dim` statt eines nicht definierten `--text-2`.
+- **Ein Karten-Renderer statt zwei Kopien** (`readinessCardHTML()`), und `readiness()`
+  zählt Gesamt- und Themenstand in einem einzigen Katalog-Durchlauf statt einmal pro Thema.
+
 ### Technisch
 - Neue Helfer `readiness()`, `masteryPace()`, `enoughForToday()`, `dueTomorrowCount()`;
   `bumpToday()` schreibt das Lerntempo-Log mit. Keine Änderung am Datenmodell des
