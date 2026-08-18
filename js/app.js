@@ -1443,7 +1443,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.38.0";
+const APP_VERSION = "0.38.2";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1467,10 +1467,10 @@ const BADGE_ICON = {
   hundred: { i: "star", c: "#ff2d55" },
   answered250: { i: "gem", c: "#5e5ce6" }, answered500: { i: "rocket", c: "#007aff" },
   answered750: { i: "mountain", c: "#30b0c7" }, answered1000: { i: "trophy", c: "#ffb300" },
-  streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "bolt", c: "#ffcc00" },
+  streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "flame", c: "#ffcc00" },
   exam: { i: "clipboardCheck", c: "#34c759" }, exam90: { i: "crown", c: "#5e5ce6" },
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
-  secure25: { i: "shield", c: "#34c759" }, streak14: { i: "bolt", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
+  secure25: { i: "shield", c: "#34c759" }, streak14: { i: "flame", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
 };
 
 const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", stats: "Statistik", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis", reports: "Gemeldete Fragen" };
@@ -1587,14 +1587,14 @@ function pomoSubtitle() {
   if (!p) {
     const n = pomoDoneToday(), goal = getPomoGoal();
     if (!n) return "25 min Fokus · 5 min Pause – mit klarem Feierabend";
-    if (goal && n >= goal) return "🍅 ×" + n + " heute – Tagesziel erreicht ✓";
-    return "🍅 ×" + n + (goal ? " von " + goal : "") + " heute – weiter?";
+    if (goal && n >= goal) return "×" + n + " heute – Tagesziel erreicht ✓";
+    return "×" + n + (goal ? " von " + goal : "") + " heute – weiter?";
   }
   const mm = fmtTime(pomoRemainMs(p));
   if (p.paused && p.phase === "work" && (p.remainMs || 0) >= POMO_WORK)
-    return "🍅 Bereit für Runde " + (pomoDoneToday() + 1) + " – tippen zum Start";
-  if (p.paused) return "⏸ Pausiert (" + mm + ") – tippen zum Weitermachen";
-  return (p.phase === "work" ? "🍅 Fokus läuft – noch " : "☕ Pause – noch ") + mm;
+    return "Bereit für Runde " + (pomoDoneToday() + 1) + " – tippen zum Start";
+  if (p.paused) return "Pausiert (" + mm + ") – tippen zum Weitermachen";
+  return (p.phase === "work" ? "Fokus läuft – noch " : "Pause – noch ") + mm;
 }
 function pomoTap() {
   const p = pomoLoad();
@@ -1876,7 +1876,7 @@ function renderSettings() {
   const content = contentGateActive() ? `
     <div class="section-title">Lerninhalte</div>
     <div class="ios-group">
-      <button class="mode-btn" id="btnRelock">${iconTile("import", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen${contentVersionLabel() ? " · " + esc(contentVersionLabel()) : ""}. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" id="btnRelock">${iconTile("lock", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen${contentVersionLabel() ? " · " + esc(contentVersionLabel()) : ""}. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
     </div>` : "";
 
   const theme = getTheme(), size = getSessionSize(), haptics = getHaptics(), font = getFontSize(), pomoGoal = getPomoGoal();
@@ -1957,11 +1957,11 @@ async function renderReminderBox() {
   const box = document.getElementById("remindBox");
   if (!box) return;
   if (!pushSupported()) {
-    box.innerHTML = `<div class="install-tip">${iconTile("icloud", "#8e8e93")}<div>Benachrichtigungen sind hier nicht verfügbar. Auf dem iPhone: die App über Safari <b>„Zum Home-Bildschirm"</b> hinzufügen – danach sind Erinnerungen möglich.</div></div>`;
+    box.innerHTML = `<div class="install-tip">${iconTile("bell", "#8e8e93")}<div>Benachrichtigungen sind hier nicht verfügbar. Auf dem iPhone: die App über Safari <b>„Zum Home-Bildschirm"</b> hinzufügen – danach sind Erinnerungen möglich.</div></div>`;
     return;
   }
   if (!pushConfigured()) {
-    box.innerHTML = `<div class="install-tip">${iconTile("icloud", "#8e8e93")}<div>Erinnerungen sind serverseitig noch nicht eingerichtet. Anleitung: <b>README → „Lern-Erinnerungen"</b>.</div></div>`;
+    box.innerHTML = `<div class="install-tip">${iconTile("bell", "#8e8e93")}<div>Erinnerungen sind serverseitig noch nicht eingerichtet. Anleitung: <b>README → „Lern-Erinnerungen"</b>.</div></div>`;
     return;
   }
   const active = await remindersActive();
@@ -1970,7 +1970,7 @@ async function renderReminderBox() {
     box.innerHTML = `
       <div class="q-card">
         <div style="display:flex;align-items:center;gap:12px">
-          ${iconTile("flame", "#ff6b22")}<div style="flex:1"><b>Tägliche Erinnerung aktiv</b><p class="muted" style="margin:2px 0 0">jeden Tag um ${String(hour).padStart(2, "0")}:00 Uhr</p></div>
+          ${iconTile("bell", "#ff6b22")}<div style="flex:1"><b>Tägliche Erinnerung aktiv</b><p class="muted" style="margin:2px 0 0">jeden Tag um ${String(hour).padStart(2, "0")}:00 Uhr</p></div>
         </div>
         <label class="muted" style="display:block;margin-top:14px">Uhrzeit ändern</label>
         <select id="remindHour" class="ios-select">${hourOptions(hour)}</select>
