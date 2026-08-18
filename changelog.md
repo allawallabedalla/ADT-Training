@@ -11,6 +11,44 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.38.0] — 2026-08-18  ·  „Du hast genug gelernt" — Prüfungsbereitschaft & Lern-Timer
+
+Antwort auf ein echtes Nutzerinnen-Gefühl: *„Ich werde nie fertig — wie viel muss ich
+lernen, um alles zu wissen?"* Die App sagt jetzt ehrlich, wann genug genug ist.
+
+### Neu
+- **Prüfungsbereitschaft** (Startseite + Statistik): eine Karte übersetzt den Lernstand in
+  eine klare Aussage — *Am Anfang / Auf gutem Weg / Fast bereit / Bereit*. Anker ist die
+  echte Prüfung: bestanden ab 50 %. **„Bereit" heißt: 75 % des Katalogs sitzen sicher
+  (Box 3+) und kein Thema liegt unter der Bestehensgrenze** — ausdrücklich nicht „alles
+  wissen". Der Fortschrittsbalken trägt eine Zielmarke bei 75 %, die Statistik erklärt das
+  Warum.
+- **Prognose:** „Bei deinem Tempo (Ø x neu gesicherte Fragen/Tag) bist du in ~N Tagen
+  bereit." Basis ist ein lokales Lerntempo-Log (`adt_mastery_log`, einmal täglich der
+  „sicher"-Stand, max. 60 Einträge); die Prognose erscheint erst, wenn mindestens
+  3 Lerntage Daten da sind, und verschwindet im Zustand „Bereit".
+- **„Für heute ist wirklich Schluss":** Wenn das Tagesziel erreicht ist UND keine
+  Wiederholung mehr fällig, sagt die Tagesziel-Karte das explizit — samt Ausblick
+  („Morgen: N Wiederholungen"). Dieselbe Erlaubnis zum Aufhören erscheint nach einer
+  Übungsrunde in der Auswertung: mehr bringt heute kaum etwas, die Intervalle wirken
+  über Nacht.
+- **Lern-Timer (Pomodoro):** 25 min Fokus · 5 min Pause · nach jeder 4. Runde 15 min.
+  Start über „Üben" auf der Startseite; eine Pill in der App-Leiste (🍅 24:59) zeigt den
+  Timer auf jeder Ansicht, Tipp darauf öffnet ein Bedienfeld (Pause/Weiter/Beenden,
+  Tages-Zähler „🍅 ×3 heute"). Pausen starten automatisch, **jede neue Lernrunde startet
+  bewusst per Tipp** — und der Hinweis nach der Pause erinnert daran, dass Aufhören
+  ausdrücklich erlaubt ist. Rein lokal (`adt_pomo_v1`), Zeitstempel-basiert: übersteht
+  Ansichtswechsel, Neuladen und App-Wechsel; Phasenende vibriert (wo unterstützt).
+
+### Technisch
+- Neue Helfer `readiness()`, `masteryPace()`, `enoughForToday()`, `dueTomorrowCount()`;
+  `bumpToday()` schreibt das Lerntempo-Log mit. Keine Änderung am Datenmodell des
+  Lernstands — alles Zusätzliche liegt in eigenen localStorage-Schlüsseln und synct nicht.
+- E2E geprüft (Playwright, Katalog ohne Gate): Karte + Stufen, Timer-Pill/Panel/Pause,
+  „Bereit"-Zustand, Schluss-für-heute-Text inkl. Morgen-Zähler, Statistik-Kopf — 0 Konsolenfehler.
+
+---
+
 ## [0.37.0] — 2026-08-13  ·  Die Prüfung verrät den Fragetyp nicht mehr
 
 ### Geändert
