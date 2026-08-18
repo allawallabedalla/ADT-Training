@@ -697,10 +697,41 @@ function dueQuestions(t = todayStr()) {
 
 /* ---- Prüfungsbereitschaft: eine ehrliche Antwort auf „Wann ist genug?" ----
  * Anker ist die echte Prüfung: die Simulation gilt ab 50 % als bestanden.
- * „Bereit" heißt darum NICHT „alles sicher", sondern: drei Viertel des Katalogs
- * sitzen (Box 3+) und kein Thema liegt unter der Bestehensgrenze. */
-const READY_TARGET_PCT = 75;   // Gesamtziel: 3/4 sicher – deutlich über der 50-%-Grenze
-const READY_TOPIC_MIN  = 50;   // kein Thema unter der Bestehensgrenze
+ * Bei mehreren tausend Fragen ist "3/4 des ganzen Katalogs sicher" für die
+ * meisten Zeitbudgets rechnerisch gar nicht erreichbar (siehe Herleitung in
+ * BILANZ-Diskussion) – das Ziel wird deshalb NICHT fest auf 75 % gesetzt,
+ * sondern aus der geplanten Lernzeit hochgerechnet: was ist in den
+ * verbleibenden Wochen bei diesem Tempo realistisch drin? Sobald die App das
+ * ECHTE Tempo kennt (masteryPace), ersetzt das die Hochrechnung aus den
+ * Einstellungen – die Zielmarke wird mit echten Daten nur noch genauer. */
+const READY_TOPIC_MIN = 50;         // Themen-Untergrenze, nie höher als das Gesamtziel selbst
+const SECONDS_PER_ATTEMPT = 18;     // grobe Zeit je Wiederholung (Lesen + Entscheiden + Erklärung)
+const STUDY_MIN_CHOICES = [15, 30, 45, 60, 90, 120];
+const STUDY_WEEKS_CHOICES = [1, 2, 3, 4, 6, 8, 12];
+const STUDY_MIN_KEY = "adt_study_minutes";
+const STUDY_WEEKS_KEY = "adt_study_weeks";
+function getStudyMinutes() { try { const v = parseInt(localStorage.getItem(STUDY_MIN_KEY), 10); return STUDY_MIN_CHOICES.includes(v) ? v : 30; } catch { return 30; } }
+function setStudyMinutes(n) { try { localStorage.setItem(STUDY_MIN_KEY, String(n)); } catch (e) {} }
+function getStudyWeeks() { try { const v = parseInt(localStorage.getItem(STUDY_WEEKS_KEY), 10); return STUDY_WEEKS_CHOICES.includes(v) ? v : 4; } catch { return 4; } }
+function setStudyWeeks(n) { try { localStorage.setItem(STUDY_WEEKS_KEY, String(n)); } catch (e) {} }
+
+// Erwartete Anzahl Versuche, bis eine Frage 3x IN FOLGE richtig war (Box 3),
+// bei Trefferquote p: E = (1-p^3) / ((1-p) * p^3). Nutzt die eigene bisherige
+// Trefferquote, sobald genug Antworten vorliegen (>=20) – sonst eine
+// vorsichtige Annahme (75 %), damit die allererste Hochrechnung nicht auf 0
+// Datenpunkten steht.
+function expectedAttemptsPerMastery() {
+  let p = (S.totalAnswered >= 20) ? S.totalCorrect / S.totalAnswered : 0.75;
+  p = Math.min(0.97, Math.max(0.35, p));
+  return (1 - p ** 3) / ((1 - p) * p ** 3);
+}
+// Hochrechnung OHNE echte Tempo-Historie: aus der geplanten Lernzeit/Tag, wie
+// viele Fragen pro Tag realistisch neu "sicher" werden könnten. Wird verworfen,
+// sobald masteryPace() echte Werte liefert (siehe readiness()).
+function bootstrapDailyPace() {
+  const attemptsPerDay = (getStudyMinutes() * 60) / SECONDS_PER_ATTEMPT;
+  return attemptsPerDay / expectedAttemptsPerMastery();
+}
 
 function readiness() {
   const total = QUESTIONS.length;
@@ -715,25 +746,39 @@ function readiness() {
     if (p && p.box >= SRS_MASTER_BOX) { secure++; t.mastered++; }
   }
   const pct = total ? Math.round(secure / total * 100) : 0;
-  const weakTopics = Object.values(byTopic).filter(t => t.mastered / t.total * 100 < READY_TOPIC_MIN).length;
-  const target = Math.ceil(total * READY_TARGET_PCT / 100);
+
+  // Realistische Zielmarke statt fester Zahl: was ist in der geplanten Zeit
+  // tatsächlich erreichbar? Echtes gemessenes Tempo schlägt die Hochrechnung
+  // aus den Einstellungen, sobald genug Tage vorliegen.
+  const pace = masteryPace() || bootstrapDailyPace();
+  const remainingDays = getStudyWeeks() * 7;
+  const achievable = Math.min(total, secure + pace * remainingDays);
+  const achievablePct = total ? Math.round(achievable / total * 100) : 0;
+  const targetPct = Math.min(75, Math.max(3, achievablePct));
+  const target = Math.ceil(total * targetPct / 100);
+
+  // Themen-Untergrenze kann nie mehr verlangen als das Gesamtziel selbst –
+  // sonst wäre "kein Thema unter 50 %" bei einem 10-%-Gesamtziel unmöglich.
+  const topicMin = Math.min(READY_TOPIC_MIN, targetPct);
+  const weakTopics = Object.values(byTopic).filter(t => t.mastered / t.total * 100 < topicMin).length;
+
   let stage, label, msg;
-  if (total && pct >= READY_TARGET_PCT && weakTopics === 0) {
+  if (total && pct >= targetPct && weakTopics === 0) {
     stage = 3; label = "Bereit";
-    msg = "Du hast genug gelernt: drei Viertel sitzen sicher und kein Thema liegt unter der Bestehensgrenze. Ab hier hält dich allein die Wiederholung auf Stand.";
-  } else if (pct >= 60) {
+    msg = `Du hast genug gelernt für deine geplante Zeit: ${targetPct} % sitzen sicher${topicMin > 0 ? " und kein Thema liegt unter " + Math.round(topicMin) + " %" : ""}. Ab hier hält dich allein die Wiederholung auf Stand.`;
+  } else if (pct >= targetPct * 0.8) {
     stage = 2; label = "Fast bereit";
     msg = weakTopics
-      ? `Der Gesamtstand stimmt schon fast – ${weakTopics} Thema${weakTopics === 1 ? " liegt" : "en liegen"} noch unter 50 %. Dort lohnt sich gezieltes Üben am meisten.`
+      ? `Der Gesamtstand stimmt schon fast – ${weakTopics} Thema${weakTopics === 1 ? " liegt" : "en liegen"} noch unter ${Math.round(topicMin)} %. Dort lohnt sich gezieltes Üben am meisten.`
       : "Der Endspurt: kein Thema hängt mehr, jetzt zählt nur noch Wiederholen.";
-  } else if (pct >= 30) {
+  } else if (pct >= targetPct * 0.4) {
     stage = 1; label = "Auf gutem Weg";
-    msg = "Mehr als jede vierte Frage sitzt bereits dauerhaft. Dranbleiben wirkt – das Ziel sind nicht 100 %, sondern " + READY_TARGET_PCT + " %.";
+    msg = "Dranbleiben wirkt – das Ziel ist an deine geplante Lernzeit angepasst, nicht an den ganzen Katalog.";
   } else {
     stage = 0; label = "Am Anfang";
     msg = "Jede sichere Frage bleibt sicher – die App merkt sich alles und plant die Wiederholungen. Niemand muss alle " + total + " Fragen können: bestanden ist ab 50 %.";
   }
-  return { total, secure, pct, target, weakTopics, stage, label, msg };
+  return { total, secure, pct, target, targetPct, topicMin, weakTopics, stage, label, msg };
 }
 
 /* Eine Karte, zwei Ansichten: kompakt (Startseite, tippbar → Statistik) und
@@ -748,9 +793,9 @@ function readinessCardHTML(detailed) {
   const head = `<span class="ready-head"><b>Prüfungsbereitschaft</b><span class="ready-label" style="color:${col}">${rdy.label}${rdy.stage >= 3 ? " 🎉" : ""}</span></span>`;
   const bar = `<span class="ready-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rdy.pct}">
       <span class="fill" style="width:${rdy.pct}%;background:${col}"></span>
-      <span class="mark" style="left:${READY_TARGET_PCT}%" title="Ziel: ${READY_TARGET_PCT} % sicher"></span>
+      <span class="mark" style="left:${rdy.targetPct}%" title="Ziel: ${rdy.targetPct} % sicher"></span>
     </span>`;
-  const zahlen = `<span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${READY_TARGET_PCT} %</span>`;
+  const zahlen = `<span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${rdy.targetPct} %</span>`;
   if (!detailed) {
     return `<button class="ready-card" data-act="stats" aria-label="Prüfungsbereitschaft: ${rdy.label}, ${rdy.pct} Prozent sicher">
       ${head}${bar}${zahlen}
@@ -761,7 +806,9 @@ function readinessCardHTML(detailed) {
     ${head}${bar}${zahlen}
     <span class="ready-sub" style="margin-top:6px">${rdy.msg}</span>
     ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
-    <span class="ready-sub muted" style="margin-top:6px">Warum ${READY_TARGET_PCT} %? Die Prüfungssimulation gilt ab 50 % als bestanden – wer ${READY_TARGET_PCT} % des Katalogs dauerhaft sicher hat und in keinem Thema unter 50 % liegt, besteht mit Puffer. „Alles wissen" ist ausdrücklich nicht das Ziel.</span>
+    <span class="ready-sub muted" style="margin-top:6px">Woher die ${rdy.targetPct} %? Hochgerechnet aus deiner geplanten Lernzeit
+      (${getStudyMinutes()} Min./Tag über ${getStudyWeeks()} Wochen, einstellbar unter Einstellungen) – nicht aus dem ganzen Katalog.
+      Die Prüfung gilt schon ab 50 % als bestanden. Sobald die App dein echtes Tempo kennt, übernimmt das die Rechnung und wird genauer.</span>
   </div>`;
 }
 
@@ -1443,7 +1490,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.38.2";
+const APP_VERSION = "0.39.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1905,7 +1952,22 @@ function renderSettings() {
       </label>
     </div>`;
 
-  app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
+  const studyMin = getStudyMinutes(), studyWeeks = getStudyWeeks();
+  const smOpt = (v) => `<option value="${v}" ${studyMin === v ? "selected" : ""}>${v} Min.</option>`;
+  const swOpt = (v) => `<option value="${v}" ${studyWeeks === v ? "selected" : ""}>${v} Woche${v === 1 ? "" : "n"}</option>`;
+  const studyPlan = `
+    <div class="section-title">Lernplan</div>
+    <div class="q-card">
+      <p class="muted" style="margin:0 0 12px">Bestimmt die Zielmarke bei „Prüfungsbereitschaft" – realistisch für deine Zeit, nicht für den ganzen Katalog.</p>
+      <label class="set-row" for="setStudyMin"><span>Lernzeit pro Tag</span>
+        <select id="setStudyMin" class="ios-select">${STUDY_MIN_CHOICES.map(smOpt).join("")}</select>
+      </label>
+      <label class="set-row" for="setStudyWeeks"><span>Wochen bis zur Prüfung</span>
+        <select id="setStudyWeeks" class="ios-select">${STUDY_WEEKS_CHOICES.map(swOpt).join("")}</select>
+      </label>
+    </div>`;
+
+  app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${studyPlan}${prefs}
     <div class="section-title">Geräteübergreifende Synchronisation</div>${body}${backup}${feedback}${content}${remind}${appUpdate}`;
 
   const $ = (id) => document.getElementById(id);
@@ -1917,6 +1979,12 @@ function renderSettings() {
     const n = parseInt(stPomoGoal.value, 10); setPomoGoal(n);
     toast(n ? "🍅 Pomodoro-Ziel: " + n + " Runden/Tag" : "Pomodoro-Ziel ausgeschaltet");
     pomoRender();
+  });
+  const stStudyMin = $("setStudyMin"); if (stStudyMin) stStudyMin.addEventListener("change", () => {
+    setStudyMinutes(parseInt(stStudyMin.value, 10)); toast("🎯 Zielmarke neu berechnet");
+  });
+  const stStudyWeeks = $("setStudyWeeks"); if (stStudyWeeks) stStudyWeeks.addEventListener("change", () => {
+    setStudyWeeks(parseInt(stStudyWeeks.value, 10)); toast("🎯 Zielmarke neu berechnet");
   });
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
   const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
