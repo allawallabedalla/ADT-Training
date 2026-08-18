@@ -3477,7 +3477,9 @@ if (contentGateActive() && !contentUnlocked()) {
   if (S.lastActiveDay && daysBetween(S.lastActiveDay, t) > 2) { S.streak = 0; saveState(); }
   go("home", { replace: true });   // Basis-Eintrag des Verlaufs
   window.addEventListener("popstate", onPopState);
-  pomoInit();                      // Lern-Timer wieder aufnehmen, falls einer lief
+  // Lern-Timer wieder aufnehmen, falls einer lief. Nie boot-kritisch:
+  // ein Fehler hier darf den nachfolgenden Sync-Init nicht verhindern.
+  try { pomoInit(); } catch (e) { console.warn("Lern-Timer-Start übersprungen", e); }
 
   // Erststart-Begrüßung nur für wirklich neue Nutzer (kein Fortschritt, nie gesehen).
   try { if (!isOnboarded() && S.totalAnswered === 0) showOnboarding(); }
