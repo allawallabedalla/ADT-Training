@@ -11,6 +11,42 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.39.0] — 2026-08-18  ·  Realistische Zielmarke statt fester 75 %
+
+Direktes Nutzerinnen-Feedback: „Bei 5.000 Fragen erreicht man 75 % nie – wir
+haben 4 Wochen." Nachgerechnet und bestätigt: bei ~5.500 Fragen im Katalog
+bräuchte „75 % sicher" (jede Frage 3× richtig, mit Tagesabstand) realistisch
+~110 Stunden – bei 30 Min./Tag über 4 Wochen sind rechnerisch eher **~500–600
+Fragen (~9–10 %)** erreichbar. Die feste 75-%-Marke aus v0.38.0 war für ein
+typisches Prüfungsvorbereitungs-Zeitfenster nie erreichbar – das Gegenteil von
+dem, was die Funktion sollte.
+
+### Geändert
+- **Die Zielmarke ist jetzt keine feste Zahl mehr, sondern wird aus der
+  geplanten Lernzeit hochgerechnet**: Minuten/Tag × Wochen bis zur Prüfung →
+  wie viele Fragen sind bei diesem Tempo realistisch bis dahin „sicher" zu
+  bekommen (gedeckelt bei 75 %, nie unter 3 %). Sobald die App das **echte**
+  Lerntempo kennt (ab ein paar Tagen Praxis), ersetzt das die Hochrechnung aus
+  den Einstellungen und wird von selbst genauer.
+- Die Trefferquote-Annahme in der Hochrechnung stammt ab 20 beantworteten
+  Fragen aus der eigenen echten Trefferquote statt einer festen Schätzung.
+- **Die Themen-Untergrenze („kein Thema unter X %") skaliert mit** – sie kann
+  nie mehr verlangen als das Gesamtziel selbst. Bei einem 10-%-Gesamtziel wäre
+  „kein Thema unter 50 %" unmöglich gewesen.
+- Neu in Einstellungen → **„Lernplan"**: Lernzeit pro Tag (15–120 Min.) und
+  Wochen bis zur Prüfung (1–12), beide jederzeit änderbar.
+
+### Technisch
+- `readiness()` nutzt `masteryPace()` (echtes gemessenes Tempo) wenn
+  vorhanden, sonst `bootstrapDailyPace()` aus den neuen Lernplan-Einstellungen.
+  `expectedAttemptsPerMastery()` schätzt die nötigen Versuche bis Box 3 aus
+  der eigenen Trefferquote (Formel für „3 Erfolge in Folge").
+- Formel über den vollen Einstellungsbereich geprüft (15–120 Min. × 1–12
+  Wochen): skaliert monoton von 3 % bis zum 75-%-Deckel, keine Sprünge.
+  Volle Testsuite grün.
+
+---
+
 ## [0.38.2] — 2026-08-18  ·  Icon-Audit: vier falsche Zuordnungen korrigiert
 
 Auf Wunsch wurden alle 38 Icons der App danach geprüft, ob Symbol und Bedeutung
