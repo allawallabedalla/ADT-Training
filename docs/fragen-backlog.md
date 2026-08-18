@@ -8,7 +8,7 @@
 > Hinweis: Die Beobachtungs-Abschnitte sind von Hand geschrieben; `reports-to-backlog.mjs`
 > überträgt nur die Kästchen-Einträge – Prosa vor „## Offen" nach einem Lauf wieder einsetzen.
 
-Zuletzt aktualisiert: 2026-08-13 · offen: 0 · erledigt: 18
+Zuletzt aktualisiert: 2026-08-18 · offen: 0 · erledigt: 23
 
 ### Beobachtung: gehäuft „ohne Abbildung/Tabelle nicht lösbar"
 
@@ -65,7 +65,7 @@ Drei systematische Punkte, die mehr wert sind als die 13 Einzelfälle:
    (Fragestamm „Welchen Kode/Schlüssel …" + Antwortoptionen, die reine Kodes sind) und A um
    „nennt das Kursskript/die Folie" erweitern.
 
-### Beobachtung 3: der ausgelieferte Katalog ist nicht der aus `main`
+### Beobachtung 3 (ERLEDIGT am 17.08.): der ausgelieferte Katalog war nicht der aus `main`
 
 Das ist der wichtigere Fund der Auswertung – er betrifft jede künftige Korrektur.
 
@@ -93,6 +93,14 @@ reproduzieren. Praktische Folgen:
   → Upload nach `material/relevanz/UPLOAD.md`, und **die erzeugte `VERSION` committen**. Danach
   muss das Label in der App exakt der `VERSION` in `main` entsprechen; erst dann sind Meldungen
   eindeutig einer Katalogfassung zuzuordnen.
+
+**Nachtrag 18.08. — die Lücke ist zu.** Die fünf Meldungen vom 17.08. tragen
+`Fragen-Stand 13.08.2026 · f191e8`, und das ist exakt die `VERSION 2026-08-13-f191e8a4` aus
+`main`. Der Upload wurde also zwischen dem 13. und dem 17.08. gefahren; alle fünf gemeldeten
+Fragen ließen sich 1:1 im Repo-Stand wiederfinden. Damit sind Meldungen ab sofort eindeutig
+einer Katalogfassung zuzuordnen — und die Meldungen vom 17.08. sind **kein Nachhall eines nie
+ausgelieferten Fixes**, sondern echtes neues Feedback auf den bereinigten Katalog.
+Die Regel bleibt: nach jeder Runde erst hochladen, dann Meldungen auswerten.
 
 ### Entscheidung Nico (13.08.) — gilt ab sofort für alle Runden
 
@@ -140,7 +148,76 @@ in Supabase. `python3 pipeline/build_sql_chunked.py --keep-code` → 15 Dateien 
 `material/supabase/`, dann `material/relevanz/UPLOAD.md` abarbeiten (Zugangscode bleibt gültig,
 Geräte müssen sich nicht neu anmelden). Erst danach zeigt die App `Stand 13.08.2026 · f191e8`.
 
-## Erledigt — alle 18 Meldungen abgearbeitet (13.08.2026)
+### Beobachtung 4 (17.08.): „Beispiel, nicht pauschal" — neue Kategorie F
+
+Fünf Meldungen am 17.08. (18:59–19:34 Uhr, App 0.37.0, **Fragen-Stand 13.08.2026 · f191e8**).
+Vier davon sind derselbe, bislang unbekannte Typ: **die Antwort ist eine aus einer zitierten
+Studie oder einer Abbildung abgelesene Zahl**.
+
+| Issue | Frage-ID | Antwort ist … | Notiz |
+|---|---|---|---|
+| #28 | `brust-b4-010` | 49 % (Balken „Total ET" einer Kohortenauswertung) | „Beispiel, nicht pauschal" |
+| #25 | `strahl-b4-035` | p = 0,04 (Kaplan-Meier-Kurve) | „Beispiel, nicht pausxhal" |
+| #24 | `patho1-b2-036` | 133/261 Ereignisse, p, HR 0,48 (Trastuzumab-Studie) | „Nicht nachvollziehbar" |
+| #27 | `gyn-b4-006` | n = 228/219/690 aus einer Kurvenlegende | „Abbildung nicht sinnvoll" |
+
+Die fünfte (#26, `hautk2-b1-005`) ist ein **Nachläufer der Kategorie E**: Zuordnung
+Melanom → ICD-10-/Morphologiekode.
+
+Fachlich sind alle fünf korrekt — Frage, Lösung und Erklärung stimmen gegen die hinterlegte
+Quelle. Es geht wieder um **Relevanz und Zuschnitt, nicht um Richtigkeit**. Bei #27 und #24
+kommt der Typ „finde die falsche Zahl unter lauter richtigen Zahlen" hinzu, der reines
+Zahlengedächtnis ohne Regelbezug prüft.
+
+Drei systematische Punkte:
+
+1. **Der Detektor war für alle fünf blind.** `pipeline/relevanz.py` klassifizierte
+   *keine einzige* der Meldungen. Zwei Lücken: für F gab es kein Muster, und `E_TOK` verlangte
+   den Kode am **Optionsanfang** — Zuordnungsfragen tragen ihn mitten im Text („Malignes
+   Melanom o.n.A. – 8720/3"). Ohne beide Reparaturen hätte die nächste Runde sie wieder verfehlt.
+2. **Der Stichproben-Effekt, zum dritten Mal.** Jede gemeldete Frage hat nahezu identische
+   Zwillinge auf derselben Folie, die *nicht* gemeldet wurden: `gyn-b4-005` fragt dieselbe
+   Kurvenlegende als numeric ab (n für FIGO Ib), `patho1-b2-035` fragt die Hazard Ratio 0,48
+   derselben Studie einzeln ab, auf `brust` S.49 stehen zwölf Fragen, von denen sechs
+   Kohortenzahlen abfragen.
+3. **Größenordnung.** Der erweiterte Detektor findet **94 F-Kandidaten (1,6 %)** —
+   `gyn` 30 · `brust` 23 · `strahl` 11 — plus 92 E-Nachläufer, von denen der Großteil
+   allerdings legitime Kodierregeln sind (M.-Paget-Ausnahmeregel, Bedeutung der Kode-Endungen).
+   Größter unbemerkter Block: die Studien-Steckbriefe in `hautk1` (ORR/OS/HR je Zulassungsstudie).
+
+**Nebenbefund zu #28:** `brust-b4-010` ist zusätzlich **nicht selbsttragend** — „Welchen
+Gesamtanteil (Total) hatte die endokrine Therapie (ET) allein?" nennt weder Kohorte noch
+Auswertung. Ein Kategorie-A-Defekt, der `selfcontained_check.py` entgangen ist.
+
+### Umsetzung (18.08.): Runde F ist gefahren
+
+Alles im Secret-Repo auf `claude/neue-offene-issues-fcsm2x` (Commit `247cc70`),
+Bilanz in `material/relevanzF/BILANZ.md`:
+
+- `pipeline/relevanz.py` kennt jetzt **Kategorie F** (`F_ASK` × `F_CTX` × „Antwort ist im Kern
+  eine nackte Zahl", abzüglich `F_GRENZE`) und erkennt Kategorie **E** auch, wenn der Kode
+  *innerhalb* der Option steht. Neu außerdem `--neu-only` und das Feld `frueher` je Kandidat,
+  damit frühere Entscheidungen nicht neu aufgerollt werden.
+- **186 Kandidaten** geprüft (94 F, 92 E; 33 davon in Runde A–E schon entschieden und unberührt
+  gelassen) → **49 `keep` · 104 `delete`**, entschieden **je Folien-Cluster**.
+- Katalog **5.707 → 5.603 Fragen**, Version `2026-08-18-f8d815af`.
+  ID-Invariante maschinell geprüft: 0 neue IDs, 0 inhaltliche Änderungen an den gebliebenen Fragen.
+- **Trennlinie:** gefallen ist, wo die Zahl aus einer Studie oder Abbildung *abgelesen* wird.
+  Geblieben ist, wo sie eine **Klassifikationsgrenze** ist (T2 > 2 cm, Grading-Score,
+  FIGO-Definition), eine **biologische oder epidemiologische Regelmäßigkeit** beschreibt
+  (~86 % der Mammakarzinome HR+, ~80 % duktal, ~20 % BRCA1/2 beim Ovarialkarzinom,
+  Krampfanfall als häufigstes Erstsymptom bei ZNS-Tumoren) oder **berechnet** statt abgelesen
+  werden muss (Odds-Ratio-Rechenbeispiel `patho2-b1-019`).
+- Für E galt unverändert die Festlegung vom 13.08. — es fällt nur, wo der **Kode selbst die
+  Antwort** ist. Von 92 E-Kandidaten sind daher nur 20 gefallen.
+- Kein Thema ist leer geworden; am stärksten betroffen `hautk1_nichtmelanozytaerer_hautkrebs`
+  (120 → 110) und `gyn_ovar` (90 → 81).
+
+**Offen bleibt der Upload:** Stand `2026-08-18-f8d815af` liegt im Repo, die App liefert noch
+`13.08.2026 · f191e8` aus. `python3 pipeline/build_sql_chunked.py --keep-code` → dann
+`material/relevanz/UPLOAD.md` abarbeiten.
+
+## Erledigt — alle 23 Meldungen abgearbeitet (Stand 18.08.2026)
 
 - [x] **gyn-b3-044** · Zervixkarzinom · gemeldet 06.08.2026 · [Issue #6](https://github.com/allawallabedalla/Secret/issues/6)
       Notiz: Frage ist ohne Folie kaum zu verstehen
@@ -364,6 +441,65 @@ Geräte müssen sich nicht neu anmelden). Erst danach zeigt die App `Stand 13.08
       vom 13.08. überholt → `delete`.** Das war die Grundsatzentscheidung: die ~26 Kode-Fragen
       des `icdo`-Skripts fallen in derselben Runde mit.
       **Ergebnis (13.08.):** `delete` mit Runde E — nach Entscheidung 2 fällt auch die ICD-O-3-Topographie.
+
+- [x] **patho1-b2-036** · Pathologie I – Molekularpathologie · gemeldet 17.08.2026 · [Issue #24](https://github.com/allawallabedalla/Secret/issues/24)
+      Notiz: Nicht nachvollziehbar
+      Frage: Welche Angaben zur im Kursskript zitierten Trastuzumab-Studie (krankheitsfreies
+      Überleben) treffen zu?
+      Optionen: 133 Ereignisse [richtig] · 261 Ereignisse [richtig] · p < 0,0001 [richtig] ·
+      Hazard Ratio 0,48 [richtig] · Kontrollgruppe nur 12 Ereignisse
+      Quelle: patho1, Folie 54 (S.28)
+      Einordnung: Kategorie F. Vier Zahlen einer einzelnen zitierten Studie, dazu ein
+      Zahlen-Distraktor – ohne die Folie nicht herleitbar, mit der Folie reines Ablesen.
+      **Ergebnis (18.08.):** `delete` mit Runde F. Der Zwilling `patho1-b2-035` (Hazard Ratio 0,48
+      als Einzelfrage) fällt mit — er war dem Detektor zunächst entgangen, weil im Fragetext kein
+      Abbildungswort steht; `F_CTX` wertet eine Studienstatistik jetzt selbst als Beleg.
+
+- [x] **strahl-b4-035** · Strahlentherapie – Spezialverfahren · gemeldet 17.08.2026 · [Issue #25](https://github.com/allawallabedalla/Secret/issues/25)
+      Notiz: Beispiel, nicht pausxhal
+      Frage: Welchen p-Wert gibt die Kaplan-Meier-Kurve zur interstitiellen Brachytherapie bei
+      Weichteilsarkomen im Kursskript an? · Lösung: 0,04 · Quelle: strahl, S.54 unten
+      Einordnung: Kategorie F in Reinform – der p-Wert einer einzelnen Kurve. Die vier übrigen
+      Fragen derselben Folie sind Sachfragen zur Brachytherapie und bleiben.
+      **Ergebnis (18.08.):** `delete` mit Runde F.
+
+- [x] **hautk2-b1-005** · Hautkrebs II – Grundlagen · gemeldet 17.08.2026 · [Issue #26](https://github.com/allawallabedalla/Secret/issues/26)
+      Notiz: Nicht wichtig direkte Zuordnung
+      Frage: Welche Zuordnungen von Melanomen zu ICD-10- und Morphologie-Codes treffen zu?
+      Optionen: Malignes Melanom o.n.A. – 8720/3 (C43.-) [richtig] · SSM – 8743/3 [richtig] ·
+      Melanoma in situ – 8720/2 mit C43.- · Lentigo maligna – 8742/2 [richtig]
+      Quelle: hautk2, Folie 4 (S.4)
+      Einordnung: Nachläufer der Kategorie E, den Runde E strukturell verfehlt hatte (`E_TOK`
+      suchte den Kode am Optionsanfang, hier steht er mitten im Text). Grenzfall: die Frage
+      prüft im Kern die Regel *in situ → D03.-, maligne → C43.-*, was nach Regel 2 vom 13.08.
+      ein `keep` wäre — ihre **Antwort** besteht aber aus Morphologiekodes.
+      **Ergebnis (18.08.):** `delete` mit Runde F — aufgelöst über den Cluster statt über die
+      Einzelfrage: `hautk2-b1-007` fragt exakt die Regel ab („Melanom der Haut (maligne) – C43.-,
+      (in situ) – D03.-") und **bleibt**. Damit ist die Regel weiterhin abgedeckt und der
+      Kode-Drill verschwunden.
+
+- [x] **gyn-b4-006** · Zervixkarzinom · gemeldet 17.08.2026 · [Issue #27](https://github.com/allawallabedalla/Secret/issues/27)
+      Notiz: Abbildung nciht sinnvoll
+      Frage: Welche Fallzahlen nennt die Legende der Kurve „relatives survival nach FIGO"
+      korrekt? · Lösung: Ia n=228, IIa n=219, IIb n=690 · Quelle: gyn, S.46 unten
+      Einordnung: Kategorie F, zusätzlich vom Typ „finde die falsche Zahl" (der Distraktor
+      verschiebt n=558 von FIGO III auf IV). Auf derselben Folie fragt `gyn-b4-005` dieselbe
+      Legende als numeric ab (n für FIGO Ib).
+      **Ergebnis (18.08.):** `delete` mit Runde F, zusammen mit `gyn-b4-005`. Die fünf Sachfragen
+      der Folie (FIGO-III/IV-Definitionen, Hydronephrose) bleiben.
+
+- [x] **brust-b4-010** · Brustkrebs – Therapie · gemeldet 17.08.2026 · [Issue #28](https://github.com/allawallabedalla/Secret/issues/28)
+      Notiz: Beispiel, nicht pauschal
+      Frage: Welchen Gesamtanteil (Total) hatte die endokrine Therapie (ET) allein (in %)?
+      Lösung: 49 · Quelle: brust, S.49 unten
+      Einordnung: Kategorie F **und** Kategorie A – die Frage nennt weder Kohorte noch
+      Auswertung, „Total" bleibt ohne die Folie unbestimmt. Auf `brust` S.49 stehen zwölf
+      Fragen, sechs davon fragen Kohortenzahlen ab.
+      **Ergebnis (18.08.):** `delete` mit Runde F, zusammen mit `brust-b4-003` (n = 7421),
+      `brust-b4-011` (Trastuzumab-Anteile) und den Trend-Fragen `b4-015`–`b4-017`. Der
+      Sachverhalt der Folie („ET ist die tragende adjuvante Therapie bei HR+") bleibt über
+      `brust-b4-008` erhalten; `brust-b4-004` (~86 % HR-positiv) bleibt als biologische
+      Regelmäßigkeit.
 
 ## Offen
 
