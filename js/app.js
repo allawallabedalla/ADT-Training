@@ -710,10 +710,29 @@ const STUDY_MIN_CHOICES = [15, 30, 45, 60, 90, 120];
 const STUDY_WEEKS_CHOICES = [1, 2, 3, 4, 6, 8, 12];
 const STUDY_MIN_KEY = "adt_study_minutes";
 const STUDY_WEEKS_KEY = "adt_study_weeks";
+// "X Wochen bis zur Prüfung" muss wirklich runterzählen, sonst würde die
+// Zielmarke jeden Tag neu "X Wochen ab jetzt" hochrechnen und nie stabil
+// werden, egal wie viel schon erreicht ist. STUDY_START_KEY hält deshalb den
+// Tag fest, ab dem die Wochen zählen – erster Aufruf oder jede Änderung der
+// Wochenzahl setzt ihn neu.
+const STUDY_START_KEY = "adt_study_start";
 function getStudyMinutes() { try { const v = parseInt(localStorage.getItem(STUDY_MIN_KEY), 10); return STUDY_MIN_CHOICES.includes(v) ? v : 30; } catch { return 30; } }
 function setStudyMinutes(n) { try { localStorage.setItem(STUDY_MIN_KEY, String(n)); } catch (e) {} }
 function getStudyWeeks() { try { const v = parseInt(localStorage.getItem(STUDY_WEEKS_KEY), 10); return STUDY_WEEKS_CHOICES.includes(v) ? v : 4; } catch { return 4; } }
-function setStudyWeeks(n) { try { localStorage.setItem(STUDY_WEEKS_KEY, String(n)); } catch (e) {} }
+function setStudyWeeks(n) { try { localStorage.setItem(STUDY_WEEKS_KEY, String(n)); resetStudyStart(); } catch (e) {} }
+function getStudyStart() {
+  try {
+    let d = localStorage.getItem(STUDY_START_KEY);
+    if (!d) { d = todayStr(); localStorage.setItem(STUDY_START_KEY, d); }
+    return d;
+  } catch { return todayStr(); }
+}
+function resetStudyStart() { try { localStorage.setItem(STUDY_START_KEY, todayStr()); } catch (e) {} }
+// Tage, die von der geplanten Vorbereitungszeit noch übrig sind (kann nicht
+// unter 0 fallen, sobald die geplanten Wochen verstrichen sind).
+function remainingStudyDays() {
+  return Math.max(0, getStudyWeeks() * 7 - daysBetween(getStudyStart(), todayStr()));
+}
 
 // Erwartete Anzahl Versuche, bis eine Frage 3x IN FOLGE richtig war (Box 3),
 // bei Trefferquote p: E = (1-p^3) / ((1-p) * p^3). Nutzt die eigene bisherige
@@ -731,6 +750,27 @@ function expectedAttemptsPerMastery() {
 function bootstrapDailyPace() {
   const attemptsPerDay = (getStudyMinutes() * 60) / SECONDS_PER_ATTEMPT;
   return attemptsPerDay / expectedAttemptsPerMastery();
+}
+
+/* Die Prüfungssimulation ist der einzige Ort in der App, der das echte
+ * Prüfungsformat testet (30 Fragen, proportional aus allen Themen gezogen,
+ * Zeitlimit, bestanden ab 50 %). Der Lernstand (Box 3+) sagt nur, wie viele
+ * EINZELNE Fragen dreimal in Folge richtig waren – das ist kein Beweis, dass
+ * am Ende auch die echte Prüfung klappt. "Bereit" verlangt deshalb zusätzlich
+ * einen echten Nachweis: die letzten EXAM_READY_STREAK Simulationen müssen
+ * je mindestens EXAM_READY_PCT erreicht haben (Sicherheitsabstand über der
+ * 50-%-Grenze). */
+const EXAM_READY_PCT = 65;
+const EXAM_READY_STREAK = 2;
+function examReadiness() {
+  const hist = getExamHistory();
+  const last = hist.slice(-EXAM_READY_STREAK);
+  const have = last.filter(h => h.pct >= EXAM_READY_PCT).length;
+  return {
+    hist, have, need: EXAM_READY_STREAK,
+    ready: last.length >= EXAM_READY_STREAK && have === EXAM_READY_STREAK,
+    lastPct: hist.length ? hist[hist.length - 1].pct : null,
+  };
 }
 
 function readiness() {
@@ -751,7 +791,7 @@ function readiness() {
   // tatsächlich erreichbar? Echtes gemessenes Tempo schlägt die Hochrechnung
   // aus den Einstellungen, sobald genug Tage vorliegen.
   const pace = masteryPace() || bootstrapDailyPace();
-  const remainingDays = getStudyWeeks() * 7;
+  const remainingDays = remainingStudyDays();
   const achievable = Math.min(total, secure + pace * remainingDays);
   const achievablePct = total ? Math.round(achievable / total * 100) : 0;
   const targetPct = Math.min(75, Math.max(3, achievablePct));
@@ -762,10 +802,19 @@ function readiness() {
   const topicMin = Math.min(READY_TOPIC_MIN, targetPct);
   const weakTopics = Object.values(byTopic).filter(t => t.mastered / t.total * 100 < topicMin).length;
 
+  const boxReady = total > 0 && pct >= targetPct && weakTopics === 0;
+  const exam = examReadiness();
+
   let stage, label, msg;
-  if (total && pct >= targetPct && weakTopics === 0) {
+  if (boxReady && exam.ready) {
     stage = 3; label = "Bereit";
-    msg = `Du hast genug gelernt für deine geplante Zeit: ${targetPct} % sitzen sicher${topicMin > 0 ? " und kein Thema liegt unter " + Math.round(topicMin) + " %" : ""}. Ab hier hält dich allein die Wiederholung auf Stand.`;
+    msg = `Du hast genug gelernt für deine geplante Zeit UND die letzten ${exam.need} Prüfungssimulationen lagen bei mindestens ${EXAM_READY_PCT} % – klar über der Bestehensgrenze von 50 %. Ab hier hält dich allein die Wiederholung auf Stand.`;
+  } else if (boxReady) {
+    // Lernstand reicht, aber der einzige echte Nachweis (Prüfungssimulation) fehlt noch.
+    stage = 2; label = "Fast bereit";
+    msg = exam.hist.length === 0
+      ? "Der Lernstand passt – jetzt fehlt der echte Test: mach die Prüfungssimulation (30 Fragen, wie im Ernstfall, bestanden ab 50 %)."
+      : `Der Lernstand passt, aber die Prüfungssimulation bestätigt es noch nicht: zuletzt ${exam.lastPct} % (Ziel: ${exam.need}× mindestens ${EXAM_READY_PCT} % in Folge). Nochmal probieren.`;
   } else if (pct >= targetPct * 0.8) {
     stage = 2; label = "Fast bereit";
     msg = weakTopics
@@ -778,7 +827,7 @@ function readiness() {
     stage = 0; label = "Am Anfang";
     msg = "Jede sichere Frage bleibt sicher – die App merkt sich alles und plant die Wiederholungen. Niemand muss alle " + total + " Fragen können: bestanden ist ab 50 %.";
   }
-  return { total, secure, pct, target, targetPct, topicMin, weakTopics, stage, label, msg };
+  return { total, secure, pct, target, targetPct, topicMin, weakTopics, exam, examBlocking: boxReady && !exam.ready, stage, label, msg };
 }
 
 /* Eine Karte, zwei Ansichten: kompakt (Startseite, tippbar → Statistik) und
@@ -797,8 +846,13 @@ function readinessCardHTML(detailed) {
     </span>`;
   const zahlen = `<span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${rdy.targetPct} %</span>`;
   if (!detailed) {
-    return `<button class="ready-card" data-act="stats" aria-label="Prüfungsbereitschaft: ${rdy.label}, ${rdy.pct} Prozent sicher">
+    // Lernstand passt schon, nur der echte Nachweis fehlt -> Tipp fuehrt direkt
+    // in die Simulation statt in die Statistik.
+    const act = rdy.examBlocking ? "exam" : "stats";
+    const tipp = rdy.examBlocking ? `<span class="ready-sub" style="color:${col}">→ Prüfungssimulation machen</span>` : "";
+    return `<button class="ready-card" data-act="${act}" aria-label="Prüfungsbereitschaft: ${rdy.label}, ${rdy.pct} Prozent sicher${rdy.examBlocking ? " – tippen für die Prüfungssimulation" : ""}">
       ${head}${bar}${zahlen}
+      ${tipp}
       ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
     </button>`;
   }
@@ -806,6 +860,10 @@ function readinessCardHTML(detailed) {
     ${head}${bar}${zahlen}
     <span class="ready-sub" style="margin-top:6px">${rdy.msg}</span>
     ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
+    <span class="ready-sub muted" style="margin-top:6px">Der Lernstand (Box 3+) zeigt nur, welche Einzelfragen dreimal in Folge
+      richtig waren – das echte Prüfungsformat (30 Fragen aus allen Themen, Zeitlimit, bestanden ab 50 %) testet nur die
+      Prüfungssimulation. "Bereit" verlangt deshalb beides: den Lernstand UND die letzten ${EXAM_READY_STREAK} Simulationen
+      mit je mindestens ${EXAM_READY_PCT} %.</span>
     <span class="ready-sub muted" style="margin-top:6px">Woher die ${rdy.targetPct} %? Hochgerechnet aus deiner geplanten Lernzeit
       (${getStudyMinutes()} Min./Tag über ${getStudyWeeks()} Wochen, einstellbar unter Einstellungen) – nicht aus dem ganzen Katalog.
       Die Prüfung gilt schon ab 50 % als bestanden. Sobald die App dein echtes Tempo kennt, übernimmt das die Rechnung und wird genauer.</span>
@@ -1490,7 +1548,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.39.0";
+const APP_VERSION = "0.39.1";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
