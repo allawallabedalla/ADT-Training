@@ -1443,7 +1443,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.38.0";
+const APP_VERSION = "0.38.2";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1467,10 +1467,10 @@ const BADGE_ICON = {
   hundred: { i: "star", c: "#ff2d55" },
   answered250: { i: "gem", c: "#5e5ce6" }, answered500: { i: "rocket", c: "#007aff" },
   answered750: { i: "mountain", c: "#30b0c7" }, answered1000: { i: "trophy", c: "#ffb300" },
-  streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "bolt", c: "#ffcc00" },
+  streak3: { i: "flame", c: "#ff6b22" }, streak7: { i: "flame", c: "#ffcc00" },
   exam: { i: "clipboardCheck", c: "#34c759" }, exam90: { i: "crown", c: "#5e5ce6" },
   sharp: { i: "target", c: "#ff3b30" }, master: { i: "brain", c: "#30b0c7" },
-  secure25: { i: "shield", c: "#34c759" }, streak14: { i: "bolt", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
+  secure25: { i: "shield", c: "#34c759" }, streak14: { i: "flame", c: "#ff6b22" }, allmaster: { i: "trophy", c: "#ffb300" },
 };
 
 const BAR_TITLES = { home: "ADT Trainer", topics: "Themen", badges: "Erfolge", stats: "Statistik", settings: "Einstellungen", info: "Info", result: "Ergebnis", quiz: "", exam: "Prüfung", examresult: "Ergebnis", reports: "Gemeldete Fragen" };
@@ -1502,8 +1502,14 @@ function updateAppbar(view) {
  * ------------------------------------------------------------------ */
 const POMO_KEY = "adt_pomo_v1";
 const POMO_DONE_KEY = "adt_pomo_done";     // Tageszähler getrennt vom Timer – überlebt „Beenden"
+const POMO_GOAL_KEY = "adt_pomo_goal";     // Tagesziel Runden, einstellbar (0 = kein Ziel)
 const POMO_WORK = 25 * 60 * 1000, POMO_BREAK = 5 * 60 * 1000, POMO_LONG = 15 * 60 * 1000, POMO_EVERY = 4;
 const POMO_ABANDON_MS = 60 * 60 * 1000;    // länger als 1 h abgelaufen = Sitzung verlassen
+// 4 Runden = ein voller Zyklus bis zur langen Pause (~2 Std. inkl. Pausen) – als
+// Standard sinnvoll, weil er mit dem ohnehin eingebauten Rhythmus zusammenfällt.
+const POMO_GOAL_CHOICES = [0, 2, 4, 6, 8];
+function getPomoGoal() { try { const v = parseInt(localStorage.getItem(POMO_GOAL_KEY), 10); return POMO_GOAL_CHOICES.includes(v) ? v : 4; } catch { return 4; } }
+function setPomoGoal(n) { try { localStorage.setItem(POMO_GOAL_KEY, String(n)); } catch (e) {} }
 let pomoTickId = null;
 
 function pomoLoad() {
@@ -1556,7 +1562,11 @@ function pomoSettle() {
     p.phase = lang ? "long" : "break";
     p.paused = false; p.endsAt = Date.now() + pomoPhaseMs(p.phase); p.remainMs = null;
     pomoSave(p); pomoVibrate();
-    toast(lang ? "🍅 Runde " + n + " geschafft – 15 Minuten lange Pause!" : "🍅 Runde " + n + " geschafft – 5 Minuten Pause. Beine vertreten! ☕");
+    const goal = getPomoGoal();
+    const pausentxt = lang ? "15 Minuten lange Pause!" : "5 Minuten Pause. Beine vertreten! ☕";
+    toast(goal && n === goal
+      ? "🎯 Pomodoro-Ziel erreicht (" + n + "/" + goal + ")! " + pausentxt
+      : "🍅 Runde " + n + " geschafft – " + pausentxt);
   } else {
     p.phase = "work"; p.paused = true; p.remainMs = POMO_WORK;
     pomoSave(p); pomoVibrate();
@@ -1574,12 +1584,17 @@ function pomoEnsureTick() {
 }
 function pomoSubtitle() {
   const p = pomoLoad();
-  if (!p) return "25 min Fokus · 5 min Pause – mit klarem Feierabend";
+  if (!p) {
+    const n = pomoDoneToday(), goal = getPomoGoal();
+    if (!n) return "25 min Fokus · 5 min Pause – mit klarem Feierabend";
+    if (goal && n >= goal) return "×" + n + " heute – Tagesziel erreicht ✓";
+    return "×" + n + (goal ? " von " + goal : "") + " heute – weiter?";
+  }
   const mm = fmtTime(pomoRemainMs(p));
   if (p.paused && p.phase === "work" && (p.remainMs || 0) >= POMO_WORK)
-    return "🍅 Bereit für Runde " + (pomoDoneToday() + 1) + " – tippen zum Start";
-  if (p.paused) return "⏸ Pausiert (" + mm + ") – tippen zum Weitermachen";
-  return (p.phase === "work" ? "🍅 Fokus läuft – noch " : "☕ Pause – noch ") + mm;
+    return "Bereit für Runde " + (pomoDoneToday() + 1) + " – tippen zum Start";
+  if (p.paused) return "Pausiert (" + mm + ") – tippen zum Weitermachen";
+  return (p.phase === "work" ? "Fokus läuft – noch " : "Pause – noch ") + mm;
 }
 function pomoTap() {
   const p = pomoLoad();
@@ -1641,8 +1656,10 @@ function pomoPanelSync(p) {
   el.querySelector("#pomoTitle").textContent = p.phase === "work"
     ? (wartend ? "Bereit für die nächste Runde?" : (p.paused ? "Fokus (pausiert)" : "Fokus 🍅"))
     : (p.phase === "long" ? "Lange Pause ☕" : "Pause ☕");
-  const n = pomoDoneToday();
-  el.querySelector("#pomoCount").textContent = n ? "🍅 ×" + n + " heute" : "";
+  const n = pomoDoneToday(), goal = getPomoGoal();
+  el.querySelector("#pomoCount").textContent = n
+    ? "🍅 ×" + n + (goal ? " / " + goal : "") + " heute" + (goal && n >= goal ? " ✓" : "")
+    : (goal ? "Ziel heute: " + goal + " Runden" : "");
   el.querySelector("#pomoMain").textContent = p.paused ? (wartend ? "Runde starten" : "Weiter") : "Pause";
 }
 function pomoInit() {
@@ -1859,14 +1876,15 @@ function renderSettings() {
   const content = contentGateActive() ? `
     <div class="section-title">Lerninhalte</div>
     <div class="ios-group">
-      <button class="mode-btn" id="btnRelock">${iconTile("import", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen${contentVersionLabel() ? " · " + esc(contentVersionLabel()) : ""}. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
+      <button class="mode-btn" id="btnRelock">${iconTile("lock", "#ff9500")}<span class="txt"><b>Inhalte neu freischalten</b><p>Aktuell ${QUESTIONS.length} Fragen · ${Object.keys(TOPICS).length} Themen${contentVersionLabel() ? " · " + esc(contentVersionLabel()) : ""}. Nötig, wenn es einen neuen Zugangscode gibt.</p></span><span class="chev">›</span></button>
     </div>` : "";
 
-  const theme = getTheme(), size = getSessionSize(), haptics = getHaptics(), font = getFontSize();
+  const theme = getTheme(), size = getSessionSize(), haptics = getHaptics(), font = getFontSize(), pomoGoal = getPomoGoal();
   const tOpt = (v, l) => `<option value="${v}" ${theme === v ? "selected" : ""}>${l}</option>`;
   const sOpt = (v, l) => `<option value="${v}" ${size === v ? "selected" : ""}>${l}</option>`;
   const hOpt = (v, l) => `<option value="${v}" ${(haptics ? "on" : "off") === v ? "selected" : ""}>${l}</option>`;
   const fOpt = (v, l) => `<option value="${v}" ${font === v ? "selected" : ""}>${l}</option>`;
+  const pgOpt = (v, l) => `<option value="${v}" ${pomoGoal === v ? "selected" : ""}>${l}</option>`;
   const prefs = `
     <div class="section-title">Anzeige & Übung</div>
     <div class="q-card">
@@ -1882,6 +1900,9 @@ function renderSettings() {
       <label class="set-row" for="setHaptics"><span>Haptisches Feedback</span>
         <select id="setHaptics" class="ios-select">${hOpt("on", "An")}${hOpt("off", "Aus")}</select>
       </label>
+      <label class="set-row" for="setPomoGoal"><span>Pomodoro-Ziel</span>
+        <select id="setPomoGoal" class="ios-select">${pgOpt(0, "Aus")}${pgOpt(2, "2 Runden (~1 Std.)")}${pgOpt(4, "4 Runden (~2 Std.)")}${pgOpt(6, "6 Runden (~3 Std.)")}${pgOpt(8, "8 Runden (~4 Std.)")}</select>
+      </label>
     </div>`;
 
   app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${prefs}
@@ -1892,6 +1913,11 @@ function renderSettings() {
   const stSize = $("setSize"); if (stSize) stSize.addEventListener("change", () => { const n = parseInt(stSize.value, 10); setSessionSize(n); toast("✅ Fragen pro Runde: " + (n > 0 ? n : "alle")); });
   const stHap = $("setHaptics"); if (stHap) stHap.addEventListener("change", () => { const on = stHap.value === "on"; setHaptics(on); if (on) hapticFeedback(true); toast(on ? "📳 Haptik an" : "Haptik aus"); });
   const stFont = $("setFont"); if (stFont) stFont.addEventListener("change", () => { setFontSize(stFont.value); toast("🔤 Schriftgröße: " + (stFont.value === "large" ? "Groß" : "Normal")); });
+  const stPomoGoal = $("setPomoGoal"); if (stPomoGoal) stPomoGoal.addEventListener("change", () => {
+    const n = parseInt(stPomoGoal.value, 10); setPomoGoal(n);
+    toast(n ? "🍅 Pomodoro-Ziel: " + n + " Runden/Tag" : "Pomodoro-Ziel ausgeschaltet");
+    pomoRender();
+  });
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
   const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
   const bCopy = $("btnCopy"); if (bCopy) bCopy.addEventListener("click", () => copyCode(code));
@@ -1931,11 +1957,11 @@ async function renderReminderBox() {
   const box = document.getElementById("remindBox");
   if (!box) return;
   if (!pushSupported()) {
-    box.innerHTML = `<div class="install-tip">${iconTile("icloud", "#8e8e93")}<div>Benachrichtigungen sind hier nicht verfügbar. Auf dem iPhone: die App über Safari <b>„Zum Home-Bildschirm"</b> hinzufügen – danach sind Erinnerungen möglich.</div></div>`;
+    box.innerHTML = `<div class="install-tip">${iconTile("bell", "#8e8e93")}<div>Benachrichtigungen sind hier nicht verfügbar. Auf dem iPhone: die App über Safari <b>„Zum Home-Bildschirm"</b> hinzufügen – danach sind Erinnerungen möglich.</div></div>`;
     return;
   }
   if (!pushConfigured()) {
-    box.innerHTML = `<div class="install-tip">${iconTile("icloud", "#8e8e93")}<div>Erinnerungen sind serverseitig noch nicht eingerichtet. Anleitung: <b>README → „Lern-Erinnerungen"</b>.</div></div>`;
+    box.innerHTML = `<div class="install-tip">${iconTile("bell", "#8e8e93")}<div>Erinnerungen sind serverseitig noch nicht eingerichtet. Anleitung: <b>README → „Lern-Erinnerungen"</b>.</div></div>`;
     return;
   }
   const active = await remindersActive();
@@ -1944,7 +1970,7 @@ async function renderReminderBox() {
     box.innerHTML = `
       <div class="q-card">
         <div style="display:flex;align-items:center;gap:12px">
-          ${iconTile("flame", "#ff6b22")}<div style="flex:1"><b>Tägliche Erinnerung aktiv</b><p class="muted" style="margin:2px 0 0">jeden Tag um ${String(hour).padStart(2, "0")}:00 Uhr</p></div>
+          ${iconTile("bell", "#ff6b22")}<div style="flex:1"><b>Tägliche Erinnerung aktiv</b><p class="muted" style="margin:2px 0 0">jeden Tag um ${String(hour).padStart(2, "0")}:00 Uhr</p></div>
         </div>
         <label class="muted" style="display:block;margin-top:14px">Uhrzeit ändern</label>
         <select id="remindHour" class="ios-select">${hourOptions(hour)}</select>
