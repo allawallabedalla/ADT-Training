@@ -11,6 +11,92 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.38.0] — 2026-08-18  ·  „Du hast genug gelernt" — Prüfungsbereitschaft & Lern-Timer
+
+Antwort auf ein echtes Nutzerinnen-Gefühl: *„Ich werde nie fertig — wie viel muss ich
+lernen, um alles zu wissen?"* Die App sagt jetzt ehrlich, wann genug genug ist.
+
+### Neu
+- **Prüfungsbereitschaft** (Startseite + Statistik): eine Karte übersetzt den Lernstand in
+  eine klare Aussage — *Am Anfang / Auf gutem Weg / Fast bereit / Bereit*. Anker ist die
+  echte Prüfung: bestanden ab 50 %. **„Bereit" heißt: 75 % des Katalogs sitzen sicher
+  (Box 3+) und kein Thema liegt unter der Bestehensgrenze** — ausdrücklich nicht „alles
+  wissen". Der Fortschrittsbalken trägt eine Zielmarke bei 75 %, die Statistik erklärt das
+  Warum.
+- **Prognose:** „Bei deinem Tempo (Ø x neu gesicherte Fragen/Tag) bist du in ~N Tagen
+  bereit." Basis ist ein lokales Lerntempo-Log (`adt_mastery_log`, einmal täglich der
+  „sicher"-Stand, max. 60 Einträge); die Prognose erscheint erst, wenn mindestens
+  3 Lerntage Daten da sind, und verschwindet im Zustand „Bereit".
+- **„Für heute ist wirklich Schluss":** Wenn das Tagesziel erreicht ist UND keine
+  Wiederholung mehr fällig, sagt die Tagesziel-Karte das explizit — samt Ausblick
+  („Morgen: N Wiederholungen"). Dieselbe Erlaubnis zum Aufhören erscheint nach einer
+  Übungsrunde in der Auswertung: mehr bringt heute kaum etwas, die Intervalle wirken
+  über Nacht.
+- **Lern-Timer (Pomodoro):** 25 min Fokus · 5 min Pause · nach jeder 4. Runde 15 min.
+  Start über „Üben" auf der Startseite; eine Pill in der App-Leiste (🍅 24:59) zeigt den
+  Timer auf jeder Ansicht, Tipp darauf öffnet ein Bedienfeld (Pause/Weiter/Beenden,
+  Tages-Zähler „🍅 ×3 heute"). Pausen starten automatisch, **jede neue Lernrunde startet
+  bewusst per Tipp** — und der Hinweis nach der Pause erinnert daran, dass Aufhören
+  ausdrücklich erlaubt ist. Rein lokal (`adt_pomo_v1`), Zeitstempel-basiert: übersteht
+  Ansichtswechsel, Neuladen und App-Wechsel; Phasenende vibriert (wo unterstützt).
+
+### Behoben (Audit nach dem ersten Wurf, gleicher Release)
+- **Pomodoro-Tageszähler überlebt „Beenden"** — er liegt jetzt in einem eigenen Schlüssel
+  (`adt_pomo_done`); vorher löschte `pomoStop()` ihn mitsamt dem Timer-Zustand.
+- **Verlassene Timer**: wer den Timer laufen ließ und Stunden später zurückkommt, bekommt
+  keine nachträgliche Rundengutschrift samt Pausen-Toast mehr — mehr als 1 h nach
+  Phasenende gilt die Sitzung als beendet und der Timer räumt sich still weg.
+- **Pause in der letzten Sekunde**: Fortsetzen bei Restzeit 0 startete die volle Phase neu;
+  jetzt wird die Phase sofort sauber abgeschlossen.
+- **Live-Untertitel**: die Timer-Zeile im „Üben"-Menü tickt jetzt mit statt einzufrieren.
+- **Layout/Theme**: die Kopfzeile der Bereitschafts-Karte nutzt eine eigene Flex-Klasse
+  (`.ready-head` — das generische `.row` war nie ein Flex-Container) und den vorhandenen
+  Farb-Token `--text-dim` statt eines nicht definierten `--text-2`.
+- **Ein Karten-Renderer statt zwei Kopien** (`readinessCardHTML()`), und `readiness()`
+  zählt Gesamt- und Themenstand in einem einzigen Katalog-Durchlauf statt einmal pro Thema.
+
+### Technisch
+- Neue Helfer `readiness()`, `masteryPace()`, `enoughForToday()`, `dueTomorrowCount()`;
+  `bumpToday()` schreibt das Lerntempo-Log mit. Keine Änderung am Datenmodell des
+  Lernstands — alles Zusätzliche liegt in eigenen localStorage-Schlüsseln und synct nicht.
+- E2E geprüft (Playwright, Katalog ohne Gate): Karte + Stufen, Timer-Pill/Panel/Pause,
+  „Bereit"-Zustand, Schluss-für-heute-Text inkl. Morgen-Zähler, Statistik-Kopf — 0 Konsolenfehler.
+
+---
+
+## [0.37.0] — 2026-08-13  ·  Die Prüfung verrät den Fragetyp nicht mehr
+
+### Geändert
+- **Prüfungssimulation: alle Auswahlfragen erscheinen als Mehrfachauswahl.** Checkboxen statt
+  Radiobuttons, einheitlicher Chip „Mehrfachauswahl", keine stille Ersetzung der vorherigen
+  Auswahl. Grund: die echte Prüfung sagt nicht, wie viele Antworten richtig sind, und § 5 der
+  Prüfungsordnung wertet alles-oder-nichts. Wer am Radiobutton abliest „hier ist genau eine
+  richtig", übt eine Erleichterung ein, die es in der Prüfung nicht gibt.
+- Der Hinweis über den Optionen sagt das jetzt auch so: „Es können eine oder mehrere Antworten
+  richtig sein. Nur vollständig richtig zählt."
+- **Der Lernmodus bleibt unverändert** – dort steht weiterhin „Einfachauswahl" bzw.
+  „Mehrfachauswahl" an der Frage, inklusive Radiobutton-Verhalten und Pfeiltasten-Auswahl.
+- Der Fragenkatalog ist davon **nicht** betroffen: `type` bleibt wie er ist, die Auswertung
+  (`gradeQuestion`) vergleicht unverändert exakt.
+
+### Tests
+- 6 neue E2E-Checks: die Prüfung enthält eine single-Frage (Testvoraussetzung), sie zeigt
+  „Mehrfachauswahl" statt „Einfachauswahl", die Optionen tragen `role="checkbox"`, zwei
+  Kreuze bei einer single-Frage bleiben beide stehen – und als Gegenprobe: im Lernmodus wird
+  „Einfachauswahl" weiterhin angezeigt. `tests/run.sh` grün.
+
+### Inhalte (Katalog, Secret-Repo)
+- **Relevanz-Runde E: 5.951 → 5.707 Fragen.** 244 reine Kode-Abfragen entfernt (ICD-10,
+  ICD-O-3-Topographie/Morphologie, OPS, Zielgebiet-Schlüssel), 7 umformuliert. Hintergrund:
+  in der Prüfung sind ICD-10, ICD-O-3 und OPS als Hilfsmittel zugelassen (§ 8.4) – Kodes
+  auswendig zu lernen trainiert etwas, das man dort nachschlagen darf.
+- Geblieben sind Kodierregeln und Anwendungsfälle, oBDS-Feldschlüssel und Sachfragen.
+- **Der Lernfortschritt bleibt erhalten:** IDs wurden nicht neu vergeben; zu den entfernten
+  Fragen hebt die App den Stand als `orphanQuestions` auf. Neuer Katalogstand
+  `2026-08-13-f191e8a4` – sichtbar in Einstellungen → App-Version, sobald eingespielt.
+
+---
+
 ## [0.36.0] — 2026-08-06  ·  Melden = ein Tipp: Issue entsteht sofort
 
 ### Geändert

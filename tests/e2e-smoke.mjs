@@ -149,6 +149,51 @@ async function page(opts = {}) {
   chk(!!saved, 'Prüfung: laufende Session bleibt nach Reload erhalten');
 }
 
+// 8b) Prüfung verrät den Fragetyp nicht (Prüfungsordnung § 5: nur vollständig richtig zählt,
+//     und die echte Prüfung sagt nicht, wie viele Antworten richtig sind). Alle Auswahlfragen
+//     erscheinen in der Simulation als Mehrfachauswahl – im Lernmodus bleibt der echte Typ.
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="exam"]'); await p.waitForSelector('.exam-bar');
+
+  // Nur aussagekräftig, wenn die Prüfung überhaupt eine single-Frage enthält.
+  const typen = await p.evaluate(() => EXAM.qids.map(id => (QUESTIONS.find(q => q.id === id) || {}).type));
+  chk(typen.includes('single'), 'Prüfung: Auswahl enthält mindestens eine single-Frage (Testvoraussetzung)');
+
+  const singleIdx = typen.indexOf('single');
+  await p.evaluate((i) => examGoto(i), singleIdx);
+  await p.waitForSelector('.q-card');
+  const chip = (await p.textContent('.q-meta')).trim();
+  const rollen = await p.$$eval('.opt', els => els.map(e => e.getAttribute('role')));
+  chk(!/Einfachauswahl/.test(chip) && /Mehrfachauswahl/.test(chip), 'Prüfung: single-Frage zeigt „Mehrfachauswahl", nicht „Einfachauswahl"');
+  chk(rollen.length > 1 && rollen.every(r => r === 'checkbox'), 'Prüfung: Optionen sind Checkboxen (keine Radiobuttons)');
+
+  // Zwei Kreuze bei einer single-Frage müssen stehen bleiben – die Prüfung korrigiert nicht still.
+  const opts = await p.$$('.opt');
+  await opts[0].click(); await opts[1].click();
+  const gewaehlt = await p.$$eval('.opt', els => els.filter(e => e.getAttribute('aria-checked') === 'true').length);
+  chk(gewaehlt === 2, 'Prüfung: zwei Auswahlen bei einer single-Frage bleiben beide stehen');
+
+  // Gegenprobe Lernmodus: dort steht der echte Typ weiterhin dran.
+  const q = await page();
+  await q.goto(BASE, { waitUntil: 'networkidle' });
+  await q.evaluate(() => localStorage.removeItem('adt_exam_session_v1'));
+  await q.click('[data-act="mixed"]'); await q.waitForSelector('.q-card');
+  const chips = [];
+  for (let i = 0; i < 12 && !chips.some(c => /Einfachauswahl/.test(c)); i++) {
+    chips.push((await q.textContent('.q-meta')).trim());
+    const num = await q.$('#numField');
+    if (num) await num.fill('1');
+    else { const opt = await q.$('.opt'); if (opt) await opt.click(); }
+    const weiter = await q.$('#checkBtn'); if (weiter) await weiter.click();
+    const next = await q.$('#nextBtn'); if (!next) break;
+    await next.click();
+    await q.waitForSelector('.q-card');
+  }
+  chk(chips.some(c => /Einfachauswahl/.test(c)), 'Übung: Einfachauswahl wird weiterhin als solche angezeigt');
+}
+
 // 9) Schema-Migration v1 -> v3: SRS-Felder werden aus altem Fortschritt warmgestartet
 {
   const p = await page();
