@@ -11,6 +11,43 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.39.1] — 2026-08-18  ·  Prüfungssimulation als echter Nachweis + Countdown-Fix
+
+### Neu
+- **„Bereit" verlangt jetzt einen echten Nachweis, nicht nur den Lernstand.**
+  Box 3+ zeigt nur, welche Einzelfragen dreimal in Folge richtig waren – das
+  ist kein Beweis, dass die echte Prüfung klappt. Die **Prüfungssimulation**
+  (30 Fragen, proportional aus allen Themen, Zeitlimit, bestanden ab 50 %) ist
+  der einzige Ort, der das echte Format testet. „Bereit" verlangt deshalb
+  beides: den Lernstand **und** die letzten 2 Simulationen mit je mindestens
+  65 % (Sicherheitsabstand über der Bestehensgrenze).
+- Ist der Lernstand da, aber der Nachweis fehlt noch, sagt die Karte das
+  („Der Lernstand passt – jetzt fehlt der echte Test") und führt bei Tipp
+  direkt in die Prüfungssimulation statt in die Statistik.
+
+### Behoben
+- **Die Zielmarke aus v0.39.0 wäre nie stabil geworden.** „X Wochen bis zur
+  Prüfung" wurde bei jeder Neuberechnung als „X Wochen ab heute" behandelt,
+  ohne dass die Zeit wirklich runterzählte – jeder Tag mit echtem Fortschritt
+  hätte das Ziel weiter nach vorne verschoben, ohne dass es je erreichbar
+  geworden wäre. Jetzt zählt ein Startdatum (gesetzt beim ersten Aufruf oder
+  bei jeder Änderung der Wochenzahl) die verbleibende Zeit echt herunter; das
+  Ziel bleibt über die gesamte Vorbereitungszeit stabil und fällt am
+  Prüfungstag automatisch auf das tatsächlich Erreichte, falls man hinter dem
+  eigenen Tempo liegt.
+
+### Technisch
+- `examReadiness()` prüft die letzten `EXAM_READY_STREAK` (2) Einträge aus der
+  bestehenden Prüfungs-Historie gegen `EXAM_READY_PCT` (65 %).
+- `remainingStudyDays()` ersetzt `getStudyWeeks() * 7` in der Hochrechnung;
+  neuer Schlüssel `adt_study_start` hält den Countdown-Bezugspunkt.
+- Per Playwright verifiziert: Ziel bleibt bei konstantem Tempo über Tag 0/14/28
+  stabil (9 % in allen drei Fällen), fällt am Prüfungstag bei Rückstand auf
+  das Erreichte, alle vier Nachweis-Zustände (kein Test, zu niedrig, 2×
+  bestanden, CTA-Verlinkung) korrekt. Volle Testsuite grün.
+
+---
+
 ## [0.39.0] — 2026-08-18  ·  Realistische Zielmarke statt fester 75 %
 
 Direktes Nutzerinnen-Feedback: „Bei 5.000 Fragen erreicht man 75 % nie – wir
