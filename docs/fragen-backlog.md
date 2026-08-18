@@ -213,9 +213,27 @@ Bilanz in `material/relevanzF/BILANZ.md`:
 - Kein Thema ist leer geworden; am stärksten betroffen `hautk1_nichtmelanozytaerer_hautkrebs`
   (120 → 110) und `gyn_ovar` (90 → 81).
 
-**Offen bleibt der Upload:** Stand `2026-08-18-f8d815af` liegt im Repo, die App liefert noch
+**Offen bleibt der Upload:** Stand `2026-08-18-93ab36b5` liegt im Repo, die App liefert noch
 `13.08.2026 · f191e8` aus. `python3 pipeline/build_sql_chunked.py --keep-code` → dann
 `material/relevanz/UPLOAD.md` abarbeiten.
+
+### Nachtrag (18.08.): proaktiver Audit — Runde F/G
+
+Ohne neue Meldung wurden sechs Sweeps über den Katalog gefahren (Details:
+`material/relevanzF/BILANZ.md` im Secret-Repo, Commit `33b0074`):
+
+- **60 weitere Löschungen** (5.603 → 5.543, Version `2026-08-18-93ab36b5`): Tabellen-Ablesewerte
+  (u. a. die letzten beiden Fragen der Folie aus **#28** und die Grafik-Frage der Folie aus
+  **#27** — beide gemeldeten Cluster sind damit restlos bereinigt), Studien-Steckbriefe,
+  jahresgenaue Snapshot-Zahlen und die neue **Kategorie G** (Folien-Meta: Überschriften,
+  Achsenbereiche, Farblegenden, Kurven-Arme, Studiennamen aus Tabellen — 24 Fälle).
+- **58 dokumentierte Keeps**: berechenbare Aufgaben, Grenzwerte (TD5/5, 12-LK-Qualitätsindikator,
+  92-Tage-Regel), epidemiologische Größenordnungen und Leitlinien-Inhaltsfragen.
+- **Konsistenz-Scan über alle 5.543 Fragen: 0 Sachfehler** (2 Widerspruchs-Verdachtspaare und
+  22 Antwort↔Erklärungs-Auffälligkeiten — alle als Fehlalarme verifiziert).
+- Detektor kennt jetzt G, Tabellen-Kontexte, Zahlwort-Komposita und Statement-Nummern mit
+  Buchstaben (`8.S6`, Fund `gyn-b2-007` als Kategorie-C-Nachläufer). Nachkontrolle über alle
+  sieben Kategorien: **0 Kandidaten**.
 
 ## Erledigt — alle 23 Meldungen abgearbeitet (Stand 18.08.2026)
 
