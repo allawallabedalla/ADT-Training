@@ -1548,7 +1548,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.39.1";
+const APP_VERSION = "0.40.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2433,19 +2433,78 @@ function loadExam() {
 function removeExam() { try { localStorage.removeItem(EXAM_KEY); } catch (e) {} }
 
 // Blueprint: Fragen je Thema proportional zur Verfügbarkeit ziehen.
+/* ---- Prüfungs-Blueprint: die echte Gewichtung nachbilden ----
+ * Die ADT-Prüfungsmail (15.09.2026) nennt die Gewichtung der echten Prüfung:
+ *   Allgemein (klinische Referierende + Block I) 40 % · Codierung 50 % · Statistik 10 %
+ * Vorher zog die Simulation faktisch EINE Frage je Thema (111 Themen → 30 zufällig),
+ * gewichtete also nach Themenzahl statt nach Prüfungsrelevanz: ~55/39/6 statt 40/50/10.
+ * Codierung – die Hälfte der echten Prüfung – war damit der schwächst getestete Block.
+ *
+ * Zuordnung als Regel statt als 111-Zeilen-Tabelle: robust gegenüber Katalog-Updates
+ * (neue Themen werden automatisch einsortiert) und funktioniert auch mit dem kleinen
+ * Beispielkatalog. Lesart: „Codierung" = die Tätigkeit (TNM/ICD-O/OPS/oBDS vergeben),
+ * unabhängig davon, welches Skript sie gelehrt hat. Die Mail ließe auch die Lesart zu,
+ * Block I (medgrund/basisdok/klassqual/kregister) komplett zu „Allgemein" zu zählen –
+ * dann läge der Katalog bei 63/31/6. Beides ist vertretbar; Regel unten anpassbar. */
+const EXAM_BLUEPRINT = { K: 40, C: 50, S: 10 };   // Allgemein/Klinik · Codierung · Statistik
+const EXAM_BLOCK_NAMES = { K: "Allgemein & Klinik", C: "Codierung", S: "Statistik" };
+const EXAM_STAT_RX = /^(deskstat|analstat)|statistik|^patho2_studien$/i;
+const EXAM_COD_RX = /^(tnm|icdo|befund|erheb|erhebbearb|basisdok)(_|$)|tnm|staging|grading|kodierung|icd|\bops\b|obds|dokumentation|klassifikation|datenqualitaet|morpholog|histopathologie|meldew|meldeb/i;
+function examBlockOf(topicKey) {
+  const k = String(topicKey || "");
+  if (EXAM_STAT_RX.test(k)) return "S";
+  return EXAM_COD_RX.test(k) ? "C" : "K";
+}
+
 function buildExamQuestions() {
   const target = Math.min(30, QUESTIONS.length);
-  const total = QUESTIONS.length;
-  const byTopic = {};
-  for (const q of QUESTIONS) (byTopic[q.topic] = byTopic[q.topic] || []).push(q);
-  const picked = [], used = new Set();
-  for (const t of Object.keys(byTopic)) {
-    const quota = Math.max(1, Math.round(target * byTopic[t].length / total));
-    for (const q of shuffle(byTopic[t]).slice(0, quota)) { picked.push(q); used.add(q.id); }
+  const BL = ["K", "C", "S"];
+  // Fragen nach Block und darin nach Thema bündeln
+  const byBlock = { K: {}, C: {}, S: {} };
+  for (const q of QUESTIONS) {
+    const b = examBlockOf(q.topic);
+    (byBlock[b][q.topic] = byBlock[b][q.topic] || []).push(q);
   }
-  const rest = shuffle(QUESTIONS.filter(q => !used.has(q.id)));
-  while (picked.length < target && rest.length) { const q = rest.pop(); picked.push(q); used.add(q.id); }
+  const avail = {}, slots = {};
+  for (const b of BL) {
+    avail[b] = Object.values(byBlock[b]).reduce((s, a) => s + a.length, 0);
+    slots[b] = Math.min(avail[b], Math.round(target * EXAM_BLUEPRINT[b] / 100));
+  }
+  // Rundungsdrift und Blöcke ohne genug Fragen ausgleichen – zuerst Codierung
+  // auffüllen (größter Anteil der echten Prüfung), Statistik zuletzt kürzen.
+  let rest = target - BL.reduce((s, b) => s + slots[b], 0);
+  while (rest > 0) {
+    let moved = false;
+    for (const b of ["C", "K", "S"]) if (rest > 0 && slots[b] < avail[b]) { slots[b]++; rest--; moved = true; }
+    if (!moved) break;                       // Katalog kleiner als target
+  }
+  while (rest < 0) {
+    let moved = false;
+    for (const b of ["S", "K", "C"]) if (rest < 0 && slots[b] > 0) { slots[b]--; rest++; moved = true; }
+    if (!moved) break;
+  }
+  // Innerhalb eines Blocks reihum über die Themen ziehen, damit nicht alle
+  // Codierungsfragen aus demselben Thema kommen.
+  const picked = [];
+  for (const b of BL) {
+    const pools = shuffle(Object.keys(byBlock[b])).map(t => shuffle(byBlock[b][t]));
+    let need = slots[b];
+    while (need > 0) {
+      let took = false;
+      for (const pool of pools) {
+        if (need <= 0) break;
+        if (pool.length) { picked.push(pool.pop()); need--; took = true; }
+      }
+      if (!took) break;
+    }
+  }
   return shuffle(picked).slice(0, target);
+}
+// Wie viele Fragen je Block sind in einer Fragenliste? (Auswertung/Anzeige)
+function examBlockCounts(qs) {
+  const c = { K: 0, C: 0, S: 0 };
+  for (const q of qs) c[examBlockOf(q.topic)]++;
+  return c;
 }
 
 function examStart() {
@@ -2683,6 +2742,16 @@ function renderExamResult() {
   const color = pct >= 75 ? "var(--success)" : pct >= 50 ? "var(--warn)" : "var(--danger)";
   const hero = pct >= 90 ? "🏆 Herausragend!" : pct >= 75 ? "🎉 Stark!" : pct >= 50 ? "👍 Bestanden!" : "💪 Weiter üben!";
 
+  // Prüfungsblöcke (Gewichtung der echten Prüfung: 40/50/10) – zeigt sofort,
+  // ob ausgerechnet Codierung schwächelt, der größte Block der echten Prüfung.
+  const bAgg = { K: { r: 0, n: 0 }, C: { r: 0, n: 0 }, S: { r: 0, n: 0 } };
+  for (const r of res.results) { const b = bAgg[examBlockOf(r.q.topic)]; b.n++; if (r.ok) b.r++; }
+  const blockRows = ["K", "C", "S"].filter(b => bAgg[b].n).map(b => {
+    const a = bAgg[b], p = Math.round(a.r / a.n * 100);
+    const col = p >= 75 ? "var(--success)" : p >= 50 ? "var(--warn)" : "var(--danger)";
+    return `<div class="theme-row"><span class="tn">${EXAM_BLOCK_NAMES[b]}<br><span class="muted" style="font-size:12px">${EXAM_BLUEPRINT[b]} % der echten Prüfung</span></span><span class="tbar"><span style="width:${p}%;background:${col}"></span></span><span class="tp">${a.r}/${a.n}</span></div>`;
+  }).join("");
+
   // Themenprofil
   const agg = {};
   for (const r of res.results) { const a = (agg[r.q.topic] = agg[r.q.topic] || { r: 0, n: 0 }); a.n++; if (r.ok) a.r++; }
@@ -2722,6 +2791,10 @@ function renderExamResult() {
       <div class="pass-badge ${passed ? "pass" : "fail"}">${passed ? "BESTANDEN" : "NICHT BESTANDEN"} · Grenze 50 %</div>
       ${res.auto ? '<p class="muted center" style="margin-top:8px">Zeit abgelaufen – automatisch abgegeben.</p>' : ""}
     </div>
+    <div class="section-title">Prüfungsblöcke</div>
+    <div class="q-card">${blockRows}
+      <p class="muted" style="margin:10px 0 0;font-size:12.5px">Die Simulation zieht die Fragen in der Gewichtung der echten Prüfung
+      (Allgemein &amp; Klinik 40 % · Codierung 50 % · Statistik 10 %).</p></div>
     <div class="section-title">Themenprofil</div>
     <div class="q-card">${themeRows}</div>
     <div class="section-title">Auswertung im Detail</div>
