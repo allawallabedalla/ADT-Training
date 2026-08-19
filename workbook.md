@@ -216,10 +216,23 @@ blockweise quotieren (12/15/3), innerhalb des Blocks über Themen streuen.
 Umverteilung bei zu kleinen Blöcken; Ergebnis je Block in der Auswertung sichtbar.
 6 Regressionstests sichern die Gewichtung ab.
 
-**🟡 P1 — Aufgabentyp „Code eingeben"** (Mechanik erledigt v0.43.0, Inhalte offen).
-Stufe (a) steht: Fragetyp `code` mit nachsichtiger Normalisierung, in Übung und Simulation,
-29 Tests, fünf Beispielaufgaben im öffentlichen Katalog. **Offen bleibt (b):** 20–30
-Fallvignetten im geschützten Katalog — ohne die bleibt der Aufgabentyp eine leere Hülle.
+**🟡 P1 — Aufgabentyp „Code eingeben"** (Mechanik + erster Inhalt erledigt, Ausbau offen).
+Stufe (a) ✅ v0.43.0: Fragetyp `code` mit nachsichtiger Normalisierung, in Übung und
+Simulation, 29 Tests, fünf Beispielaufgaben im öffentlichen Katalog. Stufe (b) ✅: 29
+Kodier-Aufgaben im geschützten Katalog (5.543 → 5.572, Version `2026-08-19-bc24b5b1`) —
+ICD-O-3-Topografie, ICD-O-3-Morphologie mit Dignität, die Dignitätsziffer als eigenes
+Lernziel und ICD-10-GM. Die Content-Pipeline kennt den Typ.
+
+**Offen (c) — Ausbau:**
+- **OPS-Aufgaben fehlen ganz.** Bewusst ausgelassen: OPS ändert sich jährlich, ohne den
+  aktuellen Katalog wäre jede Musterlösung geraten. Braucht die OPS-Fassung des
+  Prüfungsjahres als Quelle.
+- **29 Aufgaben sind wenig** gegenüber 50 % Codierungsanteil in der Prüfung. Die
+  vorhandenen decken die häufigen Entitäten ab; seltenere Morphologien, Lymphome und
+  Sonderfälle (Doppelmalignome, unbekannter Primärtumor) fehlen.
+- **CUP-Kode** weiterhin ungeklärt (C80.0 vs. C80.9) — steht schon unter den fachlichen
+  Detailpunkten und wurde deshalb hier nicht als Aufgabe gestellt.
+
 Ursprüngliche Beschreibung:
 Die Mail nennt ihn als drittes Format neben MC und Rechenaufgabe. Die App kennt nur
 `single`/`multi`/`numeric` — eine Eingabe wie `C50.4` oder `8500/3` ist nirgends übbar.
