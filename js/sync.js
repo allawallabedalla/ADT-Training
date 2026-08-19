@@ -104,9 +104,21 @@
       else first = pa.first || pb.first || null;
       const la = pa.lastAt || "", lb = pb.lastAt || "";
       const lastAt = (la >= lb ? la : lb) || null;
+      // `cold` = letzter kalter Abruf. Hier gewinnt das SPÄTERE Datum – anders als bei
+      // `first` ist das kein Konflikt, sondern schlicht die neuere Beobachtung; sie soll
+      // die ältere ersetzen (genau darum gibt es das Feld). Nur bei gleichem Datum auf
+      // beiden Geräten ist die Reihenfolge unbekannt, dann konservativ „wrong".
+      const ca = pa.coldAt || "", cb = pb.coldAt || "";
+      let cold = null, coldAt = null;
+      if (pa.cold && pb.cold) {
+        if (ca > cb)      { cold = pa.cold; coldAt = ca; }
+        else if (cb > ca) { cold = pb.cold; coldAt = cb; }
+        else              { cold = (pa.cold === "wrong" || pb.cold === "wrong") ? "wrong" : "correct"; coldAt = ca || null; }
+      } else if (pa.cold) { cold = pa.cold; coldAt = ca || null; }
+      else if (pb.cold)   { cold = pb.cold; coldAt = cb || null; }
       // ACHTUNG: Jedes Feld, das hier fehlt, ist im Zwei-Geräte-Betrieb still weg.
       // (masteredOnce fehlte historisch – sanitizeState() stellt es aus box>=3 wieder her.)
-      pq[id] = { seen, correct, wrong, lastResult, box, due, masteredOnce: (pa.masteredOnce === true || pb.masteredOnce === true), first, lastAt };
+      pq[id] = { seen, correct, wrong, lastResult, box, due, masteredOnce: (pa.masteredOnce === true || pb.masteredOnce === true), first, lastAt, cold, coldAt };
     }
     out.perQuestion = pq;
 

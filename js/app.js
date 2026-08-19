@@ -46,7 +46,7 @@ let DATA_OK = checkData();
  * 1) Persistenter Zustand (localStorage, robust gegen Defekte)
  * ------------------------------------------------------------------ */
 const STORE_KEY = "adt_trainer_state_v1";   // NIE umbenennen – siehe workbook.md („Speicherstände sind heilig")
-const SCHEMA_VERSION = 4;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
+const SCHEMA_VERSION = 5;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
 
 // Spaced Repetition (Leitner): Box 0–5. Pause bis zur nächsten Wiederholung in Tagen.
 // Richtig -> eine Box höher (längere Pause); falsch -> zurück auf Box 0 (heute erneut).
@@ -119,6 +119,22 @@ const MIGRATIONS = {
       else if (seen > 1 && wrong === 0 && corr > 0) first = "correct";
       else if (seen > 1 && corr === 0 && wrong > 0) first = "wrong";
       p.first = first;
+      pq[id] = p;
+    }
+    return s;
+  },
+  // v4 -> v5: Beobachtung ist nicht mehr nur der ERSTE Kontakt, sondern der jeweils
+  // letzte „kalte" Abruf (`cold`, `coldAt`) – also jede Antwort auf eine Frage, die
+  // an diesem Tag noch nicht dran war. Begründung: Der Erstversuch altert nie weg;
+  // eine anfangs falsche, inzwischen gelernte Frage bliebe für immer als „falsch"
+  // gebucht. Der Startwert ist genau der Erstversuch – der IST ein kalter Abruf.
+  5: (s) => {
+    const pq = (s && s.perQuestion && typeof s.perQuestion === "object") ? s.perQuestion : {};
+    for (const id of Object.keys(pq)) {
+      const p = pq[id] || {};
+      if (p.cold === "correct" || p.cold === "wrong") continue;
+      p.cold = (p.first === "correct" || p.first === "wrong") ? p.first : null;
+      p.coldAt = p.cold ? (p.lastAt || null) : null;
       pq[id] = p;
     }
     return s;
@@ -201,6 +217,10 @@ function sanitizeState(raw) {
       // `lastAt` = Datum der letzten Antwort (trennt echten Abruf vom Echo derselben Sitzung).
       first: (p.first === "correct" || p.first === "wrong") ? p.first : null,
       lastAt: /^\d{4}-\d{2}-\d{2}$/.test(String(p.lastAt || "")) ? p.lastAt : null,
+      // `cold` = Ergebnis des letzten KALTEN Abrufs (Frage war an dem Tag noch nicht dran),
+      // `coldAt` dessen Datum. Das ist die Beobachtung, die die Prognose auswertet.
+      cold: (p.cold === "correct" || p.cold === "wrong") ? p.cold : null,
+      coldAt: /^\d{4}-\d{2}-\d{2}$/.test(String(p.coldAt || "")) ? p.coldAt : null,
     };
   }
   const rawBg = (src.badges && typeof src.badges === "object") ? src.badges : {};
@@ -727,29 +747,18 @@ function dueQuestions(t = todayStr()) {
   return QUESTIONS.filter(q => { const p = S.perQuestion[q.id]; return p && isDue(p, t); });
 }
 
-/* ---- Prüfungsbereitschaft: eine ehrliche Antwort auf „Wann ist genug?" ----
- * Anker ist die echte Prüfung: die Simulation gilt ab 50 % als bestanden.
- * Bei mehreren tausend Fragen ist "3/4 des ganzen Katalogs sicher" für die
- * meisten Zeitbudgets rechnerisch gar nicht erreichbar (siehe Herleitung in
- * BILANZ-Diskussion) – das Ziel wird deshalb NICHT fest auf 75 % gesetzt,
- * sondern aus der geplanten Lernzeit hochgerechnet: was ist in den
- * verbleibenden Wochen bei diesem Tempo realistisch drin? Sobald die App das
- * ECHTE Tempo kennt (masteryPace), ersetzt das die Hochrechnung aus den
- * Einstellungen – die Zielmarke wird mit echten Daten nur noch genauer. */
-const READY_TOPIC_MIN = 50;         // Themen-Untergrenze, nie höher als das Gesamtziel selbst
-const SECONDS_PER_ATTEMPT = 18;     // grobe Zeit je Wiederholung (Lesen + Entscheiden + Erklärung)
-const STUDY_MIN_CHOICES = [15, 30, 45, 60, 90, 120];
+/* ---- Prüfungstermin: nur Countdown ----
+ * Historie (bewusst dokumentiert, damit der Fehler nicht zurückkehrt): Die Wochenzahl
+ * steuerte früher die Zielmarke der „Prüfungsbereitschaft". Das war falsch — wer weniger
+ * Lernzeit eintrug, galt bei identischem Wissen früher als bereit. Bereitschaft ist eine
+ * Eigenschaft des Könnens, nicht des Plans. Die Bewertung läuft jetzt über
+ * passProbability(); diese Einstellung dient ausschließlich dem Countdown. */
 const STUDY_WEEKS_CHOICES = [1, 2, 3, 4, 6, 8, 12];
-const STUDY_MIN_KEY = "adt_study_minutes";
 const STUDY_WEEKS_KEY = "adt_study_weeks";
-// "X Wochen bis zur Prüfung" muss wirklich runterzählen, sonst würde die
-// Zielmarke jeden Tag neu "X Wochen ab jetzt" hochrechnen und nie stabil
-// werden, egal wie viel schon erreicht ist. STUDY_START_KEY hält deshalb den
-// Tag fest, ab dem die Wochen zählen – erster Aufruf oder jede Änderung der
-// Wochenzahl setzt ihn neu.
+// "X Wochen bis zur Prüfung" muss wirklich runterzählen, sonst zeigte der Countdown
+// jeden Tag aufs Neue "X Wochen ab jetzt". STUDY_START_KEY hält den Tag fest, ab dem
+// gezählt wird – erster Aufruf oder jede Änderung der Wochenzahl setzt ihn neu.
 const STUDY_START_KEY = "adt_study_start";
-function getStudyMinutes() { try { const v = parseInt(localStorage.getItem(STUDY_MIN_KEY), 10); return STUDY_MIN_CHOICES.includes(v) ? v : 30; } catch { return 30; } }
-function setStudyMinutes(n) { try { localStorage.setItem(STUDY_MIN_KEY, String(n)); } catch (e) {} }
 function getStudyWeeks() { try { const v = parseInt(localStorage.getItem(STUDY_WEEKS_KEY), 10); return STUDY_WEEKS_CHOICES.includes(v) ? v : 4; } catch { return 4; } }
 function setStudyWeeks(n) { try { localStorage.setItem(STUDY_WEEKS_KEY, String(n)); resetStudyStart(); } catch (e) {} }
 function getStudyStart() {
@@ -766,139 +775,194 @@ function remainingStudyDays() {
   return Math.max(0, getStudyWeeks() * 7 - daysBetween(getStudyStart(), todayStr()));
 }
 
-// Erwartete Anzahl Versuche, bis eine Frage 3x IN FOLGE richtig war (Box 3),
-// bei Trefferquote p: E = (1-p^3) / ((1-p) * p^3). Nutzt die eigene bisherige
-// Trefferquote, sobald genug Antworten vorliegen (>=20) – sonst eine
-// vorsichtige Annahme (75 %), damit die allererste Hochrechnung nicht auf 0
-// Datenpunkten steht.
-function expectedAttemptsPerMastery() {
-  let p = (S.totalAnswered >= 20) ? S.totalCorrect / S.totalAnswered : 0.75;
-  p = Math.min(0.97, Math.max(0.35, p));
-  return (1 - p ** 3) / ((1 - p) * p ** 3);
-}
-// Hochrechnung OHNE echte Tempo-Historie: aus der geplanten Lernzeit/Tag, wie
-// viele Fragen pro Tag realistisch neu "sicher" werden könnten. Wird verworfen,
-// sobald masteryPace() echte Werte liefert (siehe readiness()).
-function bootstrapDailyPace() {
-  const attemptsPerDay = (getStudyMinutes() * 60) / SECONDS_PER_ATTEMPT;
-  return attemptsPerDay / expectedAttemptsPerMastery();
+
+/* ---- Bestehenswahrscheinlichkeit ----
+ * Statt einer willkürlichen Schwelle („2× ≥ 65 %") die direkte Frage beantworten:
+ * Wie wahrscheinlich erreicht sie in einer Prüfung die 50-%-Grenze?
+ *
+ * Verfahren: je Prüfungsblock ein Beta-Posterior aus ihren Antworten, gewichtet nach
+ * der echten Prüfung (40/50/10), daraus eine Beta-Binomial-Vorhersage über eine
+ * Prüfung mit EXAM_ASSUMED_N Fragen. Zwei Unsicherheiten stecken darin:
+ *   1. Wie gut ist sie wirklich? (schrumpft mit jeder Antwort)
+ *   2. Wie fällt die Prüfung aus? (bleibt — die Prüfung ist selbst eine Stichprobe)
+ * Deshalb steigt die Zahl bei knappem Können auch mit sehr vielen Antworten nicht
+ * über ~95 %: das ist ehrlich, kein Rechenfehler.
+ *
+ * Robustheit geprüft: Ob die echte Prüfung 30 oder 120 Fragen hat, verschiebt das
+ * Ergebnis bei 65 % Trefferquote nur von 95 % auf 99 %; der Klumpungsfaktor (1,0–3,0)
+ * bewegt es um unter 5 Punkte. Die beiden geschätzten Größen sind also unkritisch.
+ *
+ * WICHTIG: Die Zahl gilt für UNSEREN Katalog. Die echte Prüfung hat andere Fragen und
+ * den Aufgabentyp „Code eingeben", den wir nicht haben — ein Gültigkeits-, kein
+ * Stichprobenproblem. Die Anzeige benennt das. */
+const EXAM_ASSUMED_N = 60;      // angenommene Fragenzahl der echten Prüfung (unkritisch, s. o.)
+const EXAM_PASS_RATIO = 0.5;    // Bestehensgrenze laut Prüfungsordnung
+const CLUSTER_DEFF = 1.6;       // Klumpung: Ø 2,2 Fragen je Folie, ρ konservativ 0,5 -> ANNAHME
+const PASSPROB_MIN_N = 30;
+// Ein Abruf gilt als „kalt", wenn die Frage seit mindestens so vielen Tagen nicht dran war.
+// 1 Tag schließt das Echo derselben Sitzung aus (Wiedererkennen statt Wissen) und ist bei
+// vier Wochen Restzeit die Schwelle, die überhaupt genug Beobachtungen liefert.
+const COLD_GAP_DAYS = 1;      // darunter keine Zahl zeigen, sondern „sammelt Daten"
+
+// P(X >= kmin) für X ~ BetaBinomial(N, a, b) – rekursiv, ohne Spezialfunktionen.
+function betaBinomTailGE(kmin, N, a, b) {
+  let f = 1;
+  for (let i = 0; i < N; i++) f *= (b + i) / (a + b + i);   // f(0)
+  let sum = kmin <= 0 ? f : 0;
+  for (let k = 0; k < N; k++) {
+    f *= ((N - k) / (k + 1)) * ((a + k) / (b + N - k - 1)); // f(k+1)/f(k)
+    if (k + 1 >= kmin) sum += f;
+  }
+  return Math.min(1, Math.max(0, sum));
 }
 
-/* Die Prüfungssimulation ist der einzige Ort in der App, der das echte
- * Prüfungsformat testet (30 Fragen, proportional aus allen Themen gezogen,
- * Zeitlimit, bestanden ab 50 %). Der Lernstand (Box 3+) sagt nur, wie viele
- * EINZELNE Fragen dreimal in Folge richtig waren – das ist kein Beweis, dass
- * am Ende auch die echte Prüfung klappt. "Bereit" verlangt deshalb zusätzlich
- * einen echten Nachweis: die letzten EXAM_READY_STREAK Simulationen müssen
- * je mindestens EXAM_READY_PCT erreicht haben (Sicherheitsabstand über der
- * 50-%-Grenze). */
-const EXAM_READY_PCT = 65;
-const EXAM_READY_STREAK = 2;
-function examReadiness() {
-  const hist = getExamHistory();
-  const last = hist.slice(-EXAM_READY_STREAK);
-  const have = last.filter(h => h.pct >= EXAM_READY_PCT).length;
-  return {
-    hist, have, need: EXAM_READY_STREAK,
-    ready: last.length >= EXAM_READY_STREAK && have === EXAM_READY_STREAK,
-    lastPct: hist.length ? hist[hist.length - 1].pct : null,
-  };
-}
-
-function readiness() {
-  const total = QUESTIONS.length;
-  // Ein Durchlauf über den Katalog liefert Gesamt- und Themenstand zugleich
-  // (topicStats je Thema würde den ~5500er-Katalog einmal pro Thema filtern).
-  let secure = 0;
-  const byTopic = {};
+/* Eine Beobachtung je Frage – niemals Zähler summieren (der Cloud-Merge nimmt je Feld
+ * das Maximum, wodurch correct+wrong > seen entstehen kann; als Stichprobe wäre das
+ * unbrauchbar). Gezählt wird der LETZTE KALTE ABRUF (`cold`): jede Antwort auf eine
+ * Frage, die an dem Tag nicht schon dran war – der Erstkontakt eingeschlossen.
+ *
+ * Warum nicht nur der Erstversuch: Der misst zwar sauber „ungesehener Stoff", altert aber
+ * nie weg. Eine Frage, die im ersten Anlauf danebenging und inzwischen dreimal richtig
+ * beantwortet wurde, bliebe für immer als Fehler gebucht – die Prognose könnte dem
+ * Lernfortschritt nie folgen. Warum nicht jede Antwort: Direkt nach der Auflösung ist
+ * eine Wiederholung Wiedererkennen, kein Abruf; das würde die Quote hochziehen.
+ * Der kalte Abruf am Folgetag ist der Kompromiss, den auch die Lernforschung nimmt.
+ *
+ * Zwei bekannte Verzerrungen, beide nach oben:
+ *  - Die Wiederholung ist nicht zufällig: Leitner legt falsche Fragen früher wieder vor,
+ *    richtige seltener. Aufstufungen kommen also häufiger vor als Abstufungen.
+ *  - Für Fragen aus der Zeit vor v0.41.0 ist der Startwert nur dort bekannt, wo die
+ *    Historie eindeutig war (immer richtig / immer falsch / einmal gesehen); gemischte
+ *    Altfragen fehlen, und das sind eher die schwierigen.
+ * Beides steht als Vorbehalt auf der Karte. */
+function passObservations() {
+  const acc = { K: { n: 0, x: 0 }, C: { n: 0, x: 0 }, S: { n: 0, x: 0 } };
   for (const q of QUESTIONS) {
-    const t = byTopic[q.topic] || (byTopic[q.topic] = { total: 0, mastered: 0 });
-    t.total++;
     const p = S.perQuestion[q.id];
-    if (p && p.box >= SRS_MASTER_BOX) { secure++; t.mastered++; }
+    if (!p) continue;
+    const o = (p.cold === "correct" || p.cold === "wrong") ? p.cold
+            : ((p.first === "correct" || p.first === "wrong") ? p.first : null);   // Altdaten ohne Migration
+    if (!o) continue;
+    const b = acc[examBlockOf(q.topic)];
+    b.n++; if (o === "correct") b.x++;
   }
-  const pct = total ? Math.round(secure / total * 100) : 0;
+  return acc;
+}
 
-  // Realistische Zielmarke statt fester Zahl: was ist in der geplanten Zeit
-  // tatsächlich erreichbar? Echtes gemessenes Tempo schlägt die Hochrechnung
-  // aus den Einstellungen, sobald genug Tage vorliegen.
-  const pace = masteryPace() || bootstrapDailyPace();
-  const remainingDays = remainingStudyDays();
-  const achievable = Math.min(total, secure + pace * remainingDays);
-  const achievablePct = total ? Math.round(achievable / total * 100) : 0;
-  const targetPct = Math.min(75, Math.max(3, achievablePct));
-  const target = Math.ceil(total * targetPct / 100);
-
-  // Themen-Untergrenze kann nie mehr verlangen als das Gesamtziel selbst –
-  // sonst wäre "kein Thema unter 50 %" bei einem 10-%-Gesamtziel unmöglich.
-  const topicMin = Math.min(READY_TOPIC_MIN, targetPct);
-  const weakTopics = Object.values(byTopic).filter(t => t.mastered / t.total * 100 < topicMin).length;
-
-  const boxReady = total > 0 && pct >= targetPct && weakTopics === 0;
-  const exam = examReadiness();
-
-  let stage, label, msg;
-  if (boxReady && exam.ready) {
-    stage = 3; label = "Bereit";
-    msg = `Du hast genug gelernt für deine geplante Zeit UND die letzten ${exam.need} Prüfungssimulationen lagen bei mindestens ${EXAM_READY_PCT} % – klar über der Bestehensgrenze von 50 %. Ab hier hält dich allein die Wiederholung auf Stand.`;
-  } else if (boxReady) {
-    // Lernstand reicht, aber der einzige echte Nachweis (Prüfungssimulation) fehlt noch.
-    stage = 2; label = "Fast bereit";
-    msg = exam.hist.length === 0
-      ? "Der Lernstand passt – jetzt fehlt der echte Test: mach die Prüfungssimulation (30 Fragen, wie im Ernstfall, bestanden ab 50 %)."
-      : `Der Lernstand passt, aber die Prüfungssimulation bestätigt es noch nicht: zuletzt ${exam.lastPct} % (Ziel: ${exam.need}× mindestens ${EXAM_READY_PCT} % in Folge). Nochmal probieren.`;
-  } else if (pct >= targetPct * 0.8) {
-    stage = 2; label = "Fast bereit";
-    msg = weakTopics
-      ? `Der Gesamtstand stimmt schon fast – ${weakTopics} Thema${weakTopics === 1 ? " liegt" : "en liegen"} noch unter ${Math.round(topicMin)} %. Dort lohnt sich gezieltes Üben am meisten.`
-      : "Der Endspurt: kein Thema hängt mehr, jetzt zählt nur noch Wiederholen.";
-  } else if (pct >= targetPct * 0.4) {
-    stage = 1; label = "Auf gutem Weg";
-    msg = "Dranbleiben wirkt – das Ziel ist an deine geplante Lernzeit angepasst, nicht an den ganzen Katalog.";
-  } else {
-    stage = 0; label = "Am Anfang";
-    msg = "Jede sichere Frage bleibt sicher – die App merkt sich alles und plant die Wiederholungen. Niemand muss alle " + total + " Fragen können: bestanden ist ab 50 %.";
+/* `obs` ist optional – ohne Argument werden die echten Beobachtungen genommen.
+ * Der Parameter existiert, damit die Rechnung mit festen Zahlen prüfbar ist,
+ * unabhängig davon, wie groß der geladene Katalog gerade ist. */
+function passProbability(obs) {
+  obs = obs || passObservations();
+  const blocks = ["K", "C", "S"].filter(b => obs[b].n > 0);
+  const gesamtN = ["K", "C", "S"].reduce((s, b) => s + obs[b].n, 0);
+  if (!blocks.length || gesamtN < PASSPROB_MIN_N) {
+    return { genug: false, n: gesamtN, fehlt: PASSPROB_MIN_N - gesamtN, obs };
   }
-  return { total, secure, pct, target, targetPct, topicMin, weakTopics, exam, examBlocking: boxReady && !exam.ready, stage, label, msg };
+  // Gewichte der echten Prüfung, auf die Blöcke mit Daten normiert
+  const wSum = blocks.reduce((s, b) => s + EXAM_BLUEPRINT[b], 0);
+  let m = 0, v = 0;
+  for (const b of blocks) {
+    const w = EXAM_BLUEPRINT[b] / wSum;
+    const ne = obs[b].n / CLUSTER_DEFF, xe = obs[b].x / CLUSTER_DEFF;
+    const mb = (xe + 1) / (ne + 2);                 // Beta-Posterior-Mittel (Laplace)
+    const vb = mb * (1 - mb) / (ne + 3);            // dessen Varianz
+    m += w * mb; v += w * w * vb;
+  }
+  // Momentenmethode: gewichtetes Mittel -> Beta(a, b)
+  let a, bb;
+  const common = v > 0 ? (m * (1 - m) / v - 1) : 0;
+  if (common > 0) { a = m * common; bb = (1 - m) * common; }
+  else { a = 1 + m; bb = 1 + (1 - m); }             // Rückfall, sollte nicht vorkommen
+  const p = betaBinomTailGE(Math.ceil(EXAM_ASSUMED_N * EXAM_PASS_RATIO), EXAM_ASSUMED_N, a, bb);
+  const ohneDaten = ["K", "C", "S"].filter(b => obs[b].n === 0);
+  return { genug: true, p, n: gesamtN, obs, ohneDaten, schnitt: m };
+}
+
+// Sprachliche Einordnung – nie „du bestehst", immer als Aussage über die Daten.
+function passLabel(p) {
+  if (p >= 0.95) return { txt: "sehr zuversichtlich", col: "var(--success)" };
+  if (p >= 0.85) return { txt: "zuversichtlich", col: "var(--success)" };
+  if (p >= 0.60) return { txt: "auf gutem Weg", col: "#ffcc00" };
+  if (p >= 0.35) return { txt: "noch offen", col: "#ff9500" };
+  return { txt: "noch nicht so weit", col: "#ff9500" };
+}
+function passPctText(p) {
+  if (p > 0.99) return "> 99 %";          // nie 100 % behaupten – Modellgrenzen
+  if (p < 0.01) return "< 1 %";
+  return Math.round(p * 100) + " %";
 }
 
 /* Eine Karte, zwei Ansichten: kompakt (Startseite, tippbar → Statistik) und
  * ausführlich (Statistik, mit Begründung). Ein Renderer, damit nichts divergiert. */
-const READY_STAGE_COLORS = ["#8e8e93", "#ff9500", "#ffcc00", "var(--success)"];
 function readinessCardHTML(detailed) {
   logMastery();
-  const rdy = readiness();
-  if (!rdy.total) return "";
-  const col = READY_STAGE_COLORS[rdy.stage];
-  const forecast = readinessForecastText(rdy);
-  const head = `<span class="ready-head"><b>Prüfungsbereitschaft</b><span class="ready-label" style="color:${col}">${rdy.label}${rdy.stage >= 3 ? " 🎉" : ""}</span></span>`;
-  const bar = `<span class="ready-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rdy.pct}">
-      <span class="fill" style="width:${rdy.pct}%;background:${col}"></span>
-      <span class="mark" style="left:${rdy.targetPct}%" title="Ziel: ${rdy.targetPct} % sicher"></span>
+  if (!QUESTIONS.length) return "";
+  const pp = passProbability();
+
+  // Hauptaussage ist die Bestehenswahrscheinlichkeit – objektiv, von keiner
+  // Einstellung beeinflussbar. Die Lernzeit-Hochrechnung ist bewusst NICHT mehr Teil
+  // des Urteils (sie steckt in der getrennten Planungsanzeige), weil sonst gälte:
+  // weniger Lernzeit eintragen = früher „bereit" bei identischem Wissen.
+  if (!pp.genug) {
+    const txt = `Noch ${pp.fehlt} Fragen bis zur ersten Einschätzung – dann rechnet die App aus,
+      wie wahrscheinlich du bestehst.`;
+    const head0 = `<span class="ready-head"><b>Prüfungsprognose</b><span class="ready-label" style="color:var(--text-dim)">sammelt Daten</span></span>`;
+    if (!detailed) {
+      return `<button class="ready-card" data-act="mixed" aria-label="Prüfungsprognose: noch ${pp.fehlt} Fragen bis zur ersten Einschätzung">
+        ${head0}<span class="ready-sub">${txt}</span>
+        <span class="ready-sub" style="color:var(--primary)">→ Weiter üben</span></button>`;
+    }
+    return `<div class="ready-card static">${head0}<span class="ready-sub">${txt}</span>
+      <span class="ready-sub muted" style="margin-top:6px">Grundlage ist dein Ergebnis bei <b>kalten Abrufen</b> – also jedes Mal, wenn eine
+      Frage kam, die an dem Tag noch nicht dran war. Nur das sagt etwas über Stoff aus, den du nicht gerade eben gelesen hast.</span></div>`;
+  }
+
+  const lbl = passLabel(pp.p);
+  const pct = passPctText(pp.p);
+  const balken = Math.round(pp.p * 100);
+  const head = `<span class="ready-head"><b>Prüfungsprognose</b><span class="ready-label" style="color:${lbl.col}">${lbl.txt}</span></span>`;
+  const bar = `<span class="ready-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${balken}">
+      <span class="fill" style="width:${balken}%;background:${lbl.col}"></span>
+      <span class="mark" style="left:50%" title="Bestehensgrenze der echten Prüfung"></span>
     </span>`;
-  const zahlen = `<span class="ready-sub">${rdy.secure.toLocaleString("de-DE")} von ${rdy.total.toLocaleString("de-DE")} Fragen sicher (${rdy.pct} %) · Ziel: ${rdy.targetPct} %</span>`;
+  const kern = `<span class="ready-sub"><b style="font-size:15px;color:${lbl.col}">${pct}</b> – aus ${pp.n.toLocaleString("de-DE")} kalt abgerufenen Fragen</span>`;
+
   if (!detailed) {
-    // Lernstand passt schon, nur der echte Nachweis fehlt -> Tipp fuehrt direkt
-    // in die Simulation statt in die Statistik.
-    const act = rdy.examBlocking ? "exam" : "stats";
-    const tipp = rdy.examBlocking ? `<span class="ready-sub" style="color:${col}">→ Prüfungssimulation machen</span>` : "";
-    return `<button class="ready-card" data-act="${act}" aria-label="Prüfungsbereitschaft: ${rdy.label}, ${rdy.pct} Prozent sicher${rdy.examBlocking ? " – tippen für die Prüfungssimulation" : ""}">
-      ${head}${bar}${zahlen}
-      ${tipp}
-      ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
+    return `<button class="ready-card" data-act="stats" aria-label="Prüfungsprognose ${pct}, ${lbl.txt}">
+      ${head}${bar}${kern}
     </button>`;
   }
+
+  // Blockweise Aufschlüsselung: wo hakt es?
+  const blockRows = ["K", "C", "S"].map(b => {
+    const o = pp.obs[b];
+    const anteil = o.n ? Math.round(o.x / o.n * 100) : null;
+    const wert = anteil === null ? "noch keine Daten" : `${anteil} % richtig (${o.n} Fragen)`;
+    return `<div class="theme-row"><span class="tn">${EXAM_BLOCK_NAMES[b]}<br><span class="muted" style="font-size:12px">${EXAM_BLUEPRINT[b]} % der Prüfung</span></span>
+      <span class="tp" style="width:auto;text-align:right">${wert}</span></div>`;
+  }).join("");
+
+  const hinweis = pp.ohneDaten.length
+    ? `<span class="ready-sub" style="color:#ff9500">Für ${pp.ohneDaten.map(b => EXAM_BLOCK_NAMES[b]).join(" und ")} liegen noch keine Daten vor – die Zahl stützt sich nur auf die übrigen Blöcke.</span>`
+    : "";
+
   return `<div class="ready-card static">
-    ${head}${bar}${zahlen}
-    <span class="ready-sub" style="margin-top:6px">${rdy.msg}</span>
-    ${forecast ? `<span class="ready-sub muted">${forecast}</span>` : ""}
-    <span class="ready-sub muted" style="margin-top:6px">Der Lernstand (Box 3+) zeigt nur, welche Einzelfragen dreimal in Folge
-      richtig waren – das echte Prüfungsformat (30 Fragen aus allen Themen, Zeitlimit, bestanden ab 50 %) testet nur die
-      Prüfungssimulation. "Bereit" verlangt deshalb beides: den Lernstand UND die letzten ${EXAM_READY_STREAK} Simulationen
-      mit je mindestens ${EXAM_READY_PCT} %.</span>
-    <span class="ready-sub muted" style="margin-top:6px">Woher die ${rdy.targetPct} %? Hochgerechnet aus deiner geplanten Lernzeit
-      (${getStudyMinutes()} Min./Tag über ${getStudyWeeks()} Wochen, einstellbar unter Einstellungen) – nicht aus dem ganzen Katalog.
-      Die Prüfung gilt schon ab 50 % als bestanden. Sobald die App dein echtes Tempo kennt, übernimmt das die Rechnung und wird genauer.</span>
+    ${head}${bar}${kern}
+    ${hinweis}
+    <div style="margin-top:10px">${blockRows}</div>
+    <span class="ready-sub muted" style="margin-top:10px">Gerechnet wird aus deinem Ergebnis bei <b>kalten Abrufen</b>: jede Frage zählt einmal,
+      und zwar mit dem letzten Mal, an dem sie kam, ohne an dem Tag schon dran gewesen zu sein. Der erste Kontakt gehört dazu –
+      spätere Wiederholungen aber auch, sonst könnte die Zahl deinem Lernfortschritt nie folgen. Gewichtet wird wie die echte Prüfung
+      (${EXAM_BLUEPRINT.K}/${EXAM_BLUEPRINT.C}/${EXAM_BLUEPRINT.S}), und vorsichtig gerechnet: Fragen zur selben Folie zählen
+      nicht als voneinander unabhängig.</span>
+    <span class="ready-sub muted" style="margin-top:6px">Zwei Unsicherheiten stecken darin: wie gut du wirklich bist (wird mit jeder
+      Antwort genauer) und wie die Prüfung ausfällt (bleibt – sie ist selbst eine Stichprobe). Deshalb steigt der Wert bei knappem
+      Stand auch mit viel Übung nicht über ~95 %.</span>
+    <span class="ready-sub muted" style="margin-top:6px">Die Zahl ist eher etwas zu freundlich als zu streng: Wiederholungen sind nicht zufällig
+      verteilt – falsche Fragen kommen früher zurück als richtige, Verbesserungen fallen also häufiger auf als Verschlechterungen.</span>
+    <span class="ready-sub muted" style="margin-top:6px"><b>Vorbehalt:</b> Die Zahl gilt für diesen Fragenkatalog. Die echte Prüfung
+      hat andere Fragen und den Aufgabentyp „Code eingeben", den diese App nicht übt.</span>
   </div>`;
 }
 
@@ -919,29 +983,6 @@ function logMastery() {
 }
 // Ø neu gesicherte Fragen pro Tag – gemessen am ältesten Log-Eintrag der
 // letzten 3 Wochen, der mindestens 3 Tage zurückliegt. Null = noch keine Basis.
-function masteryPace() {
-  try {
-    const log = JSON.parse(localStorage.getItem(MLOG_KEY) || "[]");
-    if (!Array.isArray(log) || log.length < 2) return null;
-    const t = todayStr(), m = masteredCount();
-    const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
-    const base = log.find(e => { const d = days(e.d, t); return d >= 3 && d <= 21; });
-    if (!base) return null;
-    const span = days(base.d, t);
-    const pace = (m - base.m) / span;
-    return pace > 0.2 ? pace : null;
-  } catch (e) { return null; }
-}
-function readinessForecastText(r) {
-  if (r.stage >= 3) return "";
-  const pace = masteryPace();
-  if (!pace) return "";
-  const rest = Math.max(0, r.target - r.secure);
-  const tage = Math.ceil(rest / pace);
-  if (tage <= 0 || tage > 365) return "";
-  const dauer = tage <= 21 ? `~${tage} Tag${tage === 1 ? "" : "en"}` : `~${Math.round(tage / 7)} Wochen`;
-  return `Bei deinem Tempo (Ø ${pace.toFixed(1).replace(".", ",")} neu gesicherte Fragen/Tag) bist du in ${dauer} bereit.`;
-}
 
 /* „Für heute genug": Tagesziel erreicht UND keine Wiederholung mehr fällig.
  * Mehr bringt heute wenig – die Intervalle wirken über Nacht. */
@@ -1424,15 +1465,23 @@ function checkCurrent() {
   SESSION.correctFlags[i] = ok;
 
   // Fortschritt aktualisieren
-  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null, masteredOnce: false, first: null, lastAt: null };
+  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null, masteredOnce: false, first: null, lastAt: null, cold: null, coldAt: null };
   const boxBefore = Number(p.box) || 0;
+  const prevAt = /^\d{4}-\d{2}-\d{2}$/.test(String(p.lastAt || "")) ? p.lastAt : null;
   p.seen += 1;
   if (ok) { p.correct += 1; p.lastResult = "correct"; } else { p.wrong += 1; p.lastResult = "wrong"; }
-  // Beobachtungsdaten: der erste Kontakt wird genau einmal festgehalten und nie
-  // überschrieben; `lastAt` wandert mit. Beides nur erfasst – ausgewertet wird es
-  // erst in Stufe 2 (Konzept: workbook.md).
+  // Beobachtungsdaten (Konzept: workbook.md). Der erste Kontakt wird genau einmal
+  // festgehalten und nie überschrieben. Zusätzlich wird der letzte KALTE Abruf gebucht:
+  // jede Antwort auf eine Frage, die seit mindestens COLD_GAP_DAYS nicht dran war
+  // (inkl. des Erstkontakts). Nur solche Abrufe messen Wissen statt Kurzzeit-Echo –
+  // und anders als der Erstversuch altern sie mit dem Lernstand mit.
+  const heute = todayStr();
   if (p.first !== "correct" && p.first !== "wrong") p.first = ok ? "correct" : "wrong";
-  p.lastAt = todayStr();
+  if (!prevAt || daysBetween(prevAt, heute) >= COLD_GAP_DAYS) {
+    p.cold = ok ? "correct" : "wrong";
+    p.coldAt = heute;
+  }
+  p.lastAt = heute;
   srsUpdate(p, ok);                       // Leitner-Box + nächste Fälligkeit fortschreiben
   // Erstmeisterung: Frage erreicht zum ersten Mal Box 3+ („sicher") → einmaliger Bonus.
   const justMastered = ok && boxBefore < SRS_MASTER_BOX && p.box >= SRS_MASTER_BOX && !p.masteredOnce;
@@ -1585,7 +1634,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.41.0";
+const APP_VERSION = "0.42.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2047,19 +2096,18 @@ function renderSettings() {
       </label>
     </div>`;
 
-  const studyMin = getStudyMinutes(), studyWeeks = getStudyWeeks();
-  const smOpt = (v) => `<option value="${v}" ${studyMin === v ? "selected" : ""}>${v} Min.</option>`;
+  const studyWeeks = getStudyWeeks();
   const swOpt = (v) => `<option value="${v}" ${studyWeeks === v ? "selected" : ""}>${v} Woche${v === 1 ? "" : "n"}</option>`;
+  const restTage = remainingStudyDays();
   const studyPlan = `
-    <div class="section-title">Lernplan</div>
+    <div class="section-title">Prüfungstermin</div>
     <div class="q-card">
-      <p class="muted" style="margin:0 0 12px">Bestimmt die Zielmarke bei „Prüfungsbereitschaft" – realistisch für deine Zeit, nicht für den ganzen Katalog.</p>
-      <label class="set-row" for="setStudyMin"><span>Lernzeit pro Tag</span>
-        <select id="setStudyMin" class="ios-select">${STUDY_MIN_CHOICES.map(smOpt).join("")}</select>
-      </label>
-      <label class="set-row" for="setStudyWeeks"><span>Wochen bis zur Prüfung</span>
+      <p class="muted" style="margin:0 0 12px">Nur für den Countdown auf der Startseite. Die Bestehenswahrscheinlichkeit
+      hängt bewusst <b>nicht</b> davon ab – sie misst dein Können, nicht deinen Plan.</p>
+      <label class="set-row" for="setStudyWeeks"><span>Noch bis zur Prüfung</span>
         <select id="setStudyWeeks" class="ios-select">${STUDY_WEEKS_CHOICES.map(swOpt).join("")}</select>
       </label>
+      <p class="muted" style="margin:10px 0 0">Aktuell: noch <b>${restTage}</b> Tag${restTage === 1 ? "" : "e"}.</p>
     </div>`;
 
   app.innerHTML = `<h1 class="large-title">Einstellungen</h1>${studyPlan}${prefs}
@@ -2075,11 +2123,9 @@ function renderSettings() {
     toast(n ? "🍅 Pomodoro-Ziel: " + n + " Runden/Tag" : "Pomodoro-Ziel ausgeschaltet");
     pomoRender();
   });
-  const stStudyMin = $("setStudyMin"); if (stStudyMin) stStudyMin.addEventListener("change", () => {
-    setStudyMinutes(parseInt(stStudyMin.value, 10)); toast("🎯 Zielmarke neu berechnet");
-  });
   const stStudyWeeks = $("setStudyWeeks"); if (stStudyWeeks) stStudyWeeks.addEventListener("change", () => {
-    setStudyWeeks(parseInt(stStudyWeeks.value, 10)); toast("🎯 Zielmarke neu berechnet");
+    setStudyWeeks(parseInt(stStudyWeeks.value, 10)); toast("📅 Prüfungstermin aktualisiert");
+    if (VIEW === "settings") renderSettings();
   });
   const bC = $("btnCreate"); if (bC) bC.addEventListener("click", createSyncCode);
   const bK = $("btnConnect"); if (bK) bK.addEventListener("click", showConnectBox);
