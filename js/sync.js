@@ -94,7 +94,19 @@
       if (boxA > boxB) { box = boxA; due = pa.due || null; }
       else if (boxB > boxA) { box = boxB; due = pb.due || null; }
       else { box = boxA; const da = pa.due || "", db = pb.due || ""; due = (da >= db ? da : db) || null; }
-      pq[id] = { seen, correct, wrong, lastResult, box, due };
+      // Beobachtungsdaten (Stufe 1 des Bereitschafts-Konzepts, siehe workbook.md):
+      // `first` = Ergebnis des ersten Kontakts. Es kann nur EINEN ersten Versuch geben;
+      // liegt er auf beiden Geräten verschieden vor (z. B. weil eine Seite ihn noch
+      // nicht kannte), gewinnt bewusst „wrong" – die konservative Annahme.
+      // `lastAt` = das spätere Datum gewinnt (zuletzt geantwortet).
+      let first = null;
+      if (pa.first && pb.first) first = (pa.first === "wrong" || pb.first === "wrong") ? "wrong" : "correct";
+      else first = pa.first || pb.first || null;
+      const la = pa.lastAt || "", lb = pb.lastAt || "";
+      const lastAt = (la >= lb ? la : lb) || null;
+      // ACHTUNG: Jedes Feld, das hier fehlt, ist im Zwei-Geräte-Betrieb still weg.
+      // (masteredOnce fehlte historisch – sanitizeState() stellt es aus box>=3 wieder her.)
+      pq[id] = { seen, correct, wrong, lastResult, box, due, masteredOnce: (pa.masteredOnce === true || pb.masteredOnce === true), first, lastAt };
     }
     out.perQuestion = pq;
 
