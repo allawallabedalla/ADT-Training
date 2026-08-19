@@ -849,7 +849,7 @@ function passObservations() {
     const o = (p.cold === "correct" || p.cold === "wrong") ? p.cold
             : ((p.first === "correct" || p.first === "wrong") ? p.first : null);   // Altdaten ohne Migration
     if (!o) continue;
-    const b = acc[examBlockOf(q.topic)];
+    const b = acc[examBlockOf(q)];
     b.n++; if (o === "correct") b.x++;
   }
   return acc;
@@ -1385,6 +1385,7 @@ let SESSION = null;
 function buildSession(mode, opts = {}) {
   let pool;
   if (mode === "topic") pool = QUESTIONS.filter(q => q.topic === opts.topic);
+  else if (mode === "code") pool = QUESTIONS.filter(q => q.type === "code");
   else if (mode === "weak") pool = weakQuestions();
   else if (mode === "due") pool = dueQuestions();
   else if (mode === "exam") pool = QUESTIONS;
@@ -1650,6 +1651,7 @@ const ICONS = {
   capsule: '<rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(45 12 12)"/><path d="M12 6.5v11" transform="rotate(45 12 12)"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15" r="1.3"/><path d="M12 16.3V18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  keypad: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.4"/><path d="M7.5 10h1M11.5 10h1M15.5 10h1"/><path d="M7.5 14h9"/>',
   link: '<path d="M9.5 14.5l5-5"/><path d="M11 7.5l1.2-1.2a3.8 3.8 0 0 1 5.5 5.5L16.5 13"/><path d="M13 16.5l-1.2 1.2a3.8 3.8 0 0 1-5.5-5.5L7.5 11"/>',
   copy: '<rect x="8.5" y="8.5" width="11" height="11.5" rx="2.2"/><path d="M5.5 15.5V6.2A2.2 2.2 0 0 1 7.7 4h8"/>',
   sync: '<path d="M20 11.5A8 8 0 0 0 6.4 6"/><path d="M6 3.5V7h3.5"/><path d="M4 12.5A8 8 0 0 0 17.6 18"/><path d="M18 20.5V17h-3.5"/>',
@@ -1675,7 +1677,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.43.0";
+const APP_VERSION = "0.44.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1913,6 +1915,10 @@ function renderHome() {
   const acc = overallAccuracy();
   const due = dueQuestions().length;
   const weak = weakQuestions().length;
+  // Kodier-Aufgaben („Kode eingeben") sind der Prüfungsteil, den es sonst nirgends gezielt
+  // gibt: die Simulation zieht sie nur zufällig mit. Der Knopf erscheint nur, wenn der
+  // geladene Katalog welche enthält – der öffentliche Beispielkatalog hat wenige, ältere gar keine.
+  const codeCount = QUESTIONS.filter(q => q.type === "code").length;
 
   // Tagesziel-Ring (lokal)
   const goal = getDailyGoal();
@@ -1977,6 +1983,7 @@ function renderHome() {
     <div class="ios-group">
       <button class="mode-btn" data-act="mixed">${iconTile("shuffle", "#007aff")}<span class="txt"><b>Gemischtes Training</b><p>Zufällige Fragen aus allen Themen</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="topics">${iconTile("grid", "#5e5ce6")}<span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
+      ${codeCount ? `<button class="mode-btn" data-act="code">${iconTile("keypad", "#7c5cbf")}<span class="txt"><b>Kodes eintragen</b><p>${codeCount} Aufgaben – nachschlagen statt ankreuzen</p></span><span class="chev">›</span></button>` : ""}
       <button class="mode-btn" data-act="due" ${due ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Fällige Wiederholungen</b><p>${due ? due + " Frage" + (due === 1 ? "" : "n") + " heute fällig" : "Super – heute nichts fällig"}</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}>${iconTile("target", "#ff3b30")}<span class="txt"><b>Schwachstellen üben</b><p>${weak ? weak + " Frage" + (weak === 1 ? "" : "n") + " noch nicht sicher" : "Alles sitzt – keine Schwachstellen"}</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="pomo">${iconTile("timer", "#af52de")}<span class="txt"><b>Lern-Timer (Pomodoro)</b><p id="pomoModeSub">${pomoSubtitle()}</p></span><span class="chev">›</span></button>
@@ -2006,6 +2013,7 @@ function renderHome() {
     else if (a === "today") { buildSession("mixed"); go("quiz"); }
     else if (a === "goal") changeDailyGoal();
     else if (a === "topics") go("topics");
+    else if (a === "code") { buildSession("code"); go("quiz"); }
     else if (a === "due") { buildSession("due"); go("quiz"); }
     else if (a === "weak") { buildSession("weak"); go("quiz"); }
     else if (a === "pomo") pomoTap();
@@ -2594,8 +2602,17 @@ const EXAM_BLUEPRINT = { K: 40, C: 50, S: 10 };   // Allgemein/Klinik · Codieru
 const EXAM_BLOCK_NAMES = { K: "Allgemein & Klinik", C: "Codierung", S: "Statistik" };
 const EXAM_STAT_RX = /^(deskstat|analstat)|statistik|^patho2_studien$/i;
 const EXAM_COD_RX = /^(tnm|icdo|befund|erheb|erhebbearb|basisdok)(_|$)|tnm|staging|grading|kodierung|icd|\bops\b|obds|dokumentation|klassifikation|datenqualitaet|morpholog|histopathologie|meldew|meldeb/i;
-function examBlockOf(topicKey) {
-  const k = String(topicKey || "");
+/* Ordnet eine Frage einem der drei Prüfungsblöcke zu. Nimmt die FRAGE, nicht nur das
+ * Thema: Eine Kodier-Aufgabe („Kode eingeben") ist immer Codierung, auch wenn sie in
+ * einem klinischen Thema steht — die Lymphom- und Leukämie-Kodes zählten sonst als
+ * „Allgemein & Klinik" und die Simulation zöge zu wenig Codierung. Ein String wird
+ * weiterhin als Themenschlüssel akzeptiert. */
+function examBlockOf(q) {
+  if (q && typeof q === "object") {
+    if (q.type === "code") return "C";
+    q = q.topic;
+  }
+  const k = String(q || "");
   if (EXAM_STAT_RX.test(k)) return "S";
   return EXAM_COD_RX.test(k) ? "C" : "K";
 }
@@ -2606,7 +2623,7 @@ function buildExamQuestions() {
   // Fragen nach Block und darin nach Thema bündeln
   const byBlock = { K: {}, C: {}, S: {} };
   for (const q of QUESTIONS) {
-    const b = examBlockOf(q.topic);
+    const b = examBlockOf(q);
     (byBlock[b][q.topic] = byBlock[b][q.topic] || []).push(q);
   }
   const avail = {}, slots = {};
@@ -2647,7 +2664,7 @@ function buildExamQuestions() {
 // Wie viele Fragen je Block sind in einer Fragenliste? (Auswertung/Anzeige)
 function examBlockCounts(qs) {
   const c = { K: 0, C: 0, S: 0 };
-  for (const q of qs) c[examBlockOf(q.topic)]++;
+  for (const q of qs) c[examBlockOf(q)]++;
   return c;
 }
 
@@ -2910,7 +2927,7 @@ function renderExamResult() {
   // Prüfungsblöcke (Gewichtung der echten Prüfung: 40/50/10) – zeigt sofort,
   // ob ausgerechnet Codierung schwächelt, der größte Block der echten Prüfung.
   const bAgg = { K: { r: 0, n: 0 }, C: { r: 0, n: 0 }, S: { r: 0, n: 0 } };
-  for (const r of res.results) { const b = bAgg[examBlockOf(r.q.topic)]; b.n++; if (r.ok) b.r++; }
+  for (const r of res.results) { const b = bAgg[examBlockOf(r.q)]; b.n++; if (r.ok) b.r++; }
   const blockRows = ["K", "C", "S"].filter(b => bAgg[b].n).map(b => {
     const a = bAgg[b], p = Math.round(a.r / a.n * 100);
     const col = p >= 75 ? "var(--success)" : p >= 50 ? "var(--warn)" : "var(--danger)";

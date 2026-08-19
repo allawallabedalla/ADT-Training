@@ -11,6 +11,48 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.44.0] — 2026-08-19  ·  Kodes gezielt üben
+
+Der Aufgabentyp aus v0.43.0 war da, der Weg dorthin nicht: Die Simulation zog im
+Schnitt **1,2 Kodier-Aufgaben pro Durchlauf** — an den Stoff, der die halbe Prüfung
+ausmacht, kam man praktisch nicht heran.
+
+### Neu
+- **Übungsmodus „Kodes eintragen"** auf der Startseite: übt ausschließlich Kodier-
+  Aufgaben, mit Anzahl im Untertitel. Erscheint nur, wenn der geladene Katalog welche
+  enthält.
+- **84 weitere Kodier-Aufgaben** im geschützten Katalog (29 → 113): ICD-O-3-Topografie
+  (Rektum, Rektosigmoid, Kolonabschnitte, Kardia, Duodenum, Gallenblase, Leber, Glottis,
+  Hauptbronchus, Nierenbecken, Ureter, Hoden, Lymphknotenregionen, Knochenmark, Endometrium,
+  Ektozervix, Mamillenbereich, Quadranten, überlappende Bereiche), Morphologie (undifferenziert,
+  verhornend, Siegelring, intestinaler Typ, Nierenzell-, neuroendokrin, nicht-kleinzellig,
+  adenosquamös, Auffangkodes 8010/8000, nichtinvasiv papillär, GIST), Brust (LCIS, Mischform),
+  Haut (SSM, Melanoma in situ, Lentigo maligna, C43 vs. C44), Sarkome und Knochen, Lymphome
+  und Leukämien samt ICD-10-Entsprechungen, Hirntumoren, Keimzelltumoren, gutartige und
+  Borderline-Dignitäten sowie ICD-10-GM (dreistellige Kodes, In-situ unter D-Kodes,
+  Metastasen-Kodes).
+
+### Behoben
+- **Kodier-Aufgaben zählten je nach Thema als „Allgemein & Klinik".** `examBlockOf` urteilte
+  nur nach dem Themenschlüssel; die 14 Lymphom- und Leukämie-Kodes landeten dadurch im
+  falschen Prüfungsblock — die Simulation zog zu wenig Codierung und die Prognose gewichtete
+  sie mit 40 statt 50 %. Die Funktion nimmt jetzt die Frage: Aufgabentyp `code` ist immer
+  Codierung, unabhängig vom Thema.
+
+### Technisch
+- 17 neue Tests (Blockzuordnung mit allen vier Kombinationen, Übungsmodus, Sichtbarkeit
+  des Knopfes ohne Kodier-Aufgaben im Katalog).
+- Katalog: 5.572 → 5.656 Fragen, Version `2026-08-19-c9490bd7`.
+
+### Bewusst nicht gemacht
+- **Keine Mindestquote an Kodier-Aufgaben in der Simulation.** Die Prüfungsmail sagt nicht,
+  wie sich der Codierungsteil auf Multiple Choice und Kode-Eingabe verteilt — eine Quote
+  wäre geraten. Der eigene Übungsmodus löst das Zugangsproblem ohne diese Annahme.
+- **Weiterhin keine OPS-Aufgaben** (jährlich wechselnder Katalog) und kein CUP-Kode
+  (im Workbook ungeklärt).
+
+---
+
 ## [0.43.0] — 2026-08-19  ·  Aufgabentyp „Code eingeben"
 
 Die Prüfungsmail nennt drei Aufgabenformate: Multiple Choice, Rechenaufgaben und

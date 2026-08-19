@@ -413,6 +413,57 @@ async function page(opts = {}) {
   chk(imExamen === 'code', 'Code: Pruefungsmodus kennt den Typ (kein Rueckfall auf multi)');
 }
 
+// 6i) Blockzuordnung: eine Kodier-Aufgabe zaehlt immer als Codierung
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const r = await p.evaluate(() => ({
+    // klinisches Thema, aber Aufgabentyp code -> Codierung
+    codeInKlinik: examBlockOf({ type: 'code', topic: 'syserkr_lymphome' }),
+    mcInKlinik:   examBlockOf({ type: 'single', topic: 'syserkr_lymphome' }),
+    codeInStat:   examBlockOf({ type: 'code', topic: 'deskstat_haeufigkeit_grafik' }),
+    mcInStat:     examBlockOf({ type: 'single', topic: 'deskstat_haeufigkeit_grafik' }),
+    alsString:    examBlockOf('deskstat_haeufigkeit_grafik'),
+  }));
+  chk(r.codeInKlinik === 'C', 'Block: Kodier-Aufgabe im klinischen Thema zaehlt als Codierung');
+  chk(r.mcInKlinik === 'K', 'Block: Auswahlfrage im klinischen Thema bleibt Klinik');
+  chk(r.codeInStat === 'C', 'Block: Kodier-Aufgabe schlaegt auch die Statistik-Zuordnung');
+  chk(r.mcInStat === 'S', 'Block: Statistik-Thema bleibt sonst Statistik');
+  chk(r.alsString === 'S', 'Block: Themenschluessel als String wird weiterhin akzeptiert');
+}
+
+// 6j) Übungsmodus „Kodes eintragen": eigener Einstieg, nur Kodier-Aufgaben
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.waitForSelector('[data-act="mixed"]');
+  const anzahl = await p.evaluate(() => QUESTIONS.filter(q => q.type === 'code').length);
+  chk(anzahl > 0, 'Kodes-Modus: Testkatalog enthaelt Kodier-Aufgaben (Voraussetzung)');
+  const btn = await p.$('[data-act="code"]');
+  chk(!!btn, 'Kodes-Modus: Knopf erscheint auf der Startseite');
+  chk(new RegExp(String(anzahl)).test(await p.textContent('[data-act="code"]')),
+    'Kodes-Modus: Knopf nennt die Anzahl der Aufgaben');
+
+  await p.click('[data-act="code"]');
+  await p.waitForSelector('.q-card');
+  const nurCode = await p.evaluate(() => ({
+    alle: SESSION.questions.every(q => q.type === 'code'),
+    n: SESSION.questions.length,
+    modus: SESSION.mode,
+  }));
+  chk(nurCode.alle && nurCode.n > 0, 'Kodes-Modus: Runde enthaelt ausschliesslich Kodier-Aufgaben');
+  chk(nurCode.modus === 'code', 'Kodes-Modus: Session traegt den eigenen Modus');
+  chk(!!(await p.$('#codeField')), 'Kodes-Modus: Eingabefeld statt Optionen');
+
+  // Ohne Kodier-Aufgaben im Katalog darf der Knopf nicht erscheinen
+  const q2 = await page();
+  await q2.addInitScript(() => { window.__ohneCode = true; });
+  await q2.goto(BASE, { waitUntil: 'networkidle' });
+  await q2.evaluate(() => { window.QUESTIONS = QUESTIONS.filter(q => q.type !== 'code'); go('home'); });
+  await q2.waitForSelector('[data-act="mixed"]');
+  chk((await q2.$('[data-act="code"]')) === null, 'Kodes-Modus: ohne Kodier-Aufgaben kein Knopf');
+}
+
 // 7b) Prüfungs-Blueprint: Ziehung folgt der echten Gewichtung 40/50/10
 // (vorher zog die Simulation faktisch 1 Frage je Thema und untergewichtete
 // damit Codierung – den größten Block der echten Prüfung).

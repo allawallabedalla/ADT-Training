@@ -223,15 +223,24 @@ Kodier-Aufgaben im geschützten Katalog (5.543 → 5.572, Version `2026-08-19-bc
 ICD-O-3-Topografie, ICD-O-3-Morphologie mit Dignität, die Dignitätsziffer als eigenes
 Lernziel und ICD-10-GM. Die Content-Pipeline kennt den Typ.
 
-**Offen (c) — Ausbau:**
+Stufe (c) ✅ v0.44.0: Ausbau auf **113 Kodier-Aufgaben** (Katalog 5.656, Version
+`2026-08-19-c9490bd7`) plus eigener Übungsmodus **„Kodes eintragen"** auf der Startseite.
+Der war nötig: Die Simulation zog im Schnitt nur 1,2 Kodier-Aufgaben pro Durchlauf, der
+Stoff war praktisch nicht erreichbar. Dabei fiel auf, dass `examBlockOf` nur nach dem
+Themenschlüssel urteilte — die Lymphom- und Leukämie-Kodes zählten als „Allgemein & Klinik";
+die Funktion nimmt jetzt die Frage.
+
+**Offen (d):**
 - **OPS-Aufgaben fehlen ganz.** Bewusst ausgelassen: OPS ändert sich jährlich, ohne den
   aktuellen Katalog wäre jede Musterlösung geraten. Braucht die OPS-Fassung des
   Prüfungsjahres als Quelle.
-- **29 Aufgaben sind wenig** gegenüber 50 % Codierungsanteil in der Prüfung. Die
-  vorhandenen decken die häufigen Entitäten ab; seltenere Morphologien, Lymphome und
-  Sonderfälle (Doppelmalignome, unbekannter Primärtumor) fehlen.
+- **Verteilung Kode-Eingabe vs. Multiple Choice im Codierungsteil unbekannt.** Die
+  Prüfungsmail sagt dazu nichts. Eine Mindestquote in der Simulation wäre deshalb geraten
+  und wurde bewusst nicht eingebaut. Klärt sich nur über offizielle Beispielaufgaben.
+- **Mehrschrittige Fallvignetten** (ein Fall → Topografie + Morphologie + ICD-10 nacheinander)
+  gibt es noch nicht; die Aufgaben stellen jeweils eine Frage. Wäre näher an der Prüfung.
 - **CUP-Kode** weiterhin ungeklärt (C80.0 vs. C80.9) — steht schon unter den fachlichen
-  Detailpunkten und wurde deshalb hier nicht als Aufgabe gestellt.
+  Detailpunkten und wurde deshalb nicht als Aufgabe gestellt.
 
 Ursprüngliche Beschreibung:
 Die Mail nennt ihn als drittes Format neben MC und Rechenaufgabe. Die App kennt nur
