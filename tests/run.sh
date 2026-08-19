@@ -24,7 +24,16 @@ node tests/unit-backlog.mjs || fail=1
 echo "== 4) E2E-Smoke (Browser) =="
 python3 -m http.server "$PORT" >/dev/null 2>&1 &
 SRV=$!
-sleep 1
+# Auf den Server WARTEN statt fest zu schlafen: unter Last (z. B. direkt nach einem
+# git-Merge) brauchte er laenger als eine Sekunde zum Binden – der erste E2E-Test
+# scheiterte dann mit ERR_CONNECTION_REFUSED und meldete faelschlich "nicht ausliefern".
+for _ in $(seq 1 50); do
+  if curl -sf -o /dev/null "http://localhost:${PORT}/index.html"; then break; fi
+  sleep 0.2
+done
+if ! curl -sf -o /dev/null "http://localhost:${PORT}/index.html"; then
+  echo "  FAIL: Testserver auf Port $PORT nicht erreichbar"; fail=1
+fi
 BASE="http://localhost:${PORT}/index.html" node tests/e2e-smoke.mjs || fail=1
 
 echo "== 5) Service Worker / Offline =="
