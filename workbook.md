@@ -204,7 +204,7 @@ Taschenrechner wird gestellt, ICD-10/ICD-O-3/OPS liegen als **durchsuchbare PDFs
 - **180 Minuten, MC + Rechenaufgaben, Alles-oder-nichts** — deckt sich mit PO, Docs und Katalog
   (3.335 multi · 1.476 single · 732 numeric).
 
-**⬜ P1 — Prüfungssimulation: Blueprint auf 40/50/10.**
+**✅ P1 — Prüfungssimulation: Blueprint auf 40/50/10** (erledigt v0.40.0, 2026-08-18).
 `buildExamQuestions()` vergibt faktisch **eine Frage je Thema** (111 Themen → daraus 30 zufällig),
 gewichtet also nach *Themenzahl* statt nach Prüfungsrelevanz. Ergebnis: **~53 % Klinik ·
 ~41 % Codierung · ~6 % Statistik** statt 40/50/10 — in einer 30er-Simulation rund
@@ -212,7 +212,9 @@ gewichtet also nach *Themenzahl* statt nach Prüfungsrelevanz. Ergebnis: **~53 %
 getestete Block. Nötig: Themen → Prüfungsblock zuordnen (Tabelle, ~111 Einträge; TNM/Staging/
 Grading gehören zu Codierung, auch wo der Themenschlüssel das nicht hergibt) und die Ziehung
 blockweise quotieren (12/15/3), innerhalb des Blocks über Themen streuen.
-**Blockiert:** die Aussagekraft von „Prüfungsbereitschaft" (s. u.).
+**Erledigt:** Ziehung jetzt 12/15/3, innerhalb des Blocks über Themen gestreut, mit
+Umverteilung bei zu kleinen Blöcken; Ergebnis je Block in der Auswertung sichtbar.
+6 Regressionstests sichern die Gewichtung ab.
 
 **⬜ P1 — Aufgabentyp „Code eingeben" fehlt vollständig.**
 Die Mail nennt ihn als drittes Format neben MC und Rechenaufgabe. Die App kennt nur

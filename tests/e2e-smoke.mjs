@@ -135,6 +135,56 @@ async function page(opts = {}) {
   const profile = await p.$('.theme-row');
   const review = await p.$('.review-item');
   chk(!!profile && !!review, 'Prüfung: Abgabe → Ergebnis mit Themenprofil & Review');
+  const bodyTxt = await p.textContent('body');
+  chk(/Prüfungsblöcke/.test(bodyTxt) && /Codierung/.test(bodyTxt),
+      'Prüfung: Ergebnis zeigt die Prüfungsblöcke (40/50/10)');
+}
+
+// 7b) Prüfungs-Blueprint: Ziehung folgt der echten Gewichtung 40/50/10
+// (vorher zog die Simulation faktisch 1 Frage je Thema und untergewichtete
+// damit Codierung – den größten Block der echten Prüfung).
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const r = await p.evaluate(() => {
+    // Katalog mit bekannter Blockverteilung unterschieben
+    const mk = (t, n, o) => Array.from({ length: n }, (_, i) =>
+      ({ id: t + i, topic: t, type: 'single', question: 'x', options: ['a', 'b'], correct: [0] }));
+    window.QUESTIONS = [
+      ...mk('brust_therapie', 200), ...mk('gyn_zervix', 200),          // K
+      ...mk('tnm_grundlagen', 200), ...mk('icdo_icd_kodierung', 200),  // C
+      ...mk('deskstat_grundlagen_lagemasse', 100),                     // S
+    ];
+    const runs = 50, agg = { K: 0, C: 0, S: 0 };
+    let sizeOk = true, dupOk = true;
+    for (let i = 0; i < runs; i++) {
+      const qs = buildExamQuestions();
+      if (qs.length !== 30) sizeOk = false;
+      if (new Set(qs.map(q => q.id)).size !== qs.length) dupOk = false;
+      const c = examBlockCounts(qs);
+      agg.K += c.K; agg.C += c.C; agg.S += c.S;
+    }
+    return { K: agg.K / runs, C: agg.C / runs, S: agg.S / runs, sizeOk, dupOk };
+  });
+  chk(r.sizeOk, 'Blueprint: jede Simulation hat genau 30 Fragen');
+  chk(r.dupOk, 'Blueprint: keine Frage doppelt in einer Simulation');
+  chk(Math.abs(r.K - 12) < 0.6, `Blueprint: Allgemein & Klinik ~12/30 (ist ${r.K})`);
+  chk(Math.abs(r.C - 15) < 0.6, `Blueprint: Codierung ~15/30 (ist ${r.C})`);
+  chk(Math.abs(r.S - 3) < 0.6, `Blueprint: Statistik ~3/30 (ist ${r.S})`);
+}
+
+// 7c) Blueprint-Randfall: fehlt ein Block, werden seine Plätze umverteilt
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const r = await p.evaluate(() => {
+    const mk = (t, n) => Array.from({ length: n }, (_, i) =>
+      ({ id: t + i, topic: t, type: 'single', question: 'x', options: ['a', 'b'], correct: [0] }));
+    window.QUESTIONS = [...mk('brust_therapie', 60), ...mk('tnm_grundlagen', 60)]; // keine Statistik
+    const qs = buildExamQuestions();
+    return { n: qs.length, s: examBlockCounts(qs).S };
+  });
+  chk(r.n === 30 && r.s === 0, 'Blueprint: fehlender Block wird umverteilt (weiterhin 30 Fragen)');
 }
 
 // 8) Prüfung: Session-Persistenz (Reload mitten in der Prüfung -> Fortsetzen möglich)

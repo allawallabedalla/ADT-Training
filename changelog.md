@@ -11,6 +11,40 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.40.0] — 2026-08-18  ·  Prüfungssimulation folgt der echten Gewichtung (40/50/10)
+
+Die ADT-Prüfungsmail nennt die Gewichtung der echten Prüfung: **Allgemein & Klinik 40 % ·
+Codierung 50 % · Statistik 10 %**. Die Simulation traf das nicht.
+
+### Behoben
+- **Die Simulation gewichtete nach Themenzahl statt nach Prüfungsrelevanz.**
+  `buildExamQuestions()` gab faktisch **einer Frage je Thema** einen Platz (111 Themen →
+  daraus 30 zufällig). Ergebnis: ~55 % Klinik · ~39 % Codierung · ~6 % Statistik statt
+  40/50/10 — in einer 30er-Simulation rund **12 Codierungsfragen statt 15**. Ausgerechnet
+  Codierung, die Hälfte der echten Prüfung, war der schwächst getestete Block.
+  Jetzt: Blueprint-gesteuerte Ziehung **12 / 15 / 3**, innerhalb jedes Blocks reihum über
+  die Themen (keine Klumpung), mit Umverteilung falls ein Block zu wenig Fragen hat.
+- Das betrifft direkt die **Prüfungsbereitschaft** (v0.39.1): Ihr zweites Kriterium sind
+  zwei Simulationen ≥ 65 %. Dieser Nachweis war bisher genau dort am dünnsten, wo die
+  Prüfung am schwersten wiegt.
+
+### Neu
+- **Prüfungsblöcke in der Auswertung**: Nach jeder Simulation steht das Ergebnis je Block
+  („Codierung 9/15 · 50 % der echten Prüfung") — sichtbar wird sofort, ob der größte Block
+  hängt, statt es zwischen 111 Themenzeilen suchen zu müssen.
+
+### Technisch
+- Zuordnung Thema → Block als **Regel** statt 111-Zeilen-Tabelle: neue Themen aus
+  Katalog-Updates werden automatisch einsortiert, der Beispielkatalog funktioniert ebenfalls.
+  Lesart „Codierung = die Tätigkeit" (TNM/ICD-O/OPS/oBDS vergeben, unabhängig vom Skript);
+  die Alternative (Block I komplett zu „Allgemein") ist im Code dokumentiert.
+- **6 neue Regressionstests** in `tests/e2e-smoke.mjs`: exakt 30 Fragen je Lauf, keine
+  Dubletten, 12/15/3 im Mittel über 50 Läufe, Umverteilung bei fehlendem Block, Blockprofil
+  in der Auswertung. Zusätzlich gegen den echten 5543-Fragen-Katalog geprüft
+  (200 Simulationen: exakt 12,0 / 15,0 / 3,0).
+
+---
+
 ## [0.39.1] — 2026-08-18  ·  Prüfungssimulation als echter Nachweis + Countdown-Fix
 
 ### Neu
