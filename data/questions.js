@@ -13,12 +13,18 @@
  *   type        "single"  = genau eine richtige Antwort
  *               "multi"   = eine ODER mehrere richtige Antworten (Prüfungsformat!)
  *               "numeric" = Rechen-/Anwendungsaufgabe mit freier Zahl-Eingabe
+ *               "code"    = Kodier-Aufgabe mit freier Kode-Eingabe (ICD-10, ICD-O-3, OPS)
  *   question    Fragetext
  *   options     Array der Antwortmöglichkeiten            (single/multi)
  *   correct     Array der Indizes (0-basiert) der RICHTIGEN Antworten (single/multi)
  *   answer      erwartete Zahl                            (numeric)
  *   tolerance   erlaubte Abweichung ± (optional, Standard 0) (numeric)
  *   unit        Einheit zur Anzeige (optional)            (numeric)
+ *   answer      erwarteter Kode als Text, z. B. "C50.4"    (code)
+ *   accept      weitere gültige Kodes (optional)           (code)
+ *               Nicht nötig für andere Schreibweisen desselben Kodes: Punkte,
+ *               Leerzeichen und Groß-/Kleinschreibung ignoriert die App ohnehin.
+ *   placeholder Beispiel im leeren Feld (optional)         (code)
  *   explanation Erklärung – vermittelt den Lerninhalt (inkl. Rechenweg bei numeric)
  *
  * Neue Fragen einfach unten anhängen. Die App validiert das Format beim Start.
@@ -696,6 +702,40 @@ const SAMPLE_QUESTIONS = [
     question: "Bei einer Operation wurden 18 regionäre Lymphknoten entfernt und untersucht, 3 davon waren tumorbefallen. Wie viele der untersuchten Lymphknoten waren tumorfrei?",
     answer: 15, tolerance: 0, unit: "Lymphknoten",
     explanation: "18 untersuchte − 3 befallene = 15 tumorfreie Lymphknoten. Dokumentiert werden sowohl die Zahl der untersuchten als auch der befallenen Lymphknoten (z. B. als „3/18“). Diese Angabe fließt in die pN-Kategorie ein.",
+  },
+  // --- Kodier-Aufgaben (Aufgabentyp „Code eingeben" der ADT-Prüfung) ---------
+  // Der Prüfungsteil, der in der echten Prüfung mit den PDF-Verzeichnissen bearbeitet
+  // wird: Fall lesen, nachschlagen, Kode eintragen. Bewusst ohne Auswahlmöglichkeiten –
+  // das Erkennen des richtigen Kodes unter vier Vorschlägen ist eine andere Aufgabe.
+  {
+    id: "cod-001", topic: "icd10", difficulty: 2, type: "code",
+    question: "Invasives Karzinom im oberen äußeren Quadranten der linken Brust. Welcher ICD-10-GM-Kode beschreibt die Lokalisation?",
+    answer: "C50.4", placeholder: "z. B. C50.4",
+    explanation: "C50.- ist die Brustdrüse, die vierte Stelle bezeichnet den Quadranten: .4 = oberer äußerer Quadrant. Die Seite (links/rechts) steckt NICHT im ICD-10-Kode – sie wird als eigenes Merkmal dokumentiert.",
+  },
+  {
+    id: "cod-002", topic: "icdo", difficulty: 2, type: "code",
+    question: "Adenokarzinom des Colon sigmoideum, invasiv. Welcher ICD-O-3-Morphologiekode inklusive Dignität ist einzutragen?",
+    answer: "8140/3", placeholder: "z. B. 8140/3",
+    explanation: "8140 = Adenokarzinom o. n. A., die Ziffer hinter dem Schrägstrich ist die Dignität: /3 = maligne, primär. Ohne Dignitätsziffer ist ein Morphologiekode unvollständig.",
+  },
+  {
+    id: "cod-003", topic: "icdo", difficulty: 2, type: "code",
+    question: "Derselbe Fall: Welcher ICD-O-3-Topografiekode gehört zum Colon sigmoideum?",
+    answer: "C18.7", placeholder: "z. B. C18.7",
+    explanation: "C18.- ist das Kolon, .7 das Sigma. Topografie und Morphologie werden in der ICD-O-3 immer getrennt kodiert – der Fall braucht beide Angaben.",
+  },
+  {
+    id: "cod-004", topic: "icdo", difficulty: 3, type: "code",
+    question: "Duktales Carcinoma in situ (DCIS) der Mamma. Welcher ICD-O-3-Morphologiekode inklusive Dignität?",
+    answer: "8500/2", placeholder: "z. B. 8500/2",
+    explanation: "8500 = duktales Karzinom, /2 = In-situ-Karzinom (nicht invasiv). Der häufigste Fehler ist /3 – das wäre das invasive duktale Karzinom.",
+  },
+  {
+    id: "cod-005", topic: "icd10", difficulty: 3, type: "code",
+    question: "Bei Erstdiagnose sind bereits Lebermetastasen nachgewiesen. Welcher ICD-10-GM-Kode wird für die sekundäre bösartige Neubildung der Leber vergeben?",
+    answer: "C78.7", placeholder: "z. B. C78.7",
+    explanation: "C78.7 = sekundäre bösartige Neubildung der Leber und der intrahepatischen Gallengänge. Metastasen werden mit eigenen C78-/C79-Kodes erfasst; der Primärtumor behält seinen eigenen Kode.",
   },
 ];
 

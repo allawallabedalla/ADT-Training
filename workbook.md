@@ -216,7 +216,11 @@ blockweise quotieren (12/15/3), innerhalb des Blocks über Themen streuen.
 Umverteilung bei zu kleinen Blöcken; Ergebnis je Block in der Auswertung sichtbar.
 6 Regressionstests sichern die Gewichtung ab.
 
-**⬜ P1 — Aufgabentyp „Code eingeben" fehlt vollständig.**
+**🟡 P1 — Aufgabentyp „Code eingeben"** (Mechanik erledigt v0.43.0, Inhalte offen).
+Stufe (a) steht: Fragetyp `code` mit nachsichtiger Normalisierung, in Übung und Simulation,
+29 Tests, fünf Beispielaufgaben im öffentlichen Katalog. **Offen bleibt (b):** 20–30
+Fallvignetten im geschützten Katalog — ohne die bleibt der Aufgabentyp eine leere Hülle.
+Ursprüngliche Beschreibung:
 Die Mail nennt ihn als drittes Format neben MC und Rechenaufgabe. Die App kennt nur
 `single`/`multi`/`numeric` — eine Eingabe wie `C50.4` oder `8500/3` ist nirgends übbar.
 Das ist **die eigentliche Prüfungskompetenz**: mit den PDFs nachschlagen und den richtigen Kode
