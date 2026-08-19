@@ -239,12 +239,23 @@ müssten grob **+500 Codierungs-** und **+250 Statistik-Fragen** entstehen (oder
 ausgedünnt werden). Anders als der Blueprint-Fix (P1) betrifft das den Katalog selbst und ist
 damit die teurere, aber nachhaltigere Hälfte derselben Sache.
 
-**⬜ P2 — „Prüfungsbereitschaft" nachkalibrieren (hängt an P1).**
-Das Feature (v0.39.1) stützt sein „Bereit" auf zwei Kriterien: Lernstand **und** die letzten
-zwei Simulationen ≥ 65 %. Solange die Simulation die falsche Mischung testet, ist der zweite
-Nachweis genau dort am dünnsten, wo die Prüfung am schwersten wiegt — „Bereit" kann aufleuchten,
-während Codierung noch schwach ist. Nach dem Blueprint-Fix prüfen, ob 65 % die richtige Hürde
-bleibt, und ggf. **je Block** eine Untergrenze fordern (z. B. Codierung ≥ 50 %).
+**⬜ P2 — „Prüfungsbereitschaft" nachkalibrieren.**
+Der Blueprint-Fix (v0.40.0) hat die Voraussetzung geschaffen: die Simulation testet jetzt die
+richtige Mischung. Offen bleiben **zwei belegte Konstruktionsfehler**:
+- **Die Regel „2× je ≥ 65 %" ist zu hart.** Durchgerechnet: bei wahrem Können von 70 % — also
+  20 Punkte über der Bestehensgrenze — sagt die App nur in **53 %** der Fälle „Bereit", bei
+  65 % nur in 26 %. Gegen Fehlalarme ist sie exzellent (bei 50 % Können: 0,2 %), aber sie
+  reproduziert den Entmutigungs-Effekt, gegen den das Feature antritt. Fix: die letzten beiden
+  Läufe **zusammen** werten (60 Fragen, ≥ 65 %) statt jeden einzeln — halbiert das Rauschen,
+  lässt den Schutz gegen Fehlalarme intakt (bei 70 %: 84 % statt 53 %).
+- **Die Bereitschaft hängt an einer Einstellung.** Die Lernstand-Hürde kommt aus der
+  eingetragenen Lernzeit — wer „15 Min./Tag" einträgt, gilt bei identischem Wissen früher als
+  bereit als jemand mit „120 Min./Tag". Das Verdikt muss objektiv werden; die Zeit-Hochrechnung
+  gehört an eine getrennte *Planungs*-Anzeige. Siehe Konzept unten.
+
+~~ggf. je Block eine Untergrenze fordern~~ — **verworfen.** 15 Codierungsfragen tragen ±24
+Punkte Rauschen, die 3 Statistikfragen ±54. Eine Pass/Fail-Schwelle darauf wäre fast reiner
+Zufall. Blöcke informieren (seit v0.40.0 in der Auswertung), sie entscheiden nicht.
 
 **⬜ P3 — TNM-Buch als Hilfsmittel abbilden.**
 Neu und in der PO **nicht** erwähnt (die nennt nur ICD-10/ICD-O-3/OPS): In Teil I ist das
@@ -257,6 +268,143 @@ fliegt Stoff, der in Teil II ohne Buch gebraucht wird.
 Codierung bewusst übergewichten (via „Nach Thema lernen") — die halbe Prüfung ist Codierung und
 dank Nachschlage-PDFs die am besten trainierbare Hälfte. Und: Pomodoro-Ziel auf 1–2 Runden
 stellen, der Standard (4 Runden ≈ 2 Std.) passt nicht zu 30 Min./Tag.
+
+### 🧭 Konzept: Prüfungsbereitschaft aus Beobachtungsdaten (Entwurf, 2026-08-18)
+
+**Status:** ⬜ Konzept abgenommen? — noch nicht umgesetzt. Ersetzt mittelfristig die
+Bereitschafts-Logik aus v0.39.1/v0.40.0. Vorher lesen: die drei Konstruktionsfehler unten.
+
+#### Warum überhaupt
+
+Der Auslöser war die Beobachtung „es scheint keinen Progress zu geben". Ursache gefunden:
+**Die Messung wirft die Daten weg.** „Sicher" bedeutet Box 3+, also *dieselbe* Frage dreimal
+hintereinander richtig. Bei 30 Min./Tag entstehen ~100 Antworten/Tag (~2.800 in vier Wochen),
+verteilt auf 5.543 Fragen — dieselbe Frage dreimal zu treffen passiert dabei fast nie. Die
+Anzeige stand also nicht auf null, weil sie nichts kann, sondern weil Box-3 fast alle
+Information verwirft.
+
+Die Gegenrechnung (Wilson-Untergrenze, 95 % einseitig):
+
+| beantwortet | davon richtig | ⇒ Können mindestens |
+|---:|---:|---:|
+| 10 | 100 % | 79 % |
+| 40 | 100 % | 94 % |
+| 20 | 95 % | 80 % |
+| 40 | 80 % | 68 % |
+
+~2.800 Antworten ergeben ~25 je Thema — genau der Bereich, in dem ein Urteil je Thema
+belastbar wird. Die Daten sind da; sie müssen nur als **Stichprobe** gelesen werden statt als
+Meisterungs-Zähler.
+
+#### Leitprinzipien (aus drei eigenen Fehlern gelernt)
+
+1. **Objektiv.** Bereitschaft darf von *keiner* Einstellung abhängen. (Fehler v0.39.0: die
+   Zielmarke kam aus der eingetragenen Lernzeit — wer weniger Ambition eintrug, galt früher
+   als „bereit". Bei identischem Wissen.)
+2. **Erreichbar.** Kein Kriterium, das rechnerisch außer Reichweite liegt. (Fehler v0.38.0:
+   feste 75 % des Katalogs — bei 5.543 Fragen ~110 Stunden Arbeit.)
+3. **Stabil.** Ein Ziel darf nicht mit jedem Tag Fortschritt weiterwandern. (Fehler v0.39.0:
+   „4 Wochen" wurde bei jeder Berechnung als „4 Wochen ab heute" gelesen.)
+4. **Konservativ.** Im Zweifel untertreiben. Eine zu optimistische Bereitschaftsaussage ist
+   der einzige wirklich schädliche Fehler dieses Features.
+5. **Ehrlich in der Sprache.** Nie „du bestehst", sondern „deine Antworten sprechen dafür".
+
+#### Datenmodell — die Voraussetzung für alles Weitere
+
+`perQuestion` speichert heute nur Aggregate (`seen`/`correct`/`wrong`/`lastResult`/`box`/`due`/
+`masteredOnce`) — **keine Zeitstempel, keine Reihenfolge**. Damit ist weder „Erstversuch"
+zuverlässig noch „verzögerter Abruf" überhaupt rekonstruierbar. Nötig sind zwei rein additive
+Felder je Frage:
+
+| Feld | Inhalt | Zweck |
+|---|---|---|
+| `first` | `"correct"` \| `"wrong"` | Ergebnis des **ersten** Kontakts — generalisiert auf ungesehenen Stoff |
+| `lastAt` | `"YYYY-MM-DD"` | Datum der letzten Antwort — trennt echten Abruf vom Echo derselben Sitzung |
+
+**Rückwirkend teilweise rekonstruierbar** (einmalige Migration): `seen == 1` → `first =
+lastResult`; `wrong == 0` → `first = "correct"`; `correct == 0` → `first = "wrong"`; sonst
+unbekannt (bleibt `null` und zählt nicht mit).
+
+**Merge-Regeln zwingend mitliefern** (`js/sync.js`, `mergeStates`): `first` = der nicht-leere
+Wert, bei Konflikt „wrong" (konservativ); `lastAt` = das spätere Datum.
+⚠️ **Warnung aus dem Audit:** `mergeStates` schreibt perQuestion-Einträge explizit als
+`{ seen, correct, wrong, lastResult, box, due }` — `masteredOnce` fehlt dort bereits heute und
+**verschwindet bei jedem Merge**. Ein neues Feld, das nicht in dieser Zeile steht, ist auf
+Zwei-Geräte-Betrieb stillschweigend weg. Test dafür ist Pflicht.
+
+#### Schätzverfahren
+
+**Eine Beobachtung je Frage — niemals Zähler summieren.** Das ist nicht nur statistisch sauber
+(Unabhängigkeit auf Fragenebene), es umgeht auch einen harten Audit-Befund: `mergeStates` nimmt
+je Feld das Maximum, wodurch nach einem Sync `correct + wrong > seen` entstehen kann
+(A: 3/3/0, B: 3/1/2 → merged 3/3/2). Als „max Fortschritt gewinnt" harmlos, als Stichprobe
+unbrauchbar — und zwar in die gefährliche Richtung: n zu groß, Intervall zu eng, Aussage zu
+selbstsicher.
+
+Zwei Schätzer, die die Wahrheit einrahmen:
+
+| Schätzer | Beobachtung je Frage | Tendenz | weil |
+|---|---|---|---|
+| **kalt** | `first` | pessimistisch | ignoriert alles Gelernte |
+| **aktuell** | `lastResult`, nur wenn `lastAt` ≥ 1 Tag nach dem Erstkontakt | optimistisch | „Schwachstellen üben" holt gezielt falsche Fragen zurück und übt sie bis richtig — der Schätzer steigt dadurch **systematisch**, nicht zufällig |
+
+Same-Session-Wiederholungen fallen in beiden Fällen raus (Kurzzeitgedächtnis, kein Können).
+
+Daraus je Prüfungsblock (`examBlockOf`, bereits vorhanden):
+1. Wilson-Untergrenze, 95 % einseitig, aus (richtig, beobachtet).
+2. **Design-Effekt einrechnen:** Fragen zur selben Folie sind gekoppelt (gemessen: Ø 2,2
+   Fragen/Folie, Median 2, max 19). Effektives n = n / deff, deff = 1 + (m−1)·ρ.
+   ρ ist **nicht gemessen, sondern gesetzt** — konservativ ρ = 0,5 ⇒ deff ≈ 1,6 ⇒ 40 Fragen
+   zählen wie 25. Als Annahme kennzeichnen, nach echten Daten nachschärfen.
+3. Blöcke mit **40/50/10** gewichten (Zahlen aus der ADT-Prüfungsmail).
+4. Ergebnis: eine konservativ geschätzte Prüfungsleistung, gegen die 50-%-Grenze.
+
+#### Was die App behaupten darf
+
+- **Verdikt nur aus objektiven Größen** — Schätzung und Simulation, keine Einstellung.
+- **Die Simulation ist die Schiedsrichterin.** Sie ist die einzige echte Zufallsstichprobe
+  (blueprint-gezogen 12/15/3). Stimmen Schätzung und Simulation überein → starke Evidenz.
+  Klaffen sie auseinander → die Schätzung ist verzerrt, **die Simulation gilt**.
+- **Spanne statt Scheingenauigkeit** anzeigen („zwischen 61 % und 74 %"), wenn kalt und
+  aktuell auseinanderliegen.
+- **Mindest-Abdeckung je Block**, sonst „noch zu wenig Daten" statt einer Zahl — sonst
+  extrapoliert die Schätzung von Lieblingsthemen auf den ganzen Block.
+
+#### Bewusst NICHT umgesetzt
+
+- **Keine harte Untergrenze je Block.** Steht so im Prüfungsmail-Abschnitt und war ein Fehler:
+  15 Codierungsfragen tragen ±24 Punkte Rauschen, die 3 Statistikfragen ±54. Eine Pass/Fail-
+  Schwelle darauf wäre fast reiner Zufall. Blöcke **informieren** (Auswertung, seit v0.40.0),
+  sie **entscheiden nicht**.
+- **Keine einstellungsabhängige Bereitschaft.** Die Lernzeit-Hochrechnung bleibt — aber
+  ausschließlich als *Planungs*-Anzeige („bist du auf Kurs?"), sauber getrennt vom Verdikt.
+- **Box/SRS bleibt unangetastet** für die Wiederholungsplanung. Dafür taugt es; nur als
+  Bereitschaftsmaß taugt es nicht.
+
+#### Stufenplan (bewusst in dieser Reihenfolge)
+
+| Stufe | Inhalt | Risiko | Nutzen |
+|---|---|---|---|
+| **1** | Nur die zwei Felder erfassen + Migration + Merge-Regel + Tests | klein, rein additiv | schafft die Datengrundlage; ohne sie ist alles Weitere auf Annahmen gebaut |
+| **2** | Schätzer + Anzeige, Verdikt weiterhin über die Simulation | mittel | zeigt echten Fortschritt statt Box-3-Null |
+| **3** | Verdikt auf Schätzung + Simulation umstellen | groß | die eigentliche Antwort auf „bin ich bereit?" |
+
+**Zwischen Stufe 1 und 2 mindestens ein bis zwei Wochen echte Daten sammeln.** Der
+Design-Effekt (ρ) und die Abdeckungs-Schwellen lassen sich erst dann an der Realität
+kalibrieren statt zu raten.
+
+#### Offene Annahmen (bei Umsetzung prüfen oder dokumentieren)
+
+- **ρ ist geraten.** Aus echten Antwortdaten messbar, sobald genug vorliegen.
+- **Teilpunkte unbekannt.** Die PO sagt „50 % der möglichen **Punkte**"; wir werten
+  alles-oder-nichts je Frage. Gibt es Teilpunkte, unterschätzt die Schätzung systematisch.
+- **Anderes Messinstrument.** Die Schätzung gilt für *unseren* Katalog. Die echte Prüfung hat
+  andere Fragen und einen Aufgabentyp, den wir nicht haben (Code-Eingabe). Das ist ein
+  Gültigkeits-, kein Stichprobenproblem — **mehr Daten helfen dagegen nicht.** Deshalb bleibt
+  der Aufgabentyp „Code eingeben" der inhaltlich wichtigste offene Punkt.
+- **Kann sinken, wenn sie Neues lernt.** Neues schweres Thema → viele Fehler → Blockschätzung
+  fällt. Braucht eine Darstellung, die das nicht als Rückschritt erscheinen lässt (Trend statt
+  Momentwert), sonst reproduziert das Feature genau die Demotivation, gegen die es antritt.
 
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
