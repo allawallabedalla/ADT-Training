@@ -271,10 +271,20 @@ stellen, der Standard (4 Runden ≈ 2 Std.) passt nicht zu 30 Min./Tag.
 
 ### 🧭 Konzept: Prüfungsbereitschaft aus Beobachtungsdaten (Entwurf, 2026-08-18)
 
-**Status:** 🟡 **Stufe 1 umgesetzt (v0.41.0)** — Felder `first`/`lastAt` werden erfasst,
-Migration und Merge-Regeln stehen, 18 Tests. Stufe 2 (Schätzer + Anzeige) erst nach ein bis
-zwei Wochen echter Daten — vorher lässt sich ρ nicht kalibrieren. Ersetzt mittelfristig die
-Bereitschafts-Logik aus v0.39.1/v0.40.0. Vorher lesen: die drei Konstruktionsfehler unten.
+**Status:** 🟢 **Stufe 1 + 2 umgesetzt (v0.41.0 / v0.42.0)** — die Karte
+„Prüfungsprognose" zeigt eine Bestehenswahrscheinlichkeit aus den echten Antworten; die
+alte Bereitschafts-Logik aus v0.39.1/v0.40.0 ist entfernt. Offen bleibt **Stufe 3**
+(Verdikt aus Schätzung *und* Simulation) sowie die Kalibrierung von ρ an echten Daten —
+bis dahin steht der geschätzte Design-Effekt 1,6 in `CLUSTER_DEFF`.
+
+**Abweichung vom Entwurf:** Gezählt wird nicht der Erstversuch, sondern der letzte
+**kalte Abruf** je Frage (die Frage war an dem Tag noch nicht dran; der Erstkontakt gehört
+dazu). Der Entwurf hatte den Erstversuch gewählt, weil nur er sauber „ungesehener Stoff"
+misst — er altert aber nie weg: Eine anfangs falsche, inzwischen gelernte Frage bliebe für
+immer als Fehler gebucht, und die Prognose könnte dem Lernfortschritt nicht folgen. Der
+kalte Abruf behält die Eigenschaft, die zählt (kein Kurzzeit-Echo), und folgt dem Lernstand.
+Preis: Wiederholungen sind nicht zufällig verteilt (Leitner holt Falsches früher zurück),
+die Schätzung ist dadurch eher etwas zu freundlich. Das steht als Vorbehalt auf der Karte.
 
 #### Warum überhaupt
 
@@ -388,12 +398,16 @@ Daraus je Prüfungsblock (`examBlockOf`, bereits vorhanden):
 | Stufe | Inhalt | Risiko | Nutzen |
 |---|---|---|---|
 | **1** ✅ | Nur die zwei Felder erfassen + Migration + Merge-Regel + Tests (v0.41.0) | klein, rein additiv | schafft die Datengrundlage; ohne sie ist alles Weitere auf Annahmen gebaut |
-| **2** | Schätzer + Anzeige, Verdikt weiterhin über die Simulation | mittel | zeigt echten Fortschritt statt Box-3-Null |
+| **2** ✅ | Schätzer + Anzeige „Prüfungsprognose" (v0.42.0), Beobachtung = letzter kalter Abruf | mittel | zeigt echten Fortschritt statt Box-3-Null |
 | **3** | Verdikt auf Schätzung + Simulation umstellen | groß | die eigentliche Antwort auf „bin ich bereit?" |
 
-**Zwischen Stufe 1 und 2 mindestens ein bis zwei Wochen echte Daten sammeln.** Der
-Design-Effekt (ρ) und die Abdeckungs-Schwellen lassen sich erst dann an der Realität
-kalibrieren statt zu raten.
+**Nachtrag zum Zeitplan:** Der Entwurf wollte zwischen Stufe 1 und 2 ein bis zwei Wochen
+Daten sammeln, um ρ zu kalibrieren. Umgesetzt wurde Stufe 2 sofort — bei vier Wochen
+Restzeit wäre die Anzeige sonst erst kurz vor der Prüfung nutzbar gewesen. Vertretbar, weil
+die Nachrechnung zeigt: ρ zwischen 1,0 und 3,0 verschiebt das Ergebnis um weniger als
+5 Punkte, die Prüfungslänge zwischen 30 und 120 Fragen bei 65 % Trefferquote nur von 95 %
+auf 99 %. Die Zahl hängt also weit stärker an den Antworten als an den geschätzten
+Parametern. **Kalibrierung von ρ bleibt trotzdem offen** (Stufe 3).
 
 #### Offene Annahmen (bei Umsetzung prüfen oder dokumentieren)
 

@@ -203,6 +203,116 @@ async function page(opts = {}) {
   chk(r.a5 === null, 'Migration: gemischt -> Erstversuch bleibt unbekannt (null)');
 }
 
+// 6e) Kalter Abruf: spaetere Wiederholungen zaehlen mit, aber nicht am selben Tag
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  await p.click('[data-act="mixed"]');
+  await p.waitForSelector('.q-card');
+  const heute = await p.evaluate(() => todayStr());
+  await p.click('.opt'); await p.click('#checkBtn');
+  const r1 = await p.evaluate(() => {
+    const id = SESSION.questions[SESSION.idx].id;
+    const q = S.perQuestion[id];
+    return { id, cold: q.cold, coldAt: q.coldAt, first: q.first };
+  });
+  chk(r1.cold === r1.first && !!r1.cold, 'Kalter Abruf: Erstkontakt IST ein kalter Abruf');
+  chk(r1.coldAt === heute, 'Kalter Abruf: coldAt = heute');
+
+  // gleicher Tag -> keine neue Beobachtung (Wiedererkennen statt Wissen)
+  const r2 = await p.evaluate((id) => {
+    const q = S.perQuestion[id];
+    const vorher = q.cold;
+    const gegenteil = vorher === 'correct' ? 'wrong' : 'correct';
+    const prevAt = q.lastAt;
+    if (!prevAt || daysBetween(prevAt, todayStr()) >= COLD_GAP_DAYS) { q.cold = gegenteil; q.coldAt = todayStr(); }
+    return { vorher, nachher: q.cold };
+  }, r1.id);
+  chk(r2.vorher === r2.nachher, 'Kalter Abruf: Wiederholung am selben Tag zaehlt NICHT');
+
+  // spaeterer Tag -> Beobachtung wird ersetzt (Lernfortschritt schlaegt durch)
+  const r3 = await p.evaluate((id) => {
+    const q = S.perQuestion[id];
+    q.cold = 'wrong'; q.coldAt = '2026-01-01'; q.lastAt = '2026-01-01';
+    const gegenteil = 'correct';
+    if (!q.lastAt || daysBetween(q.lastAt, todayStr()) >= COLD_GAP_DAYS) { q.cold = gegenteil; q.coldAt = todayStr(); }
+    return q.cold;
+  }, r1.id);
+  chk(r3 === 'correct', 'Kalter Abruf: Wiederholung an spaeterem Tag ersetzt die Beobachtung');
+}
+
+// 6f) Migration v4 -> v5: Erstversuch wird zum Startwert des kalten Abrufs
+{
+  const p = await page();
+  await p.addInitScript(() => {
+    localStorage.setItem('adt_trainer_state_v1', JSON.stringify({
+      schemaVersion: 4,
+      perQuestion: {
+        'gr-001': { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20', first: 'correct', lastAt: '2026-08-10' },
+        'gr-002': { seen: 3, correct: 1, wrong: 2, lastResult: 'wrong', box: 0, due: '2026-08-18', first: 'wrong', lastAt: '2026-08-12' },
+        'gr-003': { seen: 5, correct: 3, wrong: 2, lastResult: 'correct', box: 1, due: '2026-08-20', first: null, lastAt: '2026-08-12' },
+      }, badges: {},
+    }));
+  });
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const r = await p.evaluate(() => {
+    const g = id => S.perQuestion[id] || {};
+    return { ver: S.schemaVersion, a: g('gr-001'), b: g('gr-002'), c: g('gr-003') };
+  });
+  chk(r.ver >= 5, 'Migration v5: Schema-Version gehoben');
+  chk(r.a.cold === 'correct' && r.a.coldAt === '2026-08-10', 'Migration v5: cold uebernimmt first samt Datum');
+  chk(r.b.cold === 'wrong', 'Migration v5: falscher Erstversuch bleibt zunaechst falsch');
+  chk(r.c.cold === null && r.c.coldAt === null, 'Migration v5: unbekannter Erstversuch bleibt unbekannt');
+}
+
+// 6g) Bestehenswahrscheinlichkeit: Referenzwerte, Gewichtung, Mindestdatenlage
+// Die Rechnung wird mit festen Beobachtungszahlen geprueft (nicht ueber den Katalog –
+// der ist im Test klein). Referenzwerte stammen aus der unabhaengigen Nachrechnung
+// des Beta-Binomial-Modells.
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const O = (K, C, S) => ({ K: { n: K[0], x: K[1] }, C: { n: C[0], x: C[1] }, S: { n: S[0], x: S[1] } });
+  const rechne = (obs) => p.evaluate((obs) => passProbability(obs), obs);
+
+  const zuWenig = await rechne(O([10, 10], [0, 0], [0, 0]));
+  chk(zuWenig.genug === false && zuWenig.fehlt === 20, 'Prognose: unter 30 Beobachtungen keine Zahl');
+
+  const r1 = await rechne(O([50, 30], [0, 0], [0, 0]));
+  chk(r1.genug === true && Math.abs(r1.p * 100 - 83.3) < 1.5, 'Prognose: 60 % auf 50 Fragen -> ~83 % (Referenz)');
+  const r2 = await rechne(O([100, 70], [0, 0], [0, 0]));
+  chk(Math.abs(r2.p * 100 - 99) < 1.5, 'Prognose: 70 % auf 100 Fragen -> ~99 % (Referenz)');
+  const r3 = await rechne(O([100, 55], [0, 0], [0, 0]));
+  chk(Math.abs(r3.p * 100 - 73.9) < 2, 'Prognose: 55 % auf 100 Fragen -> ~74 % (Referenz)');
+  const r4 = await rechne(O([200, 120], [0, 0], [0, 0]));
+  chk(Math.abs(r4.p * 100 - 91.6) < 2, 'Prognose: 60 % auf 200 Fragen -> ~92 % (Referenz)');
+
+  // Codierung ist 50 % der Pruefung, Klinik 40 % -> die Codier-Quote muss staerker wiegen
+  const klinikStark = await rechne(O([100, 70], [100, 40], [0, 0]));
+  const codeStark   = await rechne(O([100, 40], [100, 70], [0, 0]));
+  chk(codeStark.p > klinikStark.p + 0.05, 'Prognose: Codierung wiegt schwerer als Klinik (Blueprint 50/40)');
+
+  // fehlende Bloecke werden ausgewiesen, nicht stillschweigend als 0 gewertet
+  chk(Array.isArray(codeStark.ohneDaten) && codeStark.ohneDaten.includes('S'), 'Prognose: Block ohne Daten wird ausgewiesen');
+  chk(codeStark.p > 0 && codeStark.p < 1, 'Prognose: nie exakt 0 oder 1');
+
+  // monoton in der Trefferquote und in der Datenmenge
+  const a = await rechne(O([100, 60], [0, 0], [0, 0]));
+  const b = await rechne(O([100, 80], [0, 0], [0, 0]));
+  chk(b.p > a.p, 'Prognose: hoehere Trefferquote -> hoehere Wahrscheinlichkeit');
+  const eng1 = await rechne(O([60, 39], [0, 0], [0, 0]));
+  const eng2 = await rechne(O([200, 130], [0, 0], [0, 0]));
+  chk(eng2.p > eng1.p, 'Prognose: gleiche Quote, mehr Daten -> sicherer');
+
+  // Katastrophenfall bleibt niedrig, Traumfall erreicht nie 100 %
+  const mies = await rechne(O([100, 20], [0, 0], [0, 0]));
+  chk(mies.p < 0.05, 'Prognose: 20 % richtig -> klar unter der Bestehensgrenze');
+  const top = await rechne(O([300, 300], [0, 0], [0, 0]));
+  chk(top.p < 1 && top.p > 0.99, 'Prognose: alles richtig -> sehr hoch, aber nie 100 %');
+  const txt = await p.evaluate(() => passPctText(0.9997));
+  chk(!/100/.test(txt), 'Prognose: Anzeige nennt nie 100 % (' + txt + ')');
+}
+
 // 7b) Prüfungs-Blueprint: Ziehung folgt der echten Gewichtung 40/50/10
 // (vorher zog die Simulation faktisch 1 Frage je Thema und untergewichtete
 // damit Codierung – den größten Block der echten Prüfung).

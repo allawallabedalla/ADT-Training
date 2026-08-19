@@ -147,5 +147,26 @@ const mm = S.mergeStates(
   { schemaVersion: 4, perQuestion: { q9: { seen: 5, correct: 3, wrong: 2, lastResult: 'wrong', box: 0, due: '2026-08-18' } }, badges: {} });
 ok(mm.perQuestion.q9.masteredOnce === true, 'merge masteredOnce ueberlebt (kein doppelter Erstmeisterungs-Bonus)');
 
+// `cold` = letzter kalter Abruf. Anders als `first` ist das KEIN Konflikt, sondern eine
+// Zeitreihe: das spaetere Datum gewinnt, damit Lernfortschritt durchschlaegt. Nur bei
+// gleichem Datum ist die Reihenfolge unbekannt -> konservativ "wrong".
+const CA = { schemaVersion: 5, perQuestion: {
+  c1: { seen: 3, correct: 2, wrong: 1, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'wrong',   coldAt: '2026-08-10' },
+  c2: { seen: 3, correct: 2, wrong: 1, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'correct', coldAt: '2026-08-18' },
+  c3: { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'correct', coldAt: '2026-08-18' },
+  c4: { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20' },
+}, badges: {} };
+const CB = { schemaVersion: 5, perQuestion: {
+  c1: { seen: 3, correct: 2, wrong: 1, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'correct', coldAt: '2026-08-18' },
+  c2: { seen: 3, correct: 2, wrong: 1, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'wrong',   coldAt: '2026-08-10' },
+  c3: { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'wrong',   coldAt: '2026-08-18' },
+  c4: { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20', cold: 'wrong',   coldAt: '2026-08-11' },
+}, badges: {} };
+const mc = S.mergeStates(CA, CB);
+ok(mc.perQuestion.c1.cold === 'correct' && mc.perQuestion.c1.coldAt === '2026-08-18', 'merge cold: spaeterer Abruf gewinnt (B)');
+ok(mc.perQuestion.c2.cold === 'correct' && mc.perQuestion.c2.coldAt === '2026-08-18', 'merge cold: spaeterer Abruf gewinnt (A)');
+ok(mc.perQuestion.c3.cold === 'wrong', 'merge cold: gleiches Datum -> konservativ "wrong"');
+ok(mc.perQuestion.c4.cold === 'wrong' && mc.perQuestion.c4.coldAt === '2026-08-11', 'merge cold: vorhandener Wert schlaegt fehlenden');
+
 console.log(failures === 0 ? '\nOK: alle Unit-Tests bestanden' : `\n${failures} Unit-Test(s) fehlgeschlagen`);
 process.exit(failures === 0 ? 0 : 1);

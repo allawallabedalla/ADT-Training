@@ -11,6 +11,54 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.42.0] — 2026-08-19  ·  Prüfungsprognose statt Bereitschafts-Ampel (Stufe 2)
+
+Die Startseite zeigt jetzt eine **Bestehenswahrscheinlichkeit** statt einer Ampel, die
+von einer Einstellung abhing. Die Zahl wird aus den tatsächlichen Antworten geschätzt —
+keine Einstellung kann sie bewegen.
+
+### Neu
+- **Karte „Prüfungsprognose"**: Prozentwert, Einordnung („sehr zuversichtlich" …), Balken
+  mit Markierung bei der 50-%-Bestehensgrenze, Aufschlüsselung nach den drei
+  Prüfungsblöcken und drei Vorbehalte im Klartext. Unter 30 Beobachtungen sagt die Karte
+  „sammelt Daten" statt eine Zahl zu erfinden.
+- **Rechenweg**: je Block ein Beta-Posterior über die Trefferquote, gewichtet wie die echte
+  Prüfung (40 Allgemein / 50 Codierung / 10 Statistik), zusammengefasst über die Momente,
+  daraus die Beta-Binomial-Wahrscheinlichkeit, in einer Prüfung mit ~60 Fragen mindestens
+  die Hälfte zu treffen. Fragen zur selben Folie zählen dabei nicht als unabhängig
+  (Design-Effekt 1,6). Angezeigt wird nie 100 % — die Prüfung ist selbst eine Stichprobe.
+- **Kalte Abrufe statt nur Erstversuche.** Gezählt wird je Frage der letzte Abruf, bei dem
+  sie an dem Tag noch nicht dran war — der Erstkontakt eingeschlossen, spätere
+  Wiederholungen aber auch. Grund: Der Erstversuch altert nie weg; eine anfangs falsche,
+  inzwischen gelernte Frage bliebe sonst für immer als Fehler gebucht und die Prognose
+  könnte dem Lernfortschritt nie folgen. Wiederholungen am selben Tag zählen weiterhin
+  nicht — das wäre Wiedererkennen, kein Wissen.
+- **Migration v4 → v5** setzt den Startwert auf den bereits erfassten Erstversuch.
+
+### Geändert
+- Einstellungen: „Lernplan" heißt jetzt **„Prüfungstermin"** und ist reine Planung
+  (Countdown). Dort steht ausdrücklich, dass die Prognose davon *nicht* abhängt.
+
+### Entfernt
+- Die alte Bereitschafts-Logik (`readiness()`, `examReadiness()`, Lerntempo-Hochrechnung
+  als Verdikt, Lernminuten-Einstellung). Sie hatte den Konstruktionsfehler, dass weniger
+  eingetragene Lernzeit bei identischem Wissen früher „bereit" ergab.
+
+### Technisch
+- `passProbability(obs)` nimmt Beobachtungen optional als Argument — damit ist die
+  Rechnung mit festen Zahlen prüfbar, unabhängig von der Katalogröße.
+- Merge-Regel für `cold`/`coldAt`: das **spätere** Datum gewinnt (neuere Beobachtung
+  ersetzt die ältere); nur bei gleichem Datum auf beiden Geräten konservativ `wrong`.
+- 24 neue Tests: Referenzwerte der Rechnung gegen eine unabhängige Nachrechnung,
+  Blockgewichtung, Monotonie, Mindestdatenlage, kalte Abrufe, Migration, Merge.
+
+### Bekannte Verzerrung
+- Wiederholungen sind nicht zufällig verteilt: Leitner legt falsche Fragen früher wieder
+  vor als richtige. Aufstufungen fallen dadurch häufiger auf als Abstufungen — die Zahl ist
+  eher etwas zu freundlich. Steht so auch auf der Karte.
+
+---
+
 ## [0.41.0] — 2026-08-18  ·  Beobachtungsdaten je Frage (Stufe 1)
 
 Erste Stufe des Konzepts „Prüfungsbereitschaft aus Beobachtungsdaten"
