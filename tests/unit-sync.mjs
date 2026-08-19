@@ -121,5 +121,31 @@ await S.overwriteRemote({ xp: 3, perQuestion: {}, badges: {} });
 ok(S.hasPending() === true, 'Pending nach offline gesetzt');
 online = true;
 
+// ---- Beobachtungsdaten im Merge (Stufe 1 des Bereitschafts-Konzepts) ----
+// `first` = Ergebnis des ersten Kontakts; es kann nur einen geben. Bei Konflikt
+// gewinnt bewusst "wrong" (konservativ). `lastAt` = spaeteres Datum gewinnt.
+const OA = { schemaVersion: 4, perQuestion: {
+  o1: { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20', first: 'correct', lastAt: '2026-08-18' },
+  o2: { seen: 2, correct: 1, wrong: 1, lastResult: 'wrong', box: 0, due: '2026-08-18', first: 'correct', lastAt: '2026-08-17' },
+  o3: { seen: 1, correct: 0, wrong: 1, lastResult: 'wrong', box: 0, due: '2026-08-18', first: null, lastAt: null },
+}, badges: {} };
+const OB = { schemaVersion: 4, perQuestion: {
+  o1: { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20', first: 'correct', lastAt: '2026-08-19' },
+  o2: { seen: 2, correct: 1, wrong: 1, lastResult: 'wrong', box: 0, due: '2026-08-18', first: 'wrong', lastAt: '2026-08-16' },
+  o3: { seen: 1, correct: 0, wrong: 1, lastResult: 'wrong', box: 0, due: '2026-08-18', first: 'wrong', lastAt: '2026-08-15' },
+}, badges: {} };
+const mo = S.mergeStates(OA, OB);
+ok(mo.perQuestion.o1.first === 'correct', 'merge first: Einigkeit bleibt erhalten');
+ok(mo.perQuestion.o1.lastAt === '2026-08-19', 'merge lastAt = spaeteres Datum');
+ok(mo.perQuestion.o2.first === 'wrong', 'merge first: bei Konflikt gewinnt "wrong" (konservativ)');
+ok(mo.perQuestion.o3.first === 'wrong', 'merge first: vorhandener Wert schlaegt null');
+ok(mo.perQuestion.o3.lastAt === '2026-08-15', 'merge lastAt: vorhandenes Datum schlaegt null');
+
+// masteredOnce ging historisch beim Merge verloren (fehlte in der Ergebniszeile).
+const mm = S.mergeStates(
+  { schemaVersion: 4, perQuestion: { q9: { seen: 5, correct: 3, wrong: 2, lastResult: 'wrong', box: 0, due: '2026-08-18', masteredOnce: true } }, badges: {} },
+  { schemaVersion: 4, perQuestion: { q9: { seen: 5, correct: 3, wrong: 2, lastResult: 'wrong', box: 0, due: '2026-08-18' } }, badges: {} });
+ok(mm.perQuestion.q9.masteredOnce === true, 'merge masteredOnce ueberlebt (kein doppelter Erstmeisterungs-Bonus)');
+
 console.log(failures === 0 ? '\nOK: alle Unit-Tests bestanden' : `\n${failures} Unit-Test(s) fehlgeschlagen`);
 process.exit(failures === 0 ? 0 : 1);

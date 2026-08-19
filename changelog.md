@@ -11,6 +11,41 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.41.0] — 2026-08-18  ·  Beobachtungsdaten je Frage (Stufe 1)
+
+Erste Stufe des Konzepts „Prüfungsbereitschaft aus Beobachtungsdaten"
+(`workbook.md`). **Nur Datenerfassung — die Anzeige ändert sich noch nicht.**
+
+Hintergrund: „Sicher" bedeutet bisher Box 3+, also *dieselbe* Frage dreimal
+hintereinander richtig. Bei ~100 Antworten/Tag auf 5.543 Fragen passiert das fast nie —
+deshalb stand der Fortschritt scheinbar auf null. Eine Schätzung aus Stichproben nutzt
+dieselben Daten weit besser, braucht dafür aber Angaben, die das Datenmodell nicht hatte.
+
+### Neu
+- Zwei rein additive Felder je Frage: **`first`** (Ergebnis des ersten Kontakts —
+  generalisiert auf ungesehenen Stoff) und **`lastAt`** (Datum der letzten Antwort —
+  trennt echten Abruf vom Echo derselben Sitzung). `first` wird genau einmal gesetzt und
+  nie überschrieben.
+- **Migration v3 → v4** rekonstruiert den Erstversuch aus dem Altbestand, soweit er
+  eindeutig ist: `seen == 1` → der eine Versuch; `wrong == 0` → alle richtig; `correct == 0`
+  → alle falsch. Gemischte Fälle bleiben bewusst `null` und zählen später nicht mit.
+
+### Behoben (Altfehler, beim Umsetzen gefunden)
+- **`masteredOnce` ging bei jedem Cloud-Merge verloren.** `mergeStates` schreibt die
+  perQuestion-Einträge explizit als `{ seen, correct, wrong, lastResult, box, due }` — das
+  Feld fehlte dort schlicht. Folge: Nach einem Sync konnte der einmalige
+  Erstmeisterungs-Bonus (+15 XP) erneut vergeben werden. Jetzt im Merge enthalten, mit Test.
+
+### Technisch
+- Merge-Regeln für die neuen Felder: `first` — bei Konflikt gewinnt **`wrong`**
+  (konservativ), sonst der vorhandene Wert; `lastAt` — das spätere Datum.
+- 13 neue Tests: Erfassung beim ersten Kontakt, `first` wird nicht überschrieben,
+  alle vier Migrations-Fälle, fünf Merge-Fälle inkl. `masteredOnce`.
+- Nebenbei: Ein bestehender Test verankerte `schemaVersion === 3` fest und wäre bei jeder
+  künftigen Datenmodell-Änderung gebrochen — jetzt `>= 3`.
+
+---
+
 ## [0.40.0] — 2026-08-18  ·  Prüfungssimulation folgt der echten Gewichtung (40/50/10)
 
 Die ADT-Prüfungsmail nennt die Gewichtung der echten Prüfung: **Allgemein & Klinik 40 % ·

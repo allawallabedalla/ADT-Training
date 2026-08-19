@@ -140,6 +140,69 @@ async function page(opts = {}) {
       'Prüfung: Ergebnis zeigt die Prüfungsblöcke (40/50/10)');
 }
 
+// 6c) Beobachtungsdaten (Stufe 1 des Bereitschafts-Konzepts): Erfassung + Migration
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  // frisch antworten -> first + lastAt werden gesetzt
+  await p.click('[data-act="mixed"]');
+  await p.waitForSelector('.q-card');
+  const heute = await p.evaluate(() => todayStr());
+  await p.click('.opt'); await p.click('#checkBtn');
+  const rec = await p.evaluate(() => {
+    const id = SESSION.questions[SESSION.idx].id;
+    const q = S.perQuestion[id];
+    return { first: q.first, lastAt: q.lastAt, lastResult: q.lastResult };
+  });
+  chk(rec.first === 'correct' || rec.first === 'wrong', 'Beobachtung: first beim ersten Kontakt gesetzt');
+  chk(rec.first === rec.lastResult, 'Beobachtung: first entspricht beim ersten Kontakt dem Ergebnis');
+  chk(rec.lastAt === heute, 'Beobachtung: lastAt = heute');
+
+  // first darf bei spaeteren Antworten NICHT ueberschrieben werden
+  const stable = await p.evaluate(() => {
+    const id = SESSION.questions[SESSION.idx].id;
+    const before = S.perQuestion[id].first;
+    const q = QUESTIONS.find(x => x.id === id);
+    // gegenteiliges Ergebnis erzwingen
+    const falsch = before === 'correct';
+    S.perQuestion[id].lastResult = falsch ? 'wrong' : 'correct';
+    const p2 = S.perQuestion[id];
+    if (p2.first !== 'correct' && p2.first !== 'wrong') p2.first = 'wrong';
+    return { before, after: S.perQuestion[id].first };
+  });
+  chk(stable.before === stable.after, 'Beobachtung: first wird spaeter nicht ueberschrieben');
+}
+
+// 6d) Migration v3 -> v4: Erstversuch aus Altbestand rekonstruieren
+{
+  const p = await page();
+  await p.addInitScript(() => {
+    localStorage.setItem('adt_trainer_state_v1', JSON.stringify({
+      schemaVersion: 3,
+      perQuestion: {
+        // ECHTE Katalog-IDs noetig: sanitizeState parkt unbekannte IDs als orphanQuestions.
+        // eindeutig rekonstruierbar:
+        'gr-001': { seen: 1, correct: 1, wrong: 0, lastResult: 'correct', box: 1, due: '2026-08-20' },
+        'gr-002': { seen: 1, correct: 0, wrong: 1, lastResult: 'wrong', box: 0, due: '2026-08-18' },
+        'gr-003': { seen: 4, correct: 4, wrong: 0, lastResult: 'correct', box: 4, due: '2026-09-01' },
+        'gr-004': { seen: 3, correct: 0, wrong: 3, lastResult: 'wrong', box: 0, due: '2026-08-18' },
+        // gemischt -> Reihenfolge unbekannt, muss null bleiben:
+        'gr-005': { seen: 5, correct: 3, wrong: 2, lastResult: 'correct', box: 1, due: '2026-08-20' },
+      }, badges: {},
+    }));
+  });
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const r = await p.evaluate(() => {
+    const g = id => (S.perQuestion[id] || {}).first;
+    return { a1: g('gr-001'), a2: g('gr-002'), a3: g('gr-003'), a4: g('gr-004'), a5: g('gr-005'), ver: S.schemaVersion };
+  });
+  chk(r.ver >= 4, 'Migration: Schema-Version auf 4 gehoben');
+  chk(r.a1 === 'correct' && r.a2 === 'wrong', 'Migration: seen==1 -> Erstversuch = lastResult');
+  chk(r.a3 === 'correct', 'Migration: alle richtig -> Erstversuch richtig');
+  chk(r.a4 === 'wrong', 'Migration: alle falsch -> Erstversuch falsch');
+  chk(r.a5 === null, 'Migration: gemischt -> Erstversuch bleibt unbekannt (null)');
+}
+
 // 7b) Prüfungs-Blueprint: Ziehung folgt der echten Gewichtung 40/50/10
 // (vorher zog die Simulation faktisch 1 Frage je Thema und untergewichtete
 // damit Codierung – den größten Block der echten Prüfung).
@@ -260,7 +323,9 @@ async function page(opts = {}) {
   // nächsten Speichern neu geschrieben – die Migration selbst wirkt sofort auf S).
   const st = await p.evaluate(() => S);
   const today = await p.evaluate(() => todayStr());
-  const okMig = st.schemaVersion === 3
+  // Version nicht fest verankern (sie waechst mit dem Datenmodell) – gefordert ist,
+  // dass die Kette bis zur aktuellen Version durchlaeuft und der Warmstart stimmt.
+  const okMig = st.schemaVersion >= 3
     && st.perQuestion['tnm-001'].box === 3 && st.perQuestion['tnm-001'].due > today
     && st.perQuestion['gr-001'].box === 0 && st.perQuestion['gr-001'].due === today;
   chk(okMig, 'Migration v1->v3: Box/Fälligkeit aus altem Fortschritt warmgestartet');

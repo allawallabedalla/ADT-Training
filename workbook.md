@@ -271,7 +271,9 @@ stellen, der Standard (4 Runden ≈ 2 Std.) passt nicht zu 30 Min./Tag.
 
 ### 🧭 Konzept: Prüfungsbereitschaft aus Beobachtungsdaten (Entwurf, 2026-08-18)
 
-**Status:** ⬜ Konzept abgenommen? — noch nicht umgesetzt. Ersetzt mittelfristig die
+**Status:** 🟡 **Stufe 1 umgesetzt (v0.41.0)** — Felder `first`/`lastAt` werden erfasst,
+Migration und Merge-Regeln stehen, 18 Tests. Stufe 2 (Schätzer + Anzeige) erst nach ein bis
+zwei Wochen echter Daten — vorher lässt sich ρ nicht kalibrieren. Ersetzt mittelfristig die
 Bereitschafts-Logik aus v0.39.1/v0.40.0. Vorher lesen: die drei Konstruktionsfehler unten.
 
 #### Warum überhaupt
@@ -385,7 +387,7 @@ Daraus je Prüfungsblock (`examBlockOf`, bereits vorhanden):
 
 | Stufe | Inhalt | Risiko | Nutzen |
 |---|---|---|---|
-| **1** | Nur die zwei Felder erfassen + Migration + Merge-Regel + Tests | klein, rein additiv | schafft die Datengrundlage; ohne sie ist alles Weitere auf Annahmen gebaut |
+| **1** ✅ | Nur die zwei Felder erfassen + Migration + Merge-Regel + Tests (v0.41.0) | klein, rein additiv | schafft die Datengrundlage; ohne sie ist alles Weitere auf Annahmen gebaut |
 | **2** | Schätzer + Anzeige, Verdikt weiterhin über die Simulation | mittel | zeigt echten Fortschritt statt Box-3-Null |
 | **3** | Verdikt auf Schätzung + Simulation umstellen | groß | die eigentliche Antwort auf „bin ich bereit?" |
 

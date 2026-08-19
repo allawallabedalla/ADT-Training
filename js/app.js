@@ -46,7 +46,7 @@ let DATA_OK = checkData();
  * 1) Persistenter Zustand (localStorage, robust gegen Defekte)
  * ------------------------------------------------------------------ */
 const STORE_KEY = "adt_trainer_state_v1";   // NIE umbenennen – siehe workbook.md („Speicherstände sind heilig")
-const SCHEMA_VERSION = 3;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
+const SCHEMA_VERSION = 4;                     // bei Datenmodell-Änderungen erhöhen UND Migration ergänzen
 
 // Spaced Repetition (Leitner): Box 0–5. Pause bis zur nächsten Wiederholung in Tagen.
 // Richtig -> eine Box höher (längere Pause); falsch -> zurück auf Box 0 (heute erneut).
@@ -96,6 +96,33 @@ const MIGRATIONS = {
   // es gibt nichts umzurechnen; sanitizeState() legt das leere Objekt an. Die Version wird
   // trotzdem erhöht, damit das Datenmodell und die Migrationskette lückenlos dokumentiert sind.
   3: (s) => s,
+  // v3 -> v4: Beobachtungsdaten je Frage (`first`, `lastAt`) für die künftige
+  // Bereitschafts-Schätzung (Konzept: workbook.md → „Prüfungsbereitschaft aus
+  // Beobachtungsdaten"). Rein additiv; der Erstversuch lässt sich für einen Teil
+  // des Altbestands eindeutig rekonstruieren:
+  //   seen == 1        -> der eine Versuch IST der erste
+  //   wrong == 0       -> alle richtig, also auch der erste
+  //   correct == 0     -> alle falsch, also auch der erste
+  //   sonst            -> Reihenfolge unbekannt, bleibt null (zählt später nicht mit)
+  // `lastAt` kann nicht rekonstruiert werden (nie gespeichert) und bleibt leer –
+  // die Schätzung behandelt fehlende Werte als „unbekannt", nicht als „heute".
+  4: (s) => {
+    const pq = (s && s.perQuestion && typeof s.perQuestion === "object") ? s.perQuestion : {};
+    for (const id of Object.keys(pq)) {
+      const p = pq[id] || {};
+      if (p.first === "correct" || p.first === "wrong") continue;   // schon gesetzt
+      const seen = Math.max(0, Math.floor(Number(p.seen) || 0));
+      const corr = Math.max(0, Math.floor(Number(p.correct) || 0));
+      const wrong = Math.max(0, Math.floor(Number(p.wrong) || 0));
+      let first = null;
+      if (seen === 1) first = (p.lastResult === "correct" || p.lastResult === "wrong") ? p.lastResult : null;
+      else if (seen > 1 && wrong === 0 && corr > 0) first = "correct";
+      else if (seen > 1 && corr === 0 && wrong > 0) first = "wrong";
+      p.first = first;
+      pq[id] = p;
+    }
+    return s;
+  },
 };
 function migrate(state) {
   let v = Number(state && state.schemaVersion) || 1;
@@ -169,6 +196,11 @@ function sanitizeState(raw) {
       due: typeof p.due === "string" ? p.due : null,
       // Bereits „sichere" Fragen gelten als schon gemeistert → kein nachträglicher Bonus.
       masteredOnce: (p.masteredOnce === true) || (clampInt(p.box, 0, SRS_INTERVALS_DAYS.length - 1) >= SRS_MASTER_BOX),
+      // Beobachtungsdaten für die Bereitschafts-Schätzung (Konzept in workbook.md):
+      // `first` = Ergebnis des ERSTEN Kontakts (generalisiert auf ungesehenen Stoff),
+      // `lastAt` = Datum der letzten Antwort (trennt echten Abruf vom Echo derselben Sitzung).
+      first: (p.first === "correct" || p.first === "wrong") ? p.first : null,
+      lastAt: /^\d{4}-\d{2}-\d{2}$/.test(String(p.lastAt || "")) ? p.lastAt : null,
     };
   }
   const rawBg = (src.badges && typeof src.badges === "object") ? src.badges : {};
@@ -1392,10 +1424,15 @@ function checkCurrent() {
   SESSION.correctFlags[i] = ok;
 
   // Fortschritt aktualisieren
-  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null, masteredOnce: false };
+  const p = S.perQuestion[q.id] || { seen: 0, correct: 0, wrong: 0, lastResult: null, box: 0, due: null, masteredOnce: false, first: null, lastAt: null };
   const boxBefore = Number(p.box) || 0;
   p.seen += 1;
   if (ok) { p.correct += 1; p.lastResult = "correct"; } else { p.wrong += 1; p.lastResult = "wrong"; }
+  // Beobachtungsdaten: der erste Kontakt wird genau einmal festgehalten und nie
+  // überschrieben; `lastAt` wandert mit. Beides nur erfasst – ausgewertet wird es
+  // erst in Stufe 2 (Konzept: workbook.md).
+  if (p.first !== "correct" && p.first !== "wrong") p.first = ok ? "correct" : "wrong";
+  p.lastAt = todayStr();
   srsUpdate(p, ok);                       // Leitner-Box + nächste Fälligkeit fortschreiben
   // Erstmeisterung: Frage erreicht zum ersten Mal Box 3+ („sicher") → einmaliger Bonus.
   const justMastered = ok && boxBefore < SRS_MASTER_BOX && p.box >= SRS_MASTER_BOX && !p.masteredOnce;
@@ -1548,7 +1585,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.40.0";
+const APP_VERSION = "0.41.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
