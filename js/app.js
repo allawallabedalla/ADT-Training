@@ -10,12 +10,18 @@
 function questionValid(q, ids) {
   if (!q || !q.id || ids.has(q.id)) { console.error("Frage-Fehler (ID fehlt/doppelt):", q && q.id); return false; }
   if (!TOPICS[q.topic]) { console.error("Frage-Fehler (unbekanntes Thema):", q.id, q.topic); return false; }
-  if (!["single", "multi", "numeric"].includes(q.type)) { console.error("Frage-Fehler (unbekannter Typ):", q.id, q.type); return false; }
+  if (!["single", "multi", "numeric", "code"].includes(q.type)) { console.error("Frage-Fehler (unbekannter Typ):", q.id, q.type); return false; }
   if (typeof q.question !== "string" || !q.question.trim()) { console.error("Frage-Fehler (leerer Fragetext):", q.id); return false; }
   if (q.type === "numeric") {
     // Rechen-/Anwendungsaufgabe: erwartete Zahl + optionale Toleranz statt Optionen.
     if (typeof q.answer !== "number" || !isFinite(q.answer)) { console.error("Frage-Fehler (numeric ohne gültige answer):", q.id); return false; }
     if (q.tolerance != null && (typeof q.tolerance !== "number" || !isFinite(q.tolerance) || q.tolerance < 0)) { console.error("Frage-Fehler (numeric tolerance ungültig):", q.id); return false; }
+  } else if (q.type === "code") {
+    // Kodier-Aufgabe: erwarteter Kode als Text (z. B. "C50.4", "8500/3") statt Optionen.
+    if (typeof q.answer !== "string" || !q.answer.trim()) { console.error("Frage-Fehler (code ohne answer):", q.id); return false; }
+    if (q.accept != null && (!Array.isArray(q.accept) || q.accept.some(a => typeof a !== "string" || !a.trim()))) {
+      console.error("Frage-Fehler (code accept ungültig):", q.id); return false;
+    }
   } else {
     if (!Array.isArray(q.options) || q.options.length < 2) { console.error("Frage-Fehler (Optionen):", q.id); return false; }
     if (!Array.isArray(q.correct) || q.correct.length < 1) { console.error("Frage-Fehler (keine richtige Antwort):", q.id); return false; }
@@ -1010,7 +1016,21 @@ function shuffle(arr) {
  * So bleiben Bewertung und „beantwortet?" an EINER Stelle – neue Typen (z. B. Text/
  * Code) lassen sich später ergänzen, ohne Quiz- und Prüfungs-Flow anzufassen.        */
 function respList(resp) { return resp == null ? [] : (Array.isArray(resp) ? resp : Array.from(resp)); }
-function isInputType(q) { return q.type === "numeric"; }         // freie Eingabe statt Optionen
+function isInputType(q) { return q.type === "numeric" || q.type === "code"; }   // freie Eingabe statt Optionen
+
+/* Kode-Vergleich. Geprüft wird das Wissen „welcher Kode", nicht die Tippgenauigkeit:
+ * Groß-/Kleinschreibung, Leerzeichen und die Trennzeichen (Punkt, Komma, Schrägstrich,
+ * Bindestrich) werden weggelassen. Damit gilt „c504" ebenso wie „C50.4" und „8500 3"
+ * wie „8500/3". Das ist bewusst großzügig – in der Prüfung tippt man in ein Feld, und
+ * ein fehlender Punkt ist kein fachlicher Fehler. Die saubere Schreibweise steht in der
+ * Rückmeldung. Reihenfolge und Ziffern müssen dagegen exakt stimmen. */
+function codeKey(v) {
+  return String(v == null ? "" : v).toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+function codeAccepted(q) {
+  const list = [q.answer].concat(Array.isArray(q.accept) ? q.accept : []);
+  return list.map(codeKey).filter(Boolean);
+}
 /* Zahl aus einer Nutzereingabe lesen. Wichtig:
    - Leeres Feld ist KEINE Antwort (Number("") wäre 0 und würde als Antwort „0" gewertet).
    - Deutsche Schreibweise: "1.234,5" → 1234.5, "1.000" → 1000. Ein reines
@@ -1027,6 +1047,7 @@ function parseNum(v) {
 function hasResponse(q, resp) {
   const a = respList(resp);
   if (q.type === "numeric") return a.length >= 1 && Number.isFinite(Number(a[0]));
+  if (q.type === "code") return a.length >= 1 && !!codeKey(a[0]);
   return a.length >= 1;
 }
 function gradeQuestion(q, resp) {
@@ -1035,6 +1056,10 @@ function gradeQuestion(q, resp) {
     if (!a.length) return false;
     const v = Number(a[0]);
     return isFinite(v) && Math.abs(v - q.answer) <= (Number(q.tolerance) || 0) + 1e-9;
+  }
+  if (q.type === "code") {
+    const k = codeKey(a[0]);
+    return !!k && codeAccepted(q).includes(k);
   }
   // single/multi: Alles-oder-nichts (Prüfungsregel) – exakt die richtige Menge.
   const correct = new Set(q.correct);
@@ -1045,6 +1070,10 @@ function gradeQuestion(q, resp) {
 }
 // Wie die richtige Lösung im Review/Feedback dargestellt wird.
 function correctAnswerText(q) {
+  if (q.type === "code") {
+    const alt = (Array.isArray(q.accept) ? q.accept : []).filter(Boolean);
+    return q.answer + (alt.length ? " (auch: " + alt.join(", ") + ")" : "");
+  }
   if (q.type === "numeric") {
     const tol = Number(q.tolerance) || 0;
     return fmtNum(q.answer) + (q.unit ? " " + q.unit : "") + (tol > 0 ? " (±" + fmtNum(tol) + ")" : "");
@@ -1455,6 +1484,18 @@ function setNumericResponse(raw) {
   }
 }
 
+// Freie Eingabe (code): Rohtext speichern – normalisiert wird erst beim Bewerten,
+// damit im Feld genau das stehen bleibt, was getippt wurde.
+function setCodeResponse(raw) {
+  if (SESSION.checked[SESSION.idx]) return;
+  const set = SESSION.picks[SESSION.idx];
+  set.clear();
+  const t = String(raw);
+  if (codeKey(t)) set.add(t);
+  const cb = document.getElementById("checkBtn");
+  if (cb) cb.disabled = !hasResponse(currentQ(), set);
+}
+
 function checkCurrent() {
   const i = SESSION.idx, q = currentQ();
   if (SESSION.checked[i]) return;
@@ -1634,7 +1675,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.42.0";
+const APP_VERSION = "0.43.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -2327,12 +2368,14 @@ function renderQuiz() {
   const diffTxt = ["", "leicht", "mittel", "schwer"][q.difficulty] || "mittel";
   const order = SESSION.optionOrders[i];
   const numeric = q.type === "numeric";
+  const isCode = q.type === "code";
+  const frei = numeric || isCode;                 // freie Eingabe statt Optionsliste
   const optRole = q.type === "single" ? "radio" : "checkbox";
   // Roving Tabindex: im Optionsfeld ist genau EIN Element im Tab-Stopp (WAI-ARIA-Muster).
   let activeIdx = order.find(oi => picks.has(oi));
   if (activeIdx === undefined) activeIdx = order.length ? order[0] : -1;
 
-  const opts = order.map(origIdx => {
+  const opts = frei ? "" : order.map(origIdx => {
     const isPicked = picks.has(origIdx);
     const isCorrect = q.correct.includes(origIdx);
     let cls = "opt type-" + q.type;
@@ -2360,6 +2403,14 @@ function renderQuiz() {
         value="${esc(val)}" placeholder="Zahl eingeben" aria-label="Antwort als Zahl eingeben">
       ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
     </div>`;
+  } else if (isCode) {
+    const val = picks.size ? String(Array.from(picks)[0]) : "";
+    const state = checked ? (SESSION.correctFlags[i] ? " correct" : " wrong") : "";
+    answerArea = `<div class="num-input code${state}">
+      <input type="text" inputmode="text" id="codeField" autocomplete="off" autocapitalize="characters"
+        autocorrect="off" spellcheck="false" ${checked ? "disabled" : ""}
+        value="${esc(val)}" placeholder="${esc(typeof q.placeholder === "string" && q.placeholder ? q.placeholder : "z. B. C50.4")}" aria-label="Kode eingeben">
+    </div>`;
   } else {
     const groupRole = q.type === "single" ? "radiogroup" : "group";
     answerArea = `<div class="options" role="${groupRole}" aria-label="Antwortmöglichkeiten">${opts}</div>`;
@@ -2368,17 +2419,19 @@ function renderQuiz() {
   let explain = "";
   if (checked) {
     const ok = SESSION.correctFlags[i];
-    const solved = numeric ? `<div class="solved">Richtige Antwort: <b>${esc(correctAnswerText(q))}</b></div>` : "";
+    const solved = frei ? `<div class="solved">Richtige Antwort: <b>${esc(correctAnswerText(q))}</b></div>` : "";
     explain = `<div class="explain ${ok ? "ok" : "no"}" id="explainBox" tabindex="-1" role="status">
       <b class="verdict">${ok ? "✅ Richtig" : "❌ Nicht ganz"}</b>${solved}${esc(q.explanation)}</div>`;
   }
 
   const typeChip = numeric
     ? '<span class="chip">Rechenaufgabe</span>'
-    : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>');
+    : (isCode ? '<span class="chip code">Kode eingeben</span>'
+    : (q.type === "multi" ? '<span class="chip multi">Mehrfachauswahl</span>' : '<span class="chip">Einfachauswahl</span>'));
   const hint = numeric
     ? '<p class="q-hint">Ergebnis als Zahl eingeben (Komma oder Punkt).</p><p class="q-hint err" id="numHint" role="alert" style="display:none"></p>'
-    : (q.type === "multi" ? '<p class="q-hint">Es können mehrere Antworten richtig sein. Nur vollständig richtig zählt (Prüfungsregel).</p>' : '');
+    : (isCode ? '<p class="q-hint">Kode eintragen. Punkte, Leerzeichen und Groß-/Kleinschreibung sind egal – die Ziffern und ihre Reihenfolge zählen.</p>'
+    : (q.type === "multi" ? '<p class="q-hint">Es können mehrere Antworten richtig sein. Nur vollständig richtig zählt (Prüfungsregel).</p>' : ''));
 
   app.innerHTML = `
     <div class="quiz-top">
@@ -2403,7 +2456,7 @@ function renderQuiz() {
   wireImageZoom(app);
   wireReportButtons(app);
 
-  if (!numeric && !checked) {
+  if (!frei && !checked) {
     const optsEl = app.querySelector(".options");
     const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-oi]")) : [];
     buttons.forEach(el => el.addEventListener("click", () => { applyPick(parseInt(el.dataset.oi, 10), buttons); setRovingActive(buttons, el); }));
@@ -2415,6 +2468,14 @@ function renderQuiz() {
       nf.addEventListener("input", () => setNumericResponse(nf.value));
       nf.addEventListener("keydown", (e) => { if (e.key === "Enter" && hasResponse(q, picks)) checkCurrent(); });
       nf.focus();
+    }
+  }
+  if (isCode && !checked) {
+    const cf = document.getElementById("codeField");
+    if (cf) {
+      cf.addEventListener("input", () => setCodeResponse(cf.value));
+      cf.addEventListener("keydown", (e) => { if (e.key === "Enter" && hasResponse(q, picks)) checkCurrent(); });
+      cf.focus();
     }
   }
   // Nach dem Prüfen den Ergebnis-Block fokussieren → Screenreader liest das Verdikt vor.
@@ -2636,7 +2697,7 @@ function startExamTimer() {
 // eine Erleichterung ein, die es in der Prüfung nicht gibt. Deshalb verhalten sich single-
 // und multi-Fragen hier gleich: Mehrfachauswahl. Der Katalog bleibt unberührt, die Übung
 // (Lernmodus) zeigt weiterhin den echten Typ.
-function examPickType(q) { return q.type === "numeric" ? "numeric" : "multi"; }
+function examPickType(q) { return (q.type === "numeric" || q.type === "code") ? q.type : "multi"; }
 
 // In-place-Auswahl in der Prüfung (kein Full-Re-Render → Fokus/VoiceOver stabil,
 // kein Flackern während der Simulation). Aktualisiert Optionen + „beantwortet"-Zähler.
@@ -2656,6 +2717,14 @@ function examApplyPick(origIdx, buttons) {
   saveExam();
   const ov = document.getElementById("examOverview");
   if (ov) { const answered = EXAM.picks.filter(p => p.length).length; ov.textContent = `Übersicht · ${answered}/${EXAM.qids.length} beantwortet`; }
+}
+// Kode-Antwort in der Prüfung: speichern OHNE Re-Render (Eingabefeld behält den Fokus).
+function examSetCode(raw) {
+  const t = String(raw);
+  EXAM.picks[EXAM.idx] = codeKey(t) ? [t] : [];
+  saveExam();
+  const ov = document.getElementById("examOverview");
+  if (ov) { const a = EXAM.picks.filter(p => p.length).length; ov.textContent = `Übersicht · ${a}/${EXAM.qids.length} beantwortet`; }
 }
 // Numerische Prüfungsantwort: speichern OHNE Re-Render (Eingabefeld behält den Fokus).
 function examSetNumeric(raw) {
@@ -2689,10 +2758,12 @@ function renderExam() {
 
   const ptype = examPickType(q);
   const numeric = ptype === "numeric";
+  const isCode = ptype === "code";
+  const frei = numeric || isCode;
   const optRole = "checkbox";
   let activeIdx = order.find(oi => picks.has(oi));
   if (activeIdx === undefined) activeIdx = order.length ? order[0] : -1;
-  const opts = order.map(origIdx => {
+  const opts = frei ? "" : order.map(origIdx => {
     const isPicked = picks.has(origIdx);
     const cls = "opt type-" + ptype + (isPicked ? " selected" : "");
     const mark = isPicked ? "✓" : "";
@@ -2708,13 +2779,21 @@ function renderExam() {
         placeholder="Zahl eingeben" aria-label="Antwort als Zahl eingeben">
       ${q.unit ? `<span class="num-unit">${esc(q.unit)}</span>` : ""}
     </div>`;
+  } else if (isCode) {
+    const val = EXAM.picks[i].length ? String(EXAM.picks[i][0]) : "";
+    answerArea = `<div class="num-input code">
+      <input type="text" inputmode="text" id="examCode" autocomplete="off" autocapitalize="characters"
+        autocorrect="off" spellcheck="false" value="${esc(val)}"
+        placeholder="${esc(typeof q.placeholder === "string" && q.placeholder ? q.placeholder : "z. B. C50.4")}" aria-label="Kode eingeben">
+    </div>`;
   } else {
     answerArea = `<div class="options" role="group" aria-label="Antwortmöglichkeiten">${opts}</div>`;
   }
   const typeChip = numeric ? '<span class="chip">Rechenaufgabe</span>'
-    : '<span class="chip multi">Mehrfachauswahl</span>';
+    : (isCode ? '<span class="chip code">Kode eingeben</span>' : '<span class="chip multi">Mehrfachauswahl</span>');
   const hint = numeric ? '<p class="q-hint">Ergebnis als Zahl eingeben. Auswertung erst nach Abgabe.</p><p class="q-hint err" id="examNumHint" role="alert" style="display:none"></p>'
-    : '<p class="q-hint">Es können eine oder mehrere Antworten richtig sein. Nur vollständig richtig zählt. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>';
+    : (isCode ? '<p class="q-hint">Kode eintragen. Punkte und Groß-/Kleinschreibung sind egal. Auswertung erst nach Abgabe.</p>'
+    : '<p class="q-hint">Es können eine oder mehrere Antworten richtig sein. Nur vollständig richtig zählt. Kein Zwischen-Feedback – Auswertung erst nach Abgabe.</p>');
 
   app.innerHTML = `
     <div class="exam-bar">
@@ -2733,14 +2812,17 @@ function renderExam() {
     <div class="spacer-lg"></div>
   `;
   wireImageZoom(app);
-  if (!numeric) {
+  if (!frei) {
     const optsEl = app.querySelector(".options");
     const buttons = optsEl ? Array.from(optsEl.querySelectorAll("[data-eoi]")) : [];
     buttons.forEach(el => el.addEventListener("click", () => { examApplyPick(parseInt(el.dataset.eoi, 10), buttons); setRovingActive(buttons, el); }));
     if (optsEl) optsEl.addEventListener("keydown", (e) => onOptionKeydown(e, buttons, examPickType(q), (bel, btns) => examApplyPick(parseInt(bel.dataset.eoi, 10), btns)));
-  } else {
+  } else if (numeric) {
     const nf = document.getElementById("examNum");
     if (nf) nf.addEventListener("input", () => examSetNumeric(nf.value));
+  } else {
+    const cf = document.getElementById("examCode");
+    if (cf) cf.addEventListener("input", () => examSetCode(cf.value));
   }
   document.getElementById("examFlag").addEventListener("click", examToggleFlag);
   document.getElementById("examOverview").addEventListener("click", showExamOverview);
@@ -2847,7 +2929,9 @@ function renderExamResult() {
   const review = res.results.map((r, k) => {
     const q = r.q;
     const your = r.picks.length
-      ? (q.type === "numeric" ? esc(fmtNum(r.picks[0]) + (q.unit ? " " + q.unit : "")) : r.picks.map(i => esc(q.options[i])).join(", "))
+      ? (q.type === "numeric" ? esc(fmtNum(r.picks[0]) + (q.unit ? " " + q.unit : ""))
+         : q.type === "code" ? esc(String(r.picks[0]))
+         : r.picks.map(i => esc(q.options[i])).join(", "))
       : "— (nicht beantwortet)";
     const corr = esc(correctAnswerText(q));
     return `<div class="review-item ${r.ok ? "ok" : "no"}">
@@ -3258,7 +3342,7 @@ function handleQuizKey(e) {
     return;
   }
   if (SESSION.checked[i]) { if (e.key === "Enter") { const nb = document.getElementById("nextBtn"); if (nb) { e.preventDefault(); nb.click(); } } return; }
-  if (currentQ().type === "numeric") return;   // Zahl-Eingabefeld hat eigenen Enter-Handler
+  if (isInputType(currentQ())) return;         // Eingabefeld hat einen eigenen Enter-Handler
   if (/^[1-9]$/.test(e.key)) {
     const btns = optionButtons(), n = parseInt(e.key, 10) - 1;
     if (btns[n]) { e.preventDefault(); btns[n].click(); }
@@ -3267,7 +3351,7 @@ function handleQuizKey(e) {
   }
 }
 function handleExamKey(e) {
-  if (examQuestions()[EXAM.idx].type === "numeric") return;
+  if (isInputType(examQuestions()[EXAM.idx])) return;
   if (/^[1-9]$/.test(e.key)) {
     const btns = optionButtons(), n = parseInt(e.key, 10) - 1;
     if (btns[n]) { e.preventDefault(); btns[n].click(); }

@@ -245,6 +245,7 @@ h1, h2, h3 { line-height: 1.2; }
 .q-meta { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .chip { font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: var(--bg-elev-2); color: var(--text-dim); }
 .chip.multi { background: color-mix(in srgb, var(--primary) 16%, transparent); color: var(--primary); }
+.chip.code { background: color-mix(in srgb, #7c5cbf 16%, transparent); color: #7c5cbf; }
 .q-text { font-size: 21px; font-weight: 700; letter-spacing: -.3px; margin: 0 0 4px; line-height: 1.3; }
 .q-hint { font-size: 13px; color: var(--text-faint); margin: 8px 0 0; }
 
@@ -296,6 +297,13 @@ h1, h2, h3 { line-height: 1.2; }
 .num-input.correct input { border-color: var(--success); background: var(--success-bg); }
 .num-input.wrong input { border-color: var(--danger); background: var(--danger-bg); }
 .num-input .num-unit { font-size: 16px; font-weight: 600; color: var(--text-faint); flex-shrink: 0; }
+/* Kode-Eingabe: dieselbe Feldform, aber dicktengleich – bei „C50.4" oder „8500/3" hilft
+   es beim Prüfen, wenn Ziffern und Trennzeichen in gleich breiten Spalten stehen. */
+.num-input.code input {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.num-input.code input::placeholder { letter-spacing: .5px; text-transform: none; font-family: inherit; }
 .q-hint.err { color: var(--danger); font-weight: 600; }
 
 /* ---------- Textfeld (Themensuche u. a.) ---------- */

@@ -11,6 +11,44 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.43.0] — 2026-08-19  ·  Aufgabentyp „Code eingeben"
+
+Die Prüfungsmail nennt drei Aufgabenformate: Multiple Choice, Rechenaufgaben und
+**Eingabe von Kodes**. Das dritte konnte die App bisher gar nicht — dabei ist es die
+eigentliche Prüfungskompetenz: Fall lesen, in ICD-10-GM / ICD-O-3 / OPS nachschlagen,
+Kode eintragen. Unter vier Vorschlägen den richtigen wiederzuerkennen ist eine deutlich
+leichtere Aufgabe.
+
+### Neu
+- **Fragetyp `code`**: freies Eingabefeld statt Antwortliste, in Übung *und*
+  Prüfungssimulation. Dicktengleiche Schrift, damit sich `C50.4` und `8500/3` beim
+  Kontrollieren gut lesen lassen; Chip „Kode eingeben" benennt den Aufgabentyp.
+- **Nachsichtiger Vergleich**: Groß-/Kleinschreibung, Leerzeichen und Trennzeichen
+  (Punkt, Komma, Schrägstrich, Bindestrich) werden ignoriert — `c504` gilt wie `C50.4`,
+  `8500 3` wie `8500/3`. Geprüft wird das Wissen, welcher Kode stimmt, nicht die
+  Tippgenauigkeit. Ziffern und ihre Reihenfolge müssen exakt passen. Die saubere
+  Schreibweise steht in der Rückmeldung.
+- **`accept`** je Frage für echte fachliche Alternativen (nicht für andere Schreibweisen
+  desselben Kodes — die gelten ohnehin). Der Katalog-Prüfer meldet solche Einträge jetzt
+  als Autorenfehler.
+- Fünf Kodier-Aufgaben im öffentlichen Beispiel-Katalog (ICD-10-GM-Lokalisation,
+  ICD-O-3-Topografie/Morphologie, Dignität `/2` vs. `/3`, Metastasen-Kode).
+
+### Technisch
+- Der Fragetyp-Seam aus v0.11.0 hat getragen: `isInputType`, `hasResponse`,
+  `gradeQuestion`, `correctAnswerText` und `examPickType` an einer Stelle erweitert,
+  Quiz- und Prüfungs-Flow blieben unangetastet.
+- Fortschritt, Spaced Repetition und die Prognose-Beobachtung (`cold`) greifen ohne
+  Sonderfall — eine Kodier-Aufgabe zählt wie jede andere Frage.
+- 29 neue Tests. Die vorhandenen Durchlauf-Schleifen in den Tests kannten nur
+  „Option oder Zahlfeld" und sind am neuen Typ gescheitert — teils nur sporadisch, je
+  nachdem, was die Zufallsziehung als erste Frage lieferte. Sie antworten jetzt über eine
+  gemeinsame Hilfsfunktion, statt die Typenliste zu wiederholen. Ebenso stand an acht
+  Stellen `type !== 'numeric'` für „hat Antwortoptionen" — seit `code` stimmte das nicht
+  mehr und ist durch die tatsächliche Bedingung ersetzt.
+
+---
+
 ## [0.42.0] — 2026-08-19  ·  Prüfungsprognose statt Bereitschafts-Ampel (Stufe 2)
 
 Die Startseite zeigt jetzt eine **Bestehenswahrscheinlichkeit** statt einer Ampel, die

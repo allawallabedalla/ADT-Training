@@ -23,12 +23,20 @@ for (const q of QUESTIONS || []) {
   if (ids.has(q.id)) fail('Doppelte id: ' + q.id);
   ids.add(q.id);
   if (!TOPICS[q.topic]) fail(q.id + ': unbekanntes Thema ' + q.topic);
-  if (!['single', 'multi', 'numeric'].includes(q.type)) fail(q.id + ': ungültiger type ' + q.type);
+  if (!['single', 'multi', 'numeric', 'code'].includes(q.type)) fail(q.id + ': ungültiger type ' + q.type);
   if (![1, 2, 3].includes(q.difficulty)) fail(q.id + ': ungültige difficulty ' + q.difficulty);
   if (q.type === 'numeric') {
     if (typeof q.answer !== 'number' || !isFinite(q.answer)) fail(q.id + ': numeric ohne gültige answer');
     if (q.tolerance != null && (typeof q.tolerance !== 'number' || !isFinite(q.tolerance) || q.tolerance < 0)) fail(q.id + ': numeric tolerance ungültig');
     if ('options' in q || 'correct' in q) fail(q.id + ': numeric darf keine options/correct haben');
+  } else if (q.type === 'code') {
+    if (typeof q.answer !== 'string' || !q.answer.trim()) fail(q.id + ': code ohne answer');
+    if (q.accept != null && (!Array.isArray(q.accept) || q.accept.some(a => typeof a !== 'string' || !a.trim()))) fail(q.id + ': code accept ungültig');
+    if ('options' in q || 'correct' in q) fail(q.id + ': code darf keine options/correct haben');
+    // Ein Kode, der sich nur durch Trennzeichen von der Musterlösung unterscheidet, ist
+    // keine Alternative – die App wertet ihn ohnehin als richtig. Meist ein Autorenfehler.
+    const key = v => String(v).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    for (const a of (q.accept || [])) if (key(a) === key(q.answer)) fail(q.id + ': accept "' + a + '" ist identisch zur answer (nur andere Trennzeichen)');
   } else {
     if (!Array.isArray(q.options) || q.options.length < 2) fail(q.id + ': <2 Optionen');
     if (!Array.isArray(q.correct) || q.correct.length < 1) fail(q.id + ': keine richtige Antwort');

@@ -9,6 +9,25 @@ const require = createRequire(import.meta.url);
 const { chromium } = require('/opt/node22/lib/node_modules/playwright/index.js');
 
 const BASE = process.env.BASE || 'http://localhost:8399/index.html';
+
+// Eine Frage irgendwie beantworten – unabhaengig vom Aufgabentyp. Ohne das muss jede
+// Schleife wissen, welche Typen es gibt; genau daran sind die Tests beim Aufgabentyp
+// „Code eingeben" zerbrochen.
+async function antworteIrgendwie(pg) {
+  if (await pg.$('#numField')) { await pg.fill('#numField', '5'); return 'numeric'; }
+  if (await pg.$('#codeField')) { await pg.fill('#codeField', 'X99.9'); return 'code'; }
+  const opt = await pg.$('.opt');
+  if (opt) { await opt.click(); return 'option'; }
+  return null;
+}
+// Dasselbe fuer die Pruefungsansicht (andere Feld-IDs, kein Pruef-Knopf).
+async function antworteImExamen(pg) {
+  if (await pg.$('#examNum')) { await pg.fill('#examNum', '7'); return 'numeric'; }
+  if (await pg.$('#examCode')) { await pg.fill('#examCode', 'X99.9'); return 'code'; }
+  const opt = await pg.$('.opt');
+  if (opt) { await opt.click(); return 'option'; }
+  return null;
+}
 const TMP = process.env.TMPDIR || '/tmp';
 const errors = [];
 const checks = [];
@@ -54,7 +73,7 @@ async function page(opts = {}) {
   await p.click('[data-act="mixed"]'); await p.waitForSelector('.q-card');
   for (let i = 0; i < 3; i++) {
     await p.waitForSelector('.q-card');
-    if (await p.$('#numField')) await p.fill('#numField', '5'); else await p.click('.opt');
+    await antworteIrgendwie(p);
     await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn');
   }
   // Quiz verlassen: jetzt ein iOS-Modal statt confirm() -> „Beenden" klicken
@@ -103,8 +122,9 @@ async function page(opts = {}) {
   let missedSeen = false, allHaveNote = true;
   for (let i = 0; i < 8; i++) {
     await p.waitForSelector('.q-card');
-    if (await p.$('#numField')) { await p.fill('#numField', '5'); await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn'); continue; }
-    await p.click('.opt'); await p.click('#checkBtn'); await p.waitForSelector('.explain');
+    const typ = await antworteIrgendwie(p);
+    if (typ !== 'option') { await p.click('#checkBtn'); await p.waitForSelector('.explain'); await p.click('#nextBtn'); continue; }
+    await p.click('#checkBtn'); await p.waitForSelector('.explain');
     const missed = await p.$$eval('.opt.missed', (els) => els.length);
     const notes = await p.$$eval('.opt.missed .opt-note', (els) => els.length);
     if (missed > 0) { missedSeen = true; if (notes !== missed) allHaveNote = false; }
@@ -121,9 +141,7 @@ async function page(opts = {}) {
   await p.waitForSelector('.exam-bar');
   for (let i = 0; i < 40; i++) {
     await p.waitForSelector('.q-card');
-    // Options- ODER Zahl-Frage beantworten (Prüfung kann jetzt Rechenaufgaben enthalten)
-    if (await p.$('#examNum')) await p.fill('#examNum', '7');
-    else await p.click('.opt');
+    await antworteImExamen(p);
     const nextDisabled = await p.getAttribute('#examNext', 'disabled');
     if (nextDisabled !== null) break; // letzte Frage erreicht
     await p.click('#examNext');
@@ -148,7 +166,7 @@ async function page(opts = {}) {
   await p.click('[data-act="mixed"]');
   await p.waitForSelector('.q-card');
   const heute = await p.evaluate(() => todayStr());
-  await p.click('.opt'); await p.click('#checkBtn');
+  await antworteIrgendwie(p); await p.click('#checkBtn');
   const rec = await p.evaluate(() => {
     const id = SESSION.questions[SESSION.idx].id;
     const q = S.perQuestion[id];
@@ -210,7 +228,7 @@ async function page(opts = {}) {
   await p.click('[data-act="mixed"]');
   await p.waitForSelector('.q-card');
   const heute = await p.evaluate(() => todayStr());
-  await p.click('.opt'); await p.click('#checkBtn');
+  await antworteIrgendwie(p); await p.click('#checkBtn');
   const r1 = await p.evaluate(() => {
     const id = SESSION.questions[SESSION.idx].id;
     const q = S.perQuestion[id];
@@ -313,6 +331,88 @@ async function page(opts = {}) {
   chk(!/100/.test(txt), 'Prognose: Anzeige nennt nie 100 % (' + txt + ')');
 }
 
+// 6h) Aufgabentyp „Code eingeben": Bewertung, Eingabe, Prüfungsmodus
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+
+  // --- Bewertung (reine Logik) ---
+  const g = (q, v) => p.evaluate(([q, v]) => gradeQuestion(q, [v]), [q, v]);
+  const Q = { type: 'code', answer: 'C50.4' };
+  chk(await g(Q, 'C50.4'), 'Code: exakte Schreibweise richtig');
+  chk(await g(Q, 'c50.4'), 'Code: Kleinschreibung richtig');
+  chk(await g(Q, ' C50.4 '), 'Code: Leerzeichen aussen egal');
+  chk(await g(Q, 'C504'), 'Code: fehlender Punkt zaehlt als richtig');
+  chk(await g(Q, 'C50,4'), 'Code: Komma statt Punkt richtig');
+  chk(!(await g(Q, 'C50.5')), 'Code: falsche Endziffer ist falsch');
+  // Dokumentierte Grosszuegigkeit: Trennzeichen werden ignoriert, "C5.04" ist dieselbe
+  // Ziffernfolge wie "C50.4". Bewusst in Kauf genommen – kein realer ICD-Kode kollidiert.
+  chk(await g(Q, 'C5.04'), 'Code: Trennzeichen werden vollstaendig ignoriert');
+  chk(!(await g(Q, '')), 'Code: leere Eingabe ist keine Antwort');
+  chk(!(await g(Q, '   ')), 'Code: nur Leerzeichen ist keine Antwort');
+  chk(!(await g(Q, '.-/')), 'Code: nur Trennzeichen ist keine Antwort');
+
+  const M = { type: 'code', answer: '8500/3' };
+  chk(await g(M, '8500/3'), 'Code: Morphologie mit Schraegstrich');
+  chk(await g(M, '8500 3'), 'Code: Morphologie mit Leerzeichen');
+  chk(!(await g(M, '8500/2')), 'Code: falsche Dignitaet ist falsch');
+  chk(!(await g(M, '3/8500')), 'Code: vertauschte Reihenfolge ist falsch');
+
+  const A = { type: 'code', answer: 'C18.7', accept: ['C19'] };
+  chk(await g(A, 'C19'), 'Code: accept-Alternative gilt');
+  chk(await g(A, 'C18.7'), 'Code: Hauptantwort gilt weiterhin');
+  chk(!(await g(A, 'C20')), 'Code: nicht gelistete Alternative ist falsch');
+
+  const hr = await p.evaluate(() => [hasResponse({ type: 'code', answer: 'X' }, ['C50']),
+                                     hasResponse({ type: 'code', answer: 'X' }, ['  ']),
+                                     hasResponse({ type: 'code', answer: 'X' }, [])]);
+  chk(hr[0] === true && hr[1] === false && hr[2] === false, 'Code: hasResponse erkennt leere Eingabe');
+
+  const txt = await p.evaluate(() => correctAnswerText({ type: 'code', answer: 'C50.4', accept: ['C50.9'] }));
+  chk(/C50\.4/.test(txt) && /C50\.9/.test(txt), 'Code: Loesungstext nennt Antwort und Alternativen');
+
+  // --- Eingabe im Uebungsmodus (echte Frage aus dem Katalog) ---
+  const gestartet = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type === 'code');
+    if (!q) return false;
+    SESSION = { mode: 'practice', topic: null, questions: [q], optionOrders: [[]], idx: 0,
+      picks: [new Set()], checked: [false], correctFlags: [null] };
+    go('quiz');
+    return true;
+  });
+  chk(gestartet, 'Code: Uebungsmodus mit Kode-Frage gestartet');
+  await p.waitForSelector('#codeField');
+  chk((await p.$('.options')) === null, 'Code: keine Antwortoptionen sichtbar');
+  const chipTxt = await p.textContent('.chip.code');
+  chk(/Kode/.test(chipTxt || ''), 'Code: Aufgabentyp wird als Chip benannt');
+  chk(await p.isDisabled('#checkBtn'), 'Code: Pruefen ist ohne Eingabe gesperrt');
+
+  await p.fill('#codeField', '  ');
+  chk(await p.isDisabled('#checkBtn'), 'Code: reine Leerzeichen schalten Pruefen nicht frei');
+
+  const loesung = await p.evaluate(() => SESSION.questions[0].answer.toLowerCase());
+  await p.fill('#codeField', loesung);
+  chk(!(await p.isDisabled('#checkBtn')), 'Code: Eingabe schaltet Pruefen frei');
+  await p.click('#checkBtn');
+  await p.waitForSelector('#explainBox');
+  const verdikt = await p.textContent('.verdict');
+  chk(/Richtig/.test(verdikt), 'Code: kleingeschriebene Loesung wird als richtig gewertet');
+  chk(/Richtige Antwort/.test(await p.textContent('#explainBox')), 'Code: Musterloesung wird gezeigt');
+  const gebucht = await p.evaluate(() => {
+    const q = S.perQuestion[SESSION.questions[0].id];
+    return { seen: q.seen, correct: q.correct, cold: q.cold };
+  });
+  chk(gebucht.seen === 1 && gebucht.correct === 1 && gebucht.cold === 'correct',
+    'Code: Fortschritt und Beobachtung werden gebucht wie bei jedem anderen Typ');
+
+  // --- Pruefungsmodus ---
+  const imExamen = await p.evaluate(() => {
+    const q = QUESTIONS.find(x => x.type === 'code');
+    return examPickType(q);
+  });
+  chk(imExamen === 'code', 'Code: Pruefungsmodus kennt den Typ (kein Rueckfall auf multi)');
+}
+
 // 7b) Prüfungs-Blueprint: Ziehung folgt der echten Gewichtung 40/50/10
 // (vorher zog die Simulation faktisch 1 Frage je Thema und untergewichtete
 // damit Codierung – den größten Block der echten Prüfung).
@@ -365,7 +465,7 @@ async function page(opts = {}) {
   const p = await page();
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.click('[data-act="exam"]'); await p.waitForSelector('.exam-bar');
-  if (await p.$('#examNum')) await p.fill('#examNum', '7'); else await p.click('.opt');
+  await antworteImExamen(p);
   await p.click('#examNext'); await p.waitForTimeout(100);
   await p.reload({ waitUntil: 'networkidle' });                 // mitten in der Prüfung neu laden
   const saved = await p.evaluate(() => localStorage.getItem('adt_exam_session_v1'));
@@ -406,9 +506,7 @@ async function page(opts = {}) {
   const chips = [];
   for (let i = 0; i < 12 && !chips.some(c => /Einfachauswahl/.test(c)); i++) {
     chips.push((await q.textContent('.q-meta')).trim());
-    const num = await q.$('#numField');
-    if (num) await num.fill('1');
-    else { const opt = await q.$('.opt'); if (opt) await opt.click(); }
+    await antworteIrgendwie(q);
     const weiter = await q.$('#checkBtn'); if (weiter) await weiter.click();
     const next = await q.$('#nextBtn'); if (!next) break;
     await next.click();
@@ -452,7 +550,7 @@ async function page(opts = {}) {
   await p.goto(BASE, { waitUntil: 'networkidle' });
   // Deterministisch eine Options-Frage (nicht numeric) korrekt vorbelegen
   const qid = await p.evaluate(() => {
-    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length);
     SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set(q.correct)], checked: [false], correctFlags: [null] };
     go('quiz');
     return q.id;
@@ -598,7 +696,7 @@ async function page(opts = {}) {
   chk(/0 \/ 10 Fragen/.test(start), 'Tagesziel: Startzustand 0/10 auf der Startseite');
   // eine Frage beantworten -> Tageszähler steigt
   await p.evaluate(() => {
-    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length);
     SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set(q.correct)], checked: [false], correctFlags: [null] };
     go('quiz');
   });
@@ -714,7 +812,7 @@ async function page(opts = {}) {
 
   // Deterministische Options-Frage rendern und per Zahl/Enter bedienen
   await p.evaluate(() => {
-    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length);
     SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
     go('quiz');
   });
@@ -735,7 +833,7 @@ async function page(opts = {}) {
   await p.goto(BASE, { waitUntil: 'networkidle' });
   await p.waitForSelector('.level-card');
   const r = await p.evaluate(() => {
-    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length);
     S.perQuestion[q.id] = { seen: 2, correct: 2, wrong: 0, lastResult: 'correct', box: 2, due: todayStr(), masteredOnce: false };
     const xpBefore = S.xp;
     SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set(q.correct)], checked: [false], correctFlags: [null] };
@@ -797,7 +895,7 @@ async function page(opts = {}) {
   chk(await p.evaluate(() => document.documentElement.getAttribute('data-fontsize')) === 'large', 'Schrift: „Groß" setzt data-fontsize=large');
   await p.evaluate(() => setFontSize('normal'));
   // Frische Frage bekommt die Einblende-Klasse
-  await p.evaluate(() => { const q = QUESTIONS.find(x => x.type !== 'numeric'); SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] }; go('quiz'); });
+  await p.evaluate(() => { const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length); SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] }; go('quiz'); });
   await p.waitForSelector('.q-card.q-anim');
   chk(true, 'Animation: neue Frage wird sanft eingeblendet (q-anim)');
 }
@@ -843,7 +941,7 @@ async function page(opts = {}) {
   await p.goto(BASE, { waitUntil: 'networkidle' });
   // Deterministisch eine Options-Frage als Ein-Fragen-Session
   const qid = await p.evaluate(() => {
-    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length);
     SESSION = { mode: 'mixed', topic: null, questions: [q], optionOrders: [q.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
     go('quiz');
     return q.id;
@@ -962,7 +1060,7 @@ async function page(opts = {}) {
   const p = await page();
   await p.goto(BASE, { waitUntil: 'networkidle' });
   const qid = await p.evaluate(() => {
-    const q = QUESTIONS.find(x => x.type !== 'numeric');
+    const q = QUESTIONS.find(x => Array.isArray(x.options) && x.options.length);
     setReported(q.id, true, 'Antwort B ist auch richtig');
     go('reports');
     return q.id;
@@ -1019,7 +1117,7 @@ async function page(opts = {}) {
     await q2.goto(BASE, { waitUntil: 'networkidle' });
     const qid3 = await q2.evaluate(() => {
       localStorage.setItem('adt_content_code', 'test-zugangscode-lang');
-      const x = QUESTIONS.find(y => y.type !== 'numeric');
+      const x = QUESTIONS.find(y => Array.isArray(y.options) && y.options.length);
       SESSION = { mode: 'mixed', topic: null, questions: [x], optionOrders: [x.options.map((_, i) => i)], idx: 0, picks: [new Set()], checked: [false], correctFlags: [null] };
       go('quiz');
       return x.id;
