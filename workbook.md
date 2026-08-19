@@ -183,12 +183,87 @@ Leitplanken **kostenlos · nur wenige Personen · Robustheit & Usability wichtig
 
 _Vollständige Einzelbefunde (101) mit Fundstelle: `docs/experten-workshop-2026-07-13.md`._
 
+### 📬 Aus der ADT-Prüfungsmail (2026-08-18) — erste autoritative Ablaufbeschreibung
+
+Die Einladungsmail der ADT-Geschäftsstelle nennt erstmals **Gewichtung, Aufgabenformate und
+Ablauf** der echten Prüfung. Abgleich mit App + Katalog: drei Bestätigungen, drei echte Lücken.
+
+**Die Eckdaten:** 15.09.2026, 13:00–16:15 Uhr, Berlin, notarielle Aufsicht ·
+**Gewichtung: Allgemein/Klinik 40 % · Codierung 50 % · Statistik 10 %** ·
+Formate: MC-Fragen, Rechenaufgaben, **Eingabe von Codes** ·
+Ablauf: **Teil I 120 Min. mit TNM-Buch**, 15 Min. Pause, **Teil II 60 Min. ohne** ·
+Taschenrechner wird gestellt, ICD-10/ICD-O-3/OPS liegen als **durchsuchbare PDFs** im Portal.
+
+**✅ Bestätigt (kein Handlungsbedarf):**
+- **Bestehensgrenze 50 %** — die PO im Repo sagt wörtlich „mindestens 50 % der möglichen
+  Punkte". Unsere hartcodierte Grenze ist korrekt; der offene Punkt aus dem Experten-Workshop
+  („nicht gegen die reale PO belegt") ist damit **erledigt**.
+- **Relevanz-Runde E war richtig.** Dass ICD-10/ICD-O-3/OPS in der Prüfung als durchsuchbare
+  PDFs vorliegen (die Mail nennt sogar STRG+F), belegt nachträglich die Entscheidung, 264 reine
+  Kode-Abfragen zu streichen — genau das schlägt man in der Prüfung nach.
+- **180 Minuten, MC + Rechenaufgaben, Alles-oder-nichts** — deckt sich mit PO, Docs und Katalog
+  (3.335 multi · 1.476 single · 732 numeric).
+
+**⬜ P1 — Prüfungssimulation: Blueprint auf 40/50/10.**
+`buildExamQuestions()` vergibt faktisch **eine Frage je Thema** (111 Themen → daraus 30 zufällig),
+gewichtet also nach *Themenzahl* statt nach Prüfungsrelevanz. Ergebnis: **~53 % Klinik ·
+~41 % Codierung · ~6 % Statistik** statt 40/50/10 — in einer 30er-Simulation rund
+**12 Codierungsfragen statt 15**. Codierung ist die Hälfte der Prüfung und der am schwächsten
+getestete Block. Nötig: Themen → Prüfungsblock zuordnen (Tabelle, ~111 Einträge; TNM/Staging/
+Grading gehören zu Codierung, auch wo der Themenschlüssel das nicht hergibt) und die Ziehung
+blockweise quotieren (12/15/3), innerhalb des Blocks über Themen streuen.
+**Blockiert:** die Aussagekraft von „Prüfungsbereitschaft" (s. u.).
+
+**⬜ P1 — Aufgabentyp „Code eingeben" fehlt vollständig.**
+Die Mail nennt ihn als drittes Format neben MC und Rechenaufgabe. Die App kennt nur
+`single`/`multi`/`numeric` — eine Eingabe wie `C50.4` oder `8500/3` ist nirgends übbar.
+Das ist **die eigentliche Prüfungskompetenz**: mit den PDFs nachschlagen und den richtigen Kode
+eintragen. Deckt sich mit dem 🔴-hoch-Fund des Experten-Workshops („Fallvignette → Kodierung
+wird nicht geübt") und mit dem bereits offenen Punkt „Freitext/Code-Eingabe" unter *Inhalt*.
+Realistisch in Stufen: (a) Aufgabentyp `code` mit Normalisierung/Toleranz (Punkt vs. Komma,
+Groß-/Kleinschreibung), (b) 20–30 Fallvignetten als Startbestand, (c) Ausbau.
+
+**⬜ P2 — Simulation als Zweiteiler.**
+Real: 120 Min. (mit TNM-Buch) + 15 Min. Pause + 60 Min. (ohne). App: 45 Min. am Stück
+(30 × 90 Sek.), kein Teilwechsel. Für die Formatgewöhnung reicht eine „Light"-Fassung:
+zwei Abschnitte mit Pausen-Hinweis und Banner „TNM-Buch erlaubt / nicht erlaubt", echte
+Länge optional zuschaltbar. Der Ausdauer-Aspekt (120 Min. am Stück) wird bisher von keinem
+Feature geübt.
+
+**⬜ P2 — Katalog-Gewichtung an die Prüfung angleichen.**
+Konkretisiert den bestehenden Punkt „Fragenzahl je Thema ausbauen": Codierung liegt bei
+**41 % (2.281 Fragen)**, soll 50 % — Statistik bei **6 % (330)**, soll 10 %. Zum Ausgleich
+müssten grob **+500 Codierungs-** und **+250 Statistik-Fragen** entstehen (oder Klinik
+ausgedünnt werden). Anders als der Blueprint-Fix (P1) betrifft das den Katalog selbst und ist
+damit die teurere, aber nachhaltigere Hälfte derselben Sache.
+
+**⬜ P2 — „Prüfungsbereitschaft" nachkalibrieren (hängt an P1).**
+Das Feature (v0.39.1) stützt sein „Bereit" auf zwei Kriterien: Lernstand **und** die letzten
+zwei Simulationen ≥ 65 %. Solange die Simulation die falsche Mischung testet, ist der zweite
+Nachweis genau dort am dünnsten, wo die Prüfung am schwersten wiegt — „Bereit" kann aufleuchten,
+während Codierung noch schwach ist. Nach dem Blueprint-Fix prüfen, ob 65 % die richtige Hürde
+bleibt, und ggf. **je Block** eine Untergrenze fordern (z. B. Codierung ≥ 50 %).
+
+**⬜ P3 — TNM-Buch als Hilfsmittel abbilden.**
+Neu und in der PO **nicht** erwähnt (die nennt nur ICD-10/ICD-O-3/OPS): In Teil I ist das
+TNM-Buch zugelassen, in Teil II nicht. Konsequenz für den Katalog: reine TNM-Grenzwerte
+(T2 > 2 cm o. ä.) sind in Teil I nachschlagbar — welcher Stoff in welchem Teil drankommt, sagt
+die Mail aber nicht. Vor einer Streichrunde analog zu Runde E daher **erst klären**, sonst
+fliegt Stoff, der in Teil II ohne Buch gebraucht wird.
+
+**Sofort ohne Code-Änderung (für die Lernenden):**
+Codierung bewusst übergewichten (via „Nach Thema lernen") — die halbe Prüfung ist Codierung und
+dank Nachschlage-PDFs die am besten trainierbare Hälfte. Und: Pomodoro-Ziel auf 1–2 Runden
+stellen, der Standard (4 Runden ≈ 2 Std.) passt nicht zu 30 Min./Tag.
+
 ### Inhalt (größter Hebel für Prüfungsnähe)
 - ⬜ **P1** Offizielle / alte / Beispiel-Prüfungsfragen einarbeiten (Material von Nico)
 - ⬜ **P1** Kurs-Skript / Schulungsunterlagen als Quelle für neue Fragen nutzen
 - 🟡 **P1** **Rechen- und Dokumentationsaufgaben** als eigener Aufgabentyp: ✅ Zahl-Eingabe (v0.11.0);
   offen: Freitext/Code-Eingabe + Ausbau des Aufgabenbestands
+  → **durch die Prüfungsmail bestätigt und konkretisiert**, siehe „Aufgabentyp „Code eingeben"" oben
 - ⬜ **P2** Fragenzahl je Thema ausbauen und Gewichtung an Prüfungsrelevanz anpassen
+  → **Zielzahlen jetzt bekannt** (40/50/10), siehe „Katalog-Gewichtung" oben
 - ⬜ **P3** Quellen-/Referenzangabe je Frage (z. B. „ICD-O-3, Regel …")
 
 ### Funktionen (aus Abstimmung 2026-07-13 — „machen wir später")
