@@ -399,7 +399,7 @@ Daraus je Prüfungsblock (`examBlockOf`, bereits vorhanden):
 |---|---|---|---|
 | **1** ✅ | Nur die zwei Felder erfassen + Migration + Merge-Regel + Tests (v0.41.0) | klein, rein additiv | schafft die Datengrundlage; ohne sie ist alles Weitere auf Annahmen gebaut |
 | **2** ✅ | Schätzer + Anzeige „Prüfungsprognose" (v0.42.0), Beobachtung = letzter kalter Abruf | mittel | zeigt echten Fortschritt statt Box-3-Null |
-| **3** | Verdikt auf Schätzung + Simulation umstellen | groß | die eigentliche Antwort auf „bin ich bereit?" |
+| **3** | Verdikt auf Schätzung + Simulation umstellen; ρ an echten Daten kalibrieren; Verzerrung durch nicht-zufällige Wiederholung entschärfen (z. B. kalte Abrufe nach Alter gewichten oder gezielt „lange nicht dran"-Fragen ziehen) | groß | die eigentliche Antwort auf „bin ich bereit?" |
 
 **Nachtrag zum Zeitplan:** Der Entwurf wollte zwischen Stufe 1 und 2 ein bis zwei Wochen
 Daten sammeln, um ρ zu kalibrieren. Umgesetzt wurde Stufe 2 sofort — bei vier Wochen
