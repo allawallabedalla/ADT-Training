@@ -11,6 +11,16 @@
  * Der Cache-Name ist stabil; NICHT je Release ändern. Nur bei strukturellen
  * Änderungen der Caching-Logik erhöhen (dann wird der alte Cache in „activate" geleert). */
 const CACHE = "adt-shell-v1";
+
+/* WARUM DIESE ZEILE: Der Browser meldet eine neue Fassung nur, wenn sich sw.js SELBST
+ * ändert – dann feuert `updatefound` und die App zeigt ihr Update-Banner. Ändert sich
+ * nur app.js/css/questions.js, bleibt sw.js byte-gleich und es kommt KEIN Hinweis; die
+ * neue Fassung erscheint dann irgendwann still beim übernächsten Start.
+ * Genau das war zwischen v0.20.0 und v0.44.0 der Fall: sw.js lag unverändert, also gab
+ * es monatelang keinen automatischen Hinweis mehr.
+ * Deshalb wird hier bei JEDEM Release die App-Version mitgeführt. Sie muss mit
+ * APP_VERSION in js/app.js übereinstimmen – ein Test wacht darüber. */
+const SW_APP_VERSION = "0.45.0";
 const ASSETS = [
   "./",
   "./index.html",
@@ -31,8 +41,12 @@ self.addEventListener("install", (e) => {
   // In-App-Banner bestätigt (dann sendet die App die SKIP_WAITING-Nachricht).
   // Toleranter Precache: jede Datei einzeln – eine fehlende Datei darf NICHT die
   // ganze Installation (und damit Offline) scheitern lassen (addAll wäre all-or-nothing).
+  // `cache: "reload"` umgeht den HTTP-Cache: Sonst könnte eine gerade bestätigte
+  // Aktualisierung die ALTE app.js in den Cache legen und der Neustart zeigte weiter
+  // die alte Fassung. Weiterhin je Datei tolerant – eine fehlende darf Offline nicht kippen.
   e.waitUntil(caches.open(CACHE).then((c) =>
-    Promise.all(ASSETS.map((u) => c.add(u).catch((err) => console.warn("Precache übersprungen:", u, err))))
+    Promise.all(ASSETS.map((u) => c.add(new Request(u, { cache: "reload" }))
+      .catch(() => c.add(u).catch((err) => console.warn("Precache übersprungen:", u, err)))))
   ));
 });
 
