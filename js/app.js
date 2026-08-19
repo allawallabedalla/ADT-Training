@@ -744,8 +744,17 @@ function overallAccuracy() {
   return S.totalAnswered ? Math.round(S.totalCorrect / S.totalAnswered * 100) : 0;
 }
 // Fragen, die noch nie richtig beantwortet wurden oder zuletzt falsch waren
+/* Echte Schwachstellen: Fragen, die sie SCHON HATTE und noch nicht kann.
+ * Früher zählten auch nie gesehene Fragen mit (`!p`). Bei 5.656 Fragen und ein paar
+ * hundert beantworteten stand auf der Startseite „5.206 Fragen noch nicht sicher" —
+ * eine Zahl, die nur den ungesehenen Rest des Katalogs misst, sich beim Lernen kaum
+ * bewegt und wie ein Vorwurf liest. Ungesehener Stoff gehört ins gemischte Training,
+ * nicht unter „Schwachstellen". */
 function weakQuestions() {
-  return QUESTIONS.filter(q => { const p = S.perQuestion[q.id]; return !p || p.correct === 0 || p.lastResult === "wrong"; });
+  return QUESTIONS.filter(q => {
+    const p = S.perQuestion[q.id];
+    return !!p && p.seen > 0 && (p.correct === 0 || p.lastResult === "wrong");
+  });
 }
 // Spaced Repetition: heute (oder überfällig) zur Wiederholung anstehende Fragen.
 // Nur bereits gesehene Fragen mit erreichter Fälligkeit – neue Fragen gehören ins Training.
@@ -899,9 +908,24 @@ function passPctText(p) {
   return Math.round(p * 100) + " %";
 }
 
-/* Eine Karte, zwei Ansichten: kompakt (Startseite, tippbar → Statistik) und
- * ausführlich (Statistik, mit Begründung). Ein Renderer, damit nichts divergiert. */
-function readinessCardHTML(detailed) {
+/* Zeile für die Startseite: bewusst zurückhaltend. Die Prognose ist eine Einschätzung,
+ * kein Tagesurteil – als große Karte mit Prozentbalken stand sie beim Öffnen der App
+ * jedes Mal im Vordergrund und drängte sich zwischen die eigentliche Aufgabe („heute
+ * lernen"). Die ausführliche Fassung mit Balken, Blöcken und Vorbehalten steht in der
+ * Statistik, einen Tipp entfernt. Die Kachel bleibt neutral gefärbt: ein rotes Symbol
+ * beim Öffnen der App wäre genau der Druck, den die Anzeige nicht erzeugen soll. */
+function readinessRowHTML() {
+  if (!QUESTIONS.length) return "";
+  const pp = passProbability();
+  const sub = pp.genug
+    ? `${passLabel(pp.p).txt} · ${passPctText(pp.p)}`
+    : `sammelt noch Daten – ${pp.fehlt} Frage${pp.fehlt === 1 ? "" : "n"} bis zur ersten Einschätzung`;
+  return `<button class="mode-btn" data-act="stats">${iconTile("gauge", "#30b0c7")}<span class="txt"><b>Prüfungsprognose</b><p>${sub}</p></span><span class="chev">›</span></button>`;
+}
+
+/* Ausführliche Fassung für die Statistik: Balken, Aufschlüsselung nach Prüfungsblöcken
+ * und die Vorbehalte im Klartext. */
+function readinessCardHTML() {
   logMastery();
   if (!QUESTIONS.length) return "";
   const pp = passProbability();
@@ -914,12 +938,7 @@ function readinessCardHTML(detailed) {
     const txt = `Noch ${pp.fehlt} Fragen bis zur ersten Einschätzung – dann rechnet die App aus,
       wie wahrscheinlich du bestehst.`;
     const head0 = `<span class="ready-head"><b>Prüfungsprognose</b><span class="ready-label" style="color:var(--text-dim)">sammelt Daten</span></span>`;
-    if (!detailed) {
-      return `<button class="ready-card" data-act="mixed" aria-label="Prüfungsprognose: noch ${pp.fehlt} Fragen bis zur ersten Einschätzung">
-        ${head0}<span class="ready-sub">${txt}</span>
-        <span class="ready-sub" style="color:var(--primary)">→ Weiter üben</span></button>`;
-    }
-    return `<div class="ready-card static">${head0}<span class="ready-sub">${txt}</span>
+    return `<div class="ready-card">${head0}<span class="ready-sub">${txt}</span>
       <span class="ready-sub muted" style="margin-top:6px">Grundlage ist dein Ergebnis bei <b>kalten Abrufen</b> – also jedes Mal, wenn eine
       Frage kam, die an dem Tag noch nicht dran war. Nur das sagt etwas über Stoff aus, den du nicht gerade eben gelesen hast.</span></div>`;
   }
@@ -934,12 +953,6 @@ function readinessCardHTML(detailed) {
     </span>`;
   const kern = `<span class="ready-sub"><b style="font-size:15px;color:${lbl.col}">${pct}</b> – aus ${pp.n.toLocaleString("de-DE")} kalt abgerufenen Fragen</span>`;
 
-  if (!detailed) {
-    return `<button class="ready-card" data-act="stats" aria-label="Prüfungsprognose ${pct}, ${lbl.txt}">
-      ${head}${bar}${kern}
-    </button>`;
-  }
-
   // Blockweise Aufschlüsselung: wo hakt es?
   const blockRows = ["K", "C", "S"].map(b => {
     const o = pp.obs[b];
@@ -953,7 +966,7 @@ function readinessCardHTML(detailed) {
     ? `<span class="ready-sub" style="color:#ff9500">Für ${pp.ohneDaten.map(b => EXAM_BLOCK_NAMES[b]).join(" und ")} liegen noch keine Daten vor – die Zahl stützt sich nur auf die übrigen Blöcke.</span>`
     : "";
 
-  return `<div class="ready-card static">
+  return `<div class="ready-card">
     ${head}${bar}${kern}
     ${hinweis}
     <div style="margin-top:10px">${blockRows}</div>
@@ -1651,6 +1664,7 @@ const ICONS = {
   capsule: '<rect x="4" y="9" width="16" height="6" rx="3" transform="rotate(45 12 12)"/><path d="M12 6.5v11" transform="rotate(45 12 12)"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><circle cx="12" cy="15" r="1.3"/><path d="M12 16.3V18"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  gauge: '<path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 17l4-5"/><circle cx="12" cy="17" r="1.2" fill="currentColor" stroke="none"/>',
   keypad: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.4"/><path d="M7.5 10h1M11.5 10h1M15.5 10h1"/><path d="M7.5 14h9"/>',
   link: '<path d="M9.5 14.5l5-5"/><path d="M11 7.5l1.2-1.2a3.8 3.8 0 0 1 5.5 5.5L16.5 13"/><path d="M13 16.5l-1.2 1.2a3.8 3.8 0 0 1-5.5-5.5L7.5 11"/>',
   copy: '<rect x="8.5" y="8.5" width="11" height="11.5" rx="2.2"/><path d="M5.5 15.5V6.2A2.2 2.2 0 0 1 7.7 4h8"/>',
@@ -1677,7 +1691,7 @@ const ICONS = {
 // Achtung: sw.js liest diese Zeile beim Update-Check per Regex aus der ausgelieferten
 // Datei, um sie mit der laufenden Fassung zu vergleichen. Schreibweise bitte so lassen –
 // und in Kommentaren keine zweite Zuweisung dieses Namens notieren (die käme zuerst).
-const APP_VERSION = "0.44.0";
+const APP_VERSION = "0.45.0";
 // Datenstand des Fragenkatalogs: "<Build-Datum>-<Kurz-Hash des Inhalts>", von
 // pipeline/build_content.py erzeugt. Der Hash hängt nur vom Inhalt ab — zwei
 // Auslieferungen mit identischen Fragen haben denselben Hash-Anteil, auch an
@@ -1820,7 +1834,7 @@ function pomoSubtitle() {
   const p = pomoLoad();
   if (!p) {
     const n = pomoDoneToday(), goal = getPomoGoal();
-    if (!n) return "25 min Fokus · 5 min Pause – mit klarem Feierabend";
+    if (!n) return "25 min Fokus · 5 min Pause";
     if (goal && n >= goal) return "×" + n + " heute – Tagesziel erreicht ✓";
     return "×" + n + (goal ? " von " + goal : "") + " heute – weiter?";
   }
@@ -1951,7 +1965,7 @@ function renderHome() {
       <button class="today-edit" data-act="goal">Ziel ändern</button>
     </div>`;
 
-  const readyCard = readinessCardHTML(false);
+  const readyRow = readinessRowHTML();
 
   const standalone = window.navigator.standalone || window.matchMedia("(display-mode: standalone)").matches;
   const installTip = standalone ? "" : `
@@ -1971,7 +1985,6 @@ function renderHome() {
     </div>
 
     ${todayCard}
-    ${readyCard}
 
     <div class="stat-grid">
       <div class="stat"><div class="num">${S.totalAnswered}</div><div class="lbl">beantwortet</div></div>
@@ -1983,7 +1996,7 @@ function renderHome() {
     <div class="ios-group">
       <button class="mode-btn" data-act="mixed">${iconTile("shuffle", "#007aff")}<span class="txt"><b>Gemischtes Training</b><p>Zufällige Fragen aus allen Themen</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="topics">${iconTile("grid", "#5e5ce6")}<span class="txt"><b>Nach Thema lernen</b><p>Gezielt einzelne Themengebiete üben</p></span><span class="chev">›</span></button>
-      ${codeCount ? `<button class="mode-btn" data-act="code">${iconTile("keypad", "#7c5cbf")}<span class="txt"><b>Kodes eintragen</b><p>${codeCount} Aufgaben – nachschlagen statt ankreuzen</p></span><span class="chev">›</span></button>` : ""}
+      ${codeCount ? `<button class="mode-btn" data-act="code">${iconTile("keypad", "#7c5cbf")}<span class="txt"><b>Kodes eintragen</b><p>${codeCount} Aufgaben zum Nachschlagen</p></span><span class="chev">›</span></button>` : ""}
       <button class="mode-btn" data-act="due" ${due ? "" : "disabled"}>${iconTile("repeat", "#ff9500")}<span class="txt"><b>Fällige Wiederholungen</b><p>${due ? due + " Frage" + (due === 1 ? "" : "n") + " heute fällig" : "Super – heute nichts fällig"}</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="weak" ${weak ? "" : "disabled"}>${iconTile("target", "#ff3b30")}<span class="txt"><b>Schwachstellen üben</b><p>${weak ? weak + " Frage" + (weak === 1 ? "" : "n") + " noch nicht sicher" : "Alles sitzt – keine Schwachstellen"}</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="pomo">${iconTile("timer", "#af52de")}<span class="txt"><b>Lern-Timer (Pomodoro)</b><p id="pomoModeSub">${pomoSubtitle()}</p></span><span class="chev">›</span></button>
@@ -1996,6 +2009,7 @@ function renderHome() {
 
     <div class="section-title">Fortschritt</div>
     <div class="ios-group">
+      ${readyRow}
       <button class="mode-btn" data-act="badges">${iconTile("trophy", "#ffb300")}<span class="txt"><b>Erfolge</b><p>${Object.keys(S.badges).length} / ${BADGES.length} freigeschaltet</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="stats">${iconTile("chart", "#5e5ce6")}<span class="txt"><b>Statistik</b><p>Trefferquote je Thema & Prüfungs-Historie</p></span><span class="chev">›</span></button>
       <button class="mode-btn" data-act="settings">${iconTile("sliders", "#30b0c7")}<span class="txt"><b>Einstellungen</b><p>Design, Sync, Sicherung, Erinnerungen</p></span><span class="chev">›</span></button>
@@ -3060,7 +3074,7 @@ function renderStats() {
 
   app.innerHTML = `
     <h1 class="large-title">Statistik</h1>
-    ${readinessCardHTML(true)}
+    ${readinessCardHTML()}
     <div class="stat-grid">
       <div class="stat"><div class="num">${S.totalAnswered}</div><div class="lbl">beantwortet</div></div>
       <div class="stat"><div class="num">${acc}%</div><div class="lbl">Trefferquote</div></div>

@@ -11,6 +11,44 @@ Alle nennenswerten Änderungen am ADT Trainer. Format angelehnt an
 
 ---
 
+## [0.45.0] — 2026-08-19  ·  Update-Hinweis repariert, ruhigere Startseite
+
+### Behoben
+- **Seit v0.20.0 kam kein automatischer Update-Hinweis mehr.** Der Browser meldet eine
+  neue Fassung nur, wenn sich `sw.js` selbst ändert — dann feuert `updatefound` und die App
+  zeigt ihr Banner. Ändern sich nur `app.js`, CSS oder die Fragen, bleibt `sw.js` byte-gleich
+  und es kommt kein Hinweis; die neue Fassung erscheint dann irgendwann still beim
+  übernächsten Start. `sw.js` lag seit dem 5. August unverändert. Jetzt trägt die Datei die
+  App-Version mit, und ein Test wacht darüber, dass beide übereinstimmen.
+- **Eine bestätigte Aktualisierung konnte die alte Fassung zurückholen.** Der Precache beim
+  Installieren holte die Dateien ohne `cache: "reload"` — im Zweifel also aus dem HTTP-Cache.
+  Damit landete möglicherweise die alte `app.js` im Cache und der Neustart zeigte weiter die
+  alte Version.
+- **„Schwachstellen üben" zählte nie gesehene Fragen mit.** Auf der Startseite stand dadurch
+  „5.206 Fragen noch nicht sicher" — eine Zahl, die im Wesentlichen den ungesehenen Rest des
+  Katalogs misst, sich beim Lernen kaum bewegt und wie ein Vorwurf liest. Gezählt werden jetzt
+  nur Fragen, die schon einmal drankamen und noch nicht sitzen (im Test: 150 statt 5.206).
+  Ungesehener Stoff gehört ins gemischte Training.
+
+### Geändert
+- **Die Prüfungsprognose ist von der Startseite in die Fortschritts-Liste gerückt** — eine
+  ruhige Zeile („sehr zuversichtlich · > 99 %") statt einer großen Karte mit Prozentbalken
+  direkt unter dem Tagesziel. Sie ist eine Einschätzung, kein Tagesurteil, und drängte sich
+  bei jedem Öffnen der App vor die eigentliche Aufgabe. Die ausführliche Fassung mit Balken,
+  Blöcken und Vorbehalten steht unverändert in der Statistik, einen Tipp entfernt. Die
+  Kachel bleibt neutral gefärbt: ein rotes Symbol beim Öffnen wäre genau der Druck, den die
+  Anzeige nicht erzeugen soll.
+- Drei Untertitel gekürzt, die auf 390 px umbrachen (Kodes, Pomodoro, Prognose). Auf der
+  Startseite ist jetzt jede Zeile einzeilig — hell wie dunkel geprüft.
+
+### Technisch
+- `readinessCardHTML(detailed)` hatte nach der Umstellung zwei tote Zweige und ein Argument,
+  das immer `true` war; beides entfernt. Die zugehörige `.ready-card`-Regel ist nicht mehr
+  als tippbar gestaltet, weil sie es nicht mehr ist.
+- 7 neue Tests (Versions-Gleichlauf `sw.js`/`app.js`, Schwachstellen-Definition).
+
+---
+
 ## [0.44.0] — 2026-08-19  ·  Kodes gezielt üben
 
 Der Aufgabentyp aus v0.43.0 war da, der Weg dorthin nicht: Die Simulation zog im

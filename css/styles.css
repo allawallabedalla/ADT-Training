@@ -623,18 +623,18 @@ h1, h2, h3 { line-height: 1.2; }
   }
 }
 
-/* ---- Prüfungsbereitschaft (v0.38) ----
+/* ---- Prüfungsprognose (Statistik-Ansicht) ----
  * Padding/Radius folgen bewusst dem Standard-Karten-Maß (.level-card/.q-card:
  * 20px/16px) statt eigener kleinerer Werte – sonst wirkt die Karte zwischen
- * den anderen großzügig gepolsterten Karten eingezwängt. */
+ * den anderen großzügig gepolsterten Karten eingezwängt.
+ * Seit v0.45.0 gibt es die Karte nur noch hier; auf der Startseite steht eine
+ * ruhige Zeile (readinessRowHTML). Deshalb ist sie nicht mehr tippbar. */
 .ready-card {
   display: flex; flex-direction: column; gap: 10px; width: 100%;
   background: var(--bg-elev); border: 0.5px solid var(--border);
-  border-radius: var(--radius); padding: 20px; margin: 16px 0 0;
-  box-shadow: var(--shadow); text-align: left; color: inherit;
-  font: inherit; cursor: pointer;
+  border-radius: var(--radius); padding: 20px; margin: 0;
+  box-shadow: var(--shadow); text-align: left; color: inherit; font: inherit;
 }
-.ready-card.static { cursor: default; margin-top: 0; }
 .ready-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .ready-head b { font-size: 17px; }
 /* Statuslabel als Pill, analog .chip/.pass-badge (Farbfläche statt nacktem Text) */

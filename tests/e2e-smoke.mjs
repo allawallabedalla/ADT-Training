@@ -464,6 +464,43 @@ async function page(opts = {}) {
   chk((await q2.$('[data-act="code"]')) === null, 'Kodes-Modus: ohne Kodier-Aufgaben kein Knopf');
 }
 
+// 6k) sw.js traegt dieselbe Version wie app.js
+// Ohne das feuert `updatefound` nicht und es gibt KEINEN automatischen Update-Hinweis:
+// der Browser meldet eine neue Fassung nur, wenn sich sw.js selbst aendert.
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const app = await p.evaluate(() => APP_VERSION);
+  const swTxt = await (await p.request.get(new URL('sw.js', BASE).href)).text();
+  const m = /^\s*const SW_APP_VERSION\s*=\s*"([^"]+)"/m.exec(swTxt);
+  chk(!!m, 'Update: sw.js enthaelt eine SW_APP_VERSION');
+  chk(m && m[1] === app, `Update: sw.js (${m && m[1]}) traegt dieselbe Version wie app.js (${app})`);
+}
+
+// 6l) „Schwachstellen" sind nur bereits beantwortete Fragen
+// Frueher zaehlten auch nie gesehene mit – bei 5.656 Fragen stand dort der halbe
+// Katalog, eine Zahl die sich beim Lernen kaum bewegt.
+{
+  const p = await page();
+  await p.goto(BASE, { waitUntil: 'networkidle' });
+  const r = await p.evaluate(() => {
+    const ids = QUESTIONS.map(q => q.id);
+    S.perQuestion = {};
+    // eine falsch beantwortete, eine richtige, eine nie gesehene
+    S.perQuestion[ids[0]] = { seen: 2, correct: 0, wrong: 2, lastResult: 'wrong', box: 0, due: null, masteredOnce: false };
+    S.perQuestion[ids[1]] = { seen: 3, correct: 3, wrong: 0, lastResult: 'correct', box: 3, due: null, masteredOnce: true };
+    S.perQuestion[ids[2]] = { seen: 3, correct: 2, wrong: 1, lastResult: 'wrong', box: 1, due: null, masteredOnce: false };
+    const w = weakQuestions().map(q => q.id);
+    return { n: w.length, hatFalsche: w.includes(ids[0]), hatZuletztFalsch: w.includes(ids[2]),
+             hatRichtige: w.includes(ids[1]), hatUngesehene: w.includes(ids[5]), katalog: QUESTIONS.length };
+  });
+  chk(r.hatFalsche, 'Schwachstellen: nie richtig beantwortete Frage zaehlt');
+  chk(r.hatZuletztFalsch, 'Schwachstellen: zuletzt falsch beantwortete Frage zaehlt');
+  chk(!r.hatRichtige, 'Schwachstellen: sicher beantwortete Frage zaehlt nicht');
+  chk(!r.hatUngesehene, 'Schwachstellen: nie gesehene Frage zaehlt NICHT');
+  chk(r.n === 2, `Schwachstellen: genau die zwei erwarteten (statt ${r.katalog - 1})`);
+}
+
 // 7b) Prüfungs-Blueprint: Ziehung folgt der echten Gewichtung 40/50/10
 // (vorher zog die Simulation faktisch 1 Frage je Thema und untergewichtete
 // damit Codierung – den größten Block der echten Prüfung).
